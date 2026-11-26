@@ -1,0 +1,73 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Sistema · Auditoría</p>
+    <h2 class="pagina-cabecera__titulo">Detalle del evento</h2>
+    <p class="pagina-cabecera__texto"><%= formatearFechaHoraExacta(log.timestamp) %> · <%= etiquetasModulo[log.module] || log.module %></p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <a class="boton boton--secundario" href="/logs"><%- include('../partials/icon', { nombre: 'arrowLeft' }) %> Volver a logs</a>
+  </div>
+</section>
+
+<div class="rejilla rejilla--factura">
+  <section class="tarjeta superficie panel">
+    <div class="panel__cabecera">
+      <div><p class="etiqueta">Evento</p><h3><%= log.description %></h3></div>
+      <span class="insignia insignia--<%= log.status === 'success' ? 'active' : 'overdue' %>"><%= log.status === 'success' ? 'Correcto' : 'Fallido' %></span>
+    </div>
+
+    <dl class="datos datos--dos">
+      <div><dt>Fecha y hora</dt><dd><%= formatearFechaHoraExacta(log.timestamp) %></dd></div>
+      <div><dt>Módulo</dt><dd><%= etiquetasModulo[log.module] || log.module %></dd></div>
+      <div><dt>Acción</dt><dd><code><%= log.action %></code></dd></div>
+      <div><dt>Actor</dt><dd><%= log.actorNombre || (log.actor === 'system' ? 'Sistema' : log.actor) %><%= log.actorNombre && log.actorNombre !== log.actor ? ` (@${log.actor})` : '' %></dd></div>
+      <div><dt>Entidad</dt><dd><%= log.entity || '—' %></dd></div>
+      <div><dt>Identificador</dt><dd><code><%= log.entityId || '—' %></code></dd></div>
+      <div><dt>Resultado</dt><dd><%= log.status === 'success' ? 'Correcto' : 'Fallido' %></dd></div>
+      <div><dt>Duración</dt><dd><%= log.durationMs != null ? `${log.durationMs} ms` : '—' %></dd></div>
+      <div><dt>Modelo de IA</dt><dd><%= log.aiModel || '—' %></dd></div>
+      <div><dt>Intervención de IA</dt><dd><%= log.aiAssisted ? 'Sí' : 'No' %></dd></div>
+      <div><dt>Confirmación</dt><dd><%= log.confirmed === false ? 'No confirmada' : `Sí${log.confirmedBy ? ` · ${log.confirmedBy}` : ''}` %></dd></div>
+      <div><dt>Confirmada el</dt><dd><%= log.confirmedAt ? formatearFechaHoraExacta(log.confirmedAt) : '—' %></dd></div>
+    </dl>
+
+    <% if (log.command) { %>
+      <div class="comando-panel">
+        <div class="comando-panel__cabecera">
+          <p class="etiqueta">Comando</p>
+          <button type="button" class="boton boton--secundario boton--xs" data-copiar="#comandoLog"><%- include('../partials/icon', { nombre: 'copy' }) %> Copiar</button>
+        </div>
+        <pre class="bloque-codigo" id="comandoLog"><code><%= log.command %></code></pre>
+        <% if (log.commandResult) { %>
+          <p class="etiqueta">Resultado del router</p>
+          <pre class="bloque-codigo bloque-codigo--resultado"><code><%= log.commandResult %></code></pre>
+        <% } %>
+      </div>
+    <% } %>
+  </section>
+
+  <aside class="pila">
+    <section class="tarjeta superficie panel">
+      <div class="panel__cabecera"><div><p class="etiqueta">Antes</p><h3>Estado previo</h3></div></div>
+      <% if (log.changes && log.changes.before) { %>
+        <pre class="bloque-codigo bloque-codigo--json"><code><%= JSON.stringify(log.changes.before, null, 2) %></code></pre>
+      <% } else { %>
+        <p class="texto-suave">Sin datos previos registrados.</p>
+      <% } %>
+    </section>
+
+    <section class="tarjeta superficie panel">
+      <div class="panel__cabecera"><div><p class="etiqueta">Después</p><h3>Estado resultante</h3></div></div>
+      <% if (log.changes && log.changes.after) { %>
+        <pre class="bloque-codigo bloque-codigo--json"><code><%= JSON.stringify(log.changes.after, null, 2) %></code></pre>
+      <% } else { %>
+        <p class="texto-suave">Sin datos resultantes registrados.</p>
+      <% } %>
+    </section>
+
+    <section class="tarjeta superficie panel">
+      <div class="panel__cabecera"><div><p class="etiqueta">Inmutabilidad</p><h3>Registro protegido</h3></div></div>
+      <p class="texto-suave">La auditoría es append-only: no se puede editar ni borrar desde la aplicación. Los secretos se guardan enmascarados.</p>
+    </section>
+  </aside>
+</div>

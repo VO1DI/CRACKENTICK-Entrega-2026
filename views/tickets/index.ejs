@@ -1,0 +1,55 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Soporte · Mesa de ayuda</p>
+    <h2 class="pagina-cabecera__titulo">Tickets técnicos</h2>
+    <p class="pagina-cabecera__texto"><%= resumen.abiertos %> abierto(s) · <%= resumen.enProceso %> en proceso · <%= resumen.criticos %> de alta prioridad</p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <a class="boton boton--primario" href="/tickets/nuevo"><%- include('../partials/icon', { nombre: 'plus' }) %> Nuevo ticket</a>
+  </div>
+</section>
+
+<section class="dash-kpis">
+  <article class="kpi kpi--rojo"><div class="kpi__cabecera"><span class="kpi__titulo">Abiertos</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'ticket' }) %></span></div><p class="kpi__valor" data-contador data-valor="<%= resumen.abiertos %>" data-formato="entero"><%= resumen.abiertos %></p><p class="kpi__detalle">Sin atender</p></article>
+  <article class="kpi kpi--ambar"><div class="kpi__cabecera"><span class="kpi__titulo">En proceso</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'clock' }) %></span></div><p class="kpi__valor" data-contador data-valor="<%= resumen.enProceso %>" data-formato="entero"><%= resumen.enProceso %></p><p class="kpi__detalle">Con respuesta</p></article>
+  <article class="kpi kpi--verde"><div class="kpi__cabecera"><span class="kpi__titulo">Resueltos</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'check' }) %></span></div><p class="kpi__valor" data-contador data-valor="<%= resumen.resueltos %>" data-formato="entero"><%= resumen.resueltos %></p><p class="kpi__detalle">Cerrados o resueltos</p></article>
+  <article class="kpi kpi--morado"><div class="kpi__cabecera"><span class="kpi__titulo">Total histórico</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'message' }) %></span></div><p class="kpi__valor" data-contador data-valor="<%= resumen.total %>" data-formato="entero"><%= resumen.total %></p><p class="kpi__detalle">Todos los tickets</p></article>
+</section>
+
+<section class="tarjeta superficie filtros">
+  <form method="get" action="/tickets" class="filtros__form">
+    <div class="campo campo--busqueda">
+      <label class="sr-only" for="q">Buscar ticket</label>
+      <div class="campo__control"><%- include('../partials/icon', { nombre: 'search' }) %><input id="q" type="search" name="q" value="<%= filtros.q %>" placeholder="Código, asunto o cliente"></div>
+    </div>
+    <div class="campo"><label for="estado">Estado</label><select id="estado" name="estado" data-auto-enviar><option value="">Todos</option><% ['open', 'in_progress', 'resolved', 'closed'].forEach((v) => { %><option value="<%= v %>" <%= filtros.estado === v ? 'selected' : '' %>><%= etiquetas[v] %></option><% }); %></select></div>
+    <div class="campo"><label for="prioridad">Prioridad</label><select id="prioridad" name="prioridad" data-auto-enviar><option value="">Todas</option><% ['urgent', 'high', 'medium', 'low'].forEach((v) => { %><option value="<%= v %>" <%= filtros.prioridad === v ? 'selected' : '' %>><%= etiquetas[v] %></option><% }); %></select></div>
+    <button type="submit" class="boton boton--secundario boton--sm">Filtrar</button>
+  </form>
+</section>
+
+<section class="tarjeta panel panel--tabla">
+  <% if (tickets.length === 0) { %>
+    <div class="vacio vacio--compacto"><p class="vacio__icono"><%- include('../partials/icon', { nombre: 'ticket' }) %></p><p class="vacio__texto">No hay tickets con estos filtros.</p></div>
+  <% } else { %>
+    <div class="tabla-scroll">
+      <table class="tabla">
+        <thead><tr><th>Ticket</th><th>Cliente</th><th>Prioridad</th><th>Estado</th><th>Mensajes</th><th>Creado</th><th></th></tr></thead>
+        <tbody>
+          <% tickets.forEach((ticket) => { %>
+            <tr>
+              <td data-etiqueta="Ticket"><a href="/tickets/<%= ticket._id %>"><strong><%= ticket.code %></strong></a><small><%= ticket.subject %></small></td>
+              <td data-etiqueta="Cliente"><%= ticket.clientId ? `${ticket.clientId.firstName} ${ticket.clientId.lastName}` : '—' %><small><%= ticket.clientId?.clientCode || '' %></small></td>
+              <td data-etiqueta="Prioridad"><span class="insignia insignia--<%= ticket.priority === 'urgent' || ticket.priority === 'high' ? 'overdue' : ticket.priority === 'medium' ? 'pending' : 'none' %>"><%= etiquetas[ticket.priority] %></span></td>
+              <td data-etiqueta="Estado"><span class="insignia insignia--<%= ticket.status %>"><%= etiquetas[ticket.status] %></span></td>
+              <td data-etiqueta="Mensajes"><%= ticket.totalMensajes %></td>
+              <td data-etiqueta="Creado"><%= formatearFecha(ticket.createdAt) %></td>
+              <td><a class="boton-icono boton-icono--sm" href="/tickets/<%= ticket._id %>" aria-label="Abrir ticket"><%- include('../partials/icon', { nombre: 'eye' }) %></a></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+    <%- include('../partials/pagination', { paginacion, filtros }) %>
+  <% } %>
+</section>

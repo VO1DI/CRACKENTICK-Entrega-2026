@@ -1,0 +1,64 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Soporte · Nuevo</p>
+    <h2 class="pagina-cabecera__titulo">Abrir ticket</h2>
+    <p class="pagina-cabecera__texto">Registra la incidencia y conversa con el cliente desde su ficha.</p>
+  </div>
+  <div class="pagina-cabecera__acciones"><a class="boton boton--secundario" href="/tickets"><%- include('../partials/icon', { nombre: 'arrowLeft' }) %> Cancelar</a></div>
+</section>
+
+<% if (errores && errores.length) { %>
+  <div class="aviso aviso--error" role="alert"><span class="aviso__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></span><div class="aviso__texto"><strong>Revisa los datos:</strong><ul class="lista-errores"><% errores.forEach((m) => { %><li><%= m %></li><% }); %></ul></div></div>
+<% } %>
+
+<form class="formulario" action="/tickets" method="post" novalidate>
+  <section class="tarjeta superficie formulario__seccion">
+    <div class="formulario__cabecera"><span class="formulario__numero">01</span><div><h3>Cliente y servicio</h3><p>El ticket queda vinculado al cliente.</p></div></div>
+    <div class="formulario__rejilla">
+      <div class="campo">
+        <label for="clientId">Cliente *</label>
+        <select id="clientId" name="clientId" required data-cliente-ticket>
+          <option value="">Selecciona un cliente</option>
+          <% clientes.forEach((cliente) => { %>
+            <option value="<%= cliente._id %>" <%= clienteSeleccionado === String(cliente._id) ? 'selected' : '' %>><%= cliente.firstName %> <%= cliente.lastName %> · <%= cliente.clientCode %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="subscriptionId">Servicio</label>
+        <select id="subscriptionId" name="subscriptionId">
+          <option value="">Sin servicio específico</option>
+          <% subscriptions.forEach((sub) => { %>
+            <option value="<%= sub._id %>" data-cliente="<%= sub.clientId?._id || sub.clientId %>"><%= sub.clientId ? `${sub.clientId.firstName} ${sub.clientId.lastName}` : 'Cliente' %> · <%= sub.planSnapshot?.name || 'Plan' %></option>
+          <% }); %>
+        </select>
+      </div>
+    </div>
+  </section>
+
+  <section class="tarjeta superficie formulario__seccion">
+    <div class="formulario__cabecera"><span class="formulario__numero">02</span><div><h3>Incidencia</h3><p>Asunto claro y descripción del problema.</p></div></div>
+    <div class="formulario__rejilla">
+      <div class="campo campo--ancho"><label for="subject">Asunto *</label><input id="subject" name="subject" type="text" maxlength="120" value="<%= ticket.subject || '' %>" placeholder="Sin internet desde esta mañana" required></div>
+      <div class="campo campo--ancho"><label for="description">Descripción *</label><textarea id="description" name="description" rows="4" maxlength="2000" data-contador-de="description" required><%= ticket.description || '' %></textarea><span class="campo__ayuda" data-contador-para="description">0 / 2000</span></div>
+      <div class="campo"><label for="category">Categoría</label><select id="category" name="category"><% ['technical', 'billing', 'installation', 'other'].forEach((v) => { %><option value="<%= v %>" <%= ticket.category === v ? 'selected' : '' %>><%= etiquetas[v] || v %></option><% }); %></select></div>
+      <div class="campo"><label for="priority">Prioridad</label><select id="priority" name="priority"><% ['low', 'medium', 'high', 'urgent'].forEach((v) => { %><option value="<%= v %>" <%= ticket.priority === v ? 'selected' : '' %>><%= etiquetas[v] %></option><% }); %></select></div>
+      <div class="campo">
+        <label for="assignedTo">Asignado a</label>
+        <% const asignado = ticket.assignedTo || 'Soporte'; const enLista = (usuarios || []).some((usuario) => usuario.name === asignado); %>
+        <select id="assignedTo" name="assignedTo">
+          <% (usuarios || []).forEach((usuario) => { %>
+            <option value="<%= usuario.name %>" <%= asignado === usuario.name ? 'selected' : '' %>><%= usuario.name %></option>
+          <% }); %>
+          <% if (!enLista) { %><option value="<%= asignado %>" selected><%= asignado %></option><% } %>
+        </select>
+      </div>
+      <div class="campo campo--ancho"><label for="mensajeInicial">Primera respuesta (opcional)</label><textarea id="mensajeInicial" name="mensajeInicial" rows="2" maxlength="2000"></textarea></div>
+    </div>
+  </section>
+
+  <div class="formulario__acciones">
+    <a class="boton boton--secundario" href="/tickets">Cancelar</a>
+    <button type="submit" class="boton boton--primario"><%- include('../partials/icon', { nombre: 'check' }) %> Crear ticket</button>
+  </div>
+</form>

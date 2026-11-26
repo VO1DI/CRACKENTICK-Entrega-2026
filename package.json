@@ -1,0 +1,44 @@
+{
+  "name": "crackentick",
+  "version": "1.0.0",
+  "description": "CRACKENTICK: gestión de ISP con arquitectura MVC, Express, MongoDB y EJS. Dashboard, clientes, planes, facturación y firewall simulado.",
+  "main": "server.js",
+  "engines": {
+    "node": ">=26 <27"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "seed": "node seed.js",
+    "vaciar": "node vaciar.js --si",
+    "test": "node pruebas/probar-seguridad.js && node pruebas/probar-visual.js && node pruebas/probar-telegram.js && node pruebas/probar-concurrencia.js && node pruebas/probar-facturas.js && node pruebas/probar-economia.js && node pruebas/probar-balanceo.js && node pruebas/probar-venta-fallida.js && node pruebas/probar-hotspot-fallos.js && node pruebas/probar-portal.js && node pruebas/probar-agenda.js && node pruebas/probar-tipos-tarea.js && node pruebas/probar-presets.js && node pruebas/probar-rendimiento.js && node pruebas/probar-clientes.js && node pruebas/probar-tickets.js && node pruebas/probar-monitoreo.js && node pruebas/probar-cisco.js"
+  },
+  "keywords": [
+    "isp",
+    "mvc",
+    "express",
+    "mongodb",
+    "mongoose",
+    "ejs",
+    "dashboard",
+    "firewall"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "connect-flash": "^0.1.1",
+    "dotenv": "^16.4.7",
+    "ejs": "^3.1.10",
+    "express": "^4.21.2",
+    "express-ejs-layouts": "^2.5.1",
+    "express-session": "^1.18.1",
+    "method-override": "^3.0.0",
+    "mongoose": "^8.9.5",
+    "morgan": "^1.10.0",
+    "node-routeros": "^1.6.8",
+    "ssh2": "^1.17.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  }
+}

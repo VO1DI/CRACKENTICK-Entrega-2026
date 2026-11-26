@@ -1,0 +1,143 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Técnico · Nuevo servicio</p>
+    <h2 class="pagina-cabecera__titulo">Contratar servicio para <%= cliente.fullName %></h2>
+    <p class="pagina-cabecera__texto">Selecciona el plan y la configuración de red. El periodo inicia hoy.</p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <a class="boton boton--secundario" href="/clientes/<%= cliente._id %>?tab=servicio"><%- include('../partials/icon', { nombre: 'arrowLeft' }) %> Cancelar</a>
+  </div>
+</section>
+
+<% const v = typeof valores !== 'undefined' && valores ? valores : {}; %>
+<% const texto = (campo, respaldo) => (v[campo] !== undefined && v[campo] !== null && v[campo] !== '' ? v[campo] : (respaldo ?? '')); %>
+<% const sel = (campo, respaldo) => String(v[campo] !== undefined && v[campo] !== null && v[campo] !== '' ? v[campo] : (respaldo || '')); %>
+<% const planElegido = sel('planId', subscription?.planId); %>
+<% const tipoElegido = sel('connectionType', subscription?.serviceConfig?.connectionType || 'pppoe'); %>
+
+<% if (errores && errores.length) { %>
+  <div class="aviso aviso--error" role="alert">
+    <span class="aviso__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></span>
+    <div class="aviso__texto"><strong>Revisa los datos:</strong><ul class="lista-errores"><% errores.forEach((m) => { %><li><%= m %></li><% }); %></ul></div>
+  </div>
+<% } %>
+
+<form class="formulario" action="/clientes/<%= cliente._id %>/servicio" method="post" novalidate>
+  <section class="tarjeta superficie formulario__seccion">
+    <div class="formulario__cabecera">
+      <span class="formulario__numero">01</span>
+      <div><h3>Plan contratado</h3><p>El precio y las velocidades quedan congelados en un snapshot.</p></div>
+    </div>
+    <div class="planes-selector">
+      <% planes.forEach((plan, indice) => { %>
+        <label class="plan-opcion" data-plan-opcion data-plan-modo="<%= plan.trafficMode || 'simple_queue' %>" data-plan-routers="<%= (plan.routerIds || []).map((r) => r?._id || r).join(',') %>">
+          <input type="radio" name="planId" value="<%= plan._id %>" data-precio="<%= plan.price %>" data-velocidad="<%= plan.speedLabel %>" data-intervalo="<%= etiquetas[plan.billingInterval] %>" <%= (planElegido ? planElegido === String(plan._id) : indice === 0) ? 'checked' : '' %> required>
+          <span class="plan-opcion__contenido">
+            <span class="plan-opcion__cabecera">
+              <strong><%= plan.name %></strong>
+              <span class="plan-opcion__precio"><%= formatearDinero(plan.price) %></span>
+            </span>
+            <span class="plan-opcion__velocidad"><%= plan.speedLabel %></span>
+            <span class="plan-opcion__descripcion"><%= plan.description || 'Sin descripción.' %></span>
+            <span class="plan-opcion__intervalo"><%= etiquetas[plan.billingInterval] %></span>
+          </span>
+        </label>
+      <% }); %>
+      <% if (!planes.length) { %>
+        <p class="texto-suave">No hay planes activos. <a href="/red/planes/nuevo">Crea uno primero</a>.</p>
+      <% } %>
+    </div>
+    <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'planId') }) %>
+  </section>
+
+  <section class="tarjeta superficie formulario__seccion">
+    <div class="formulario__cabecera">
+      <span class="formulario__numero">02</span>
+      <div><h3>Configuración técnica</h3><p>Define cómo se conecta el cliente y cómo se aplicará el corte.</p></div>
+    </div>
+    <div class="formulario__rejilla">
+      <div class="campo<%= claseCampo(erroresCampo, 'connectionType') %>">
+        <label for="connectionType">Tipo de conexión *</label>
+        <select id="connectionType" name="connectionType" data-conexion>
+          <option value="pppoe" <%= tipoElegido === 'pppoe' ? 'selected' : '' %>>PPPoE</option>
+          <option value="static" <%= tipoElegido === 'static' ? 'selected' : '' %>>IP estática</option>
+          <option value="dhcp" <%= tipoElegido === 'dhcp' ? 'selected' : '' %>>DHCP</option>
+        </select>
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'connectionType') }) %>
+      </div>
+      <div class="campo<%= claseCampo(erroresCampo, 'routerId') %>">
+        <label for="routerId">Router</label>
+        <select id="routerId" name="routerId" data-router-servicio>
+          <option value="">Automático</option>
+          <% (typeof routers !== 'undefined' ? routers : []).forEach((router) => { %>
+            <option value="<%= router._id %>" data-router-plan-mode="<%= router.planMode || 'simple_queue' %>" <%= sel('routerId', subscription?.serviceConfig?.routerId) === String(router._id) ? 'selected' : '' %>><%= router.name %> · <%= etiquetas[router.mode] %></option>
+          <% }); %>
+        </select>
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'routerId') }) %>
+      </div>
+      <div class="campo<%= claseCampo(erroresCampo, 'ipPoolId') %>">
+        <label for="ipPoolId">Pool de IP</label>
+        <select id="ipPoolId" name="ipPoolId" data-pool-servicio>
+          <option value="">Sin pool (IP manual)</option>
+          <% (typeof pools !== 'undefined' ? pools : []).forEach((pool) => { %>
+            <option
+              value="<%= pool._id %>"
+              data-router="<%= pool.routerId?._id || pool.routerId || '' %>"
+              data-ips-url="/clientes/api/pools/<%= pool._id %>/ips"
+              data-disponibles="<%= pool.usedIps !== undefined ? pool.usedIps : '' %>"
+              <%= sel('ipPoolId', subscription?.serviceConfig?.ipPoolId) === String(pool._id) ? 'selected' : '' %>
+            ><%= pool.name %> · <%= pool.cidr %></option>
+          <% }); %>
+        </select>
+        <span class="campo__ayuda" data-pool-ayuda>Al elegir un pool se muestran las IP disponibles.</span>
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'ipPoolId') }) %>
+      </div>
+      <div class="campo<%= claseCampo(erroresCampo, 'pppoeUsername') %>" data-campo="pppoe">
+        <label for="pppoeUsername">Usuario PPPoE</label>
+        <input id="pppoeUsername" name="pppoeUsername" type="text" value="<%= texto('pppoeUsername', subscription?.serviceConfig?.pppoeUsername) %>" placeholder="Se genera desde el código del cliente" maxlength="60">
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'pppoeUsername') }) %>
+      </div>
+      <div class="campo" data-campo="pppoe">
+        <label for="pppoePassword">Contraseña PPPoE</label>
+        <input id="pppoePassword" name="pppoePassword" type="password" placeholder="Se genera automáticamente" maxlength="80" autocomplete="new-password">
+        <span class="campo__ayuda">Por seguridad, vuelve a escribirla si el formulario mostró un error.</span>
+      </div>
+      <div class="campo<%= claseCampo(erroresCampo, 'ipAddress') %>" data-campo="ip">
+        <label for="ipAddress">Dirección IP</label>
+        <input id="ipAddress" name="ipAddress" type="text" value="<%= texto('ipAddress', subscription?.serviceConfig?.ipAddress) %>" placeholder="Vacío = primera libre del pool" maxlength="45" data-ip-manual>
+        <select id="ipAddressSelect" data-ip-servicio hidden></select>
+        <span class="campo__ayuda" data-ip-ayuda>Selecciona un pool para elegir una IP disponible.</span>
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'ipAddress') }) %>
+      </div>
+      <div class="campo<%= claseCampo(erroresCampo, 'installedAt') %>">
+        <label for="installedAt">Fecha de instalación</label>
+        <input id="installedAt" name="installedAt" type="date" value="<%= texto('installedAt', fechaParaInput(new Date())) %>">
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'installedAt') }) %>
+      </div>
+      <div class="campo campo--ancho<%= claseCampo(erroresCampo, 'notes') %>">
+        <label for="notes">Notas técnicas</label>
+        <textarea id="notes" name="notes" rows="2" maxlength="500" placeholder="Equipo, antena, observaciones…"><%= texto('notes', subscription?.notes) %></textarea>
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'notes') }) %>
+      </div>
+    </div>
+    <p class="nota nota--morado"><%- include('../partials/icon', { nombre: 'shield' }) %> La contraseña PPPoE se cifra con AES-256-GCM y nunca se muestra en texto plano.</p>
+  </section>
+
+  <section class="tarjeta superficie formulario__seccion formulario__seccion--resumen">
+    <div class="formulario__cabecera">
+      <span class="formulario__numero">03</span>
+      <div><h3>Resumen del servicio</h3><p>Verifica antes de guardar.</p></div>
+    </div>
+    <div class="resumen-servicio">
+      <div><small>Plan</small><strong id="resumenPlan">—</strong></div>
+      <div><small>Velocidad</small><strong id="resumenVelocidad">—</strong></div>
+      <div><small>Precio</small><strong id="resumenPrecio">—</strong></div>
+      <div><small>Periodo</small><strong id="resumenIntervalo">—</strong></div>
+    </div>
+  </section>
+
+  <div class="formulario__acciones">
+    <a class="boton boton--secundario" href="/clientes/<%= cliente._id %>?tab=servicio">Cancelar</a>
+    <button type="submit" class="boton boton--primario"><%- include('../partials/icon', { nombre: 'check' }) %> Contratar servicio</button>
+  </div>
+</form>

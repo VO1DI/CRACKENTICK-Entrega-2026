@@ -1,0 +1,63 @@
+<%
+  const datos = (typeof altasBajas !== 'undefined' && altasBajas) || {};
+  const horizontal = typeof layout !== 'undefined' && layout === 'horizontal';
+  const filas = [
+    { clave: 'instalaciones', etiqueta: 'Instalaciones nuevas', valor: Number(datos.instalaciones || 0), color: '#22c55e' },
+    { clave: 'retirados', etiqueta: 'Clientes retirados', valor: Number(datos.retirados || 0), color: '#f43f5e' },
+    { clave: 'suspendidos', etiqueta: 'Clientes suspendidos', valor: Number(datos.suspendidos || 0), color: '#f59e0b' },
+  ];
+%>
+<div class="altas-bajas <%= horizontal ? 'altas-bajas--horizontal' : '' %>" data-altas-bajas>
+  <div class="altas-bajas__lienzo">
+    <canvas data-altas-lienzo role="img" aria-label="Instalaciones nuevas, clientes retirados y clientes suspendidos"></canvas>
+  </div>
+  <ul class="altas-bajas__leyenda">
+    <% filas.forEach((fila) => { %>
+      <li>
+        <span class="altas-bajas__punto" style="background:<%= fila.color %>"></span>
+        <span><%= fila.etiqueta %></span>
+        <strong><%= fila.valor %></strong>
+      </li>
+    <% }); %>
+  </ul>
+</div>
+
+<script>
+  (function () {
+    var raiz = document.querySelector('[data-altas-bajas]');
+    if (!raiz || !window.Chart) return;
+
+    var lienzo = raiz.querySelector('[data-altas-lienzo]');
+    var etiquetas = <%- JSON.stringify(filas.map((fila) => fila.etiqueta)).replace(/</g, '\\u003c') %>;
+    var valores = <%- JSON.stringify(filas.map((fila) => fila.valor)) %>;
+    var colores = <%- JSON.stringify(filas.map((fila) => fila.color)) %>;
+
+    new Chart(lienzo, {
+      type: 'doughnut',
+      data: {
+        labels: etiquetas,
+        datasets: [{
+          data: valores,
+          backgroundColor: colores,
+          borderWidth: 0,
+          hoverOffset: 6,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '70%',
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function (contexto) {
+                return ' ' + contexto.label + ': ' + contexto.parsed;
+              },
+            },
+          },
+        },
+      },
+    });
+  })();
+</script>

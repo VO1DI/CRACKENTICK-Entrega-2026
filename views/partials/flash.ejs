@@ -1,0 +1,18 @@
+<% if (exito.length || error.length) { %>
+  <div class="avisos" id="avisos">
+    <% exito.forEach((mensaje) => { %>
+      <div class="aviso aviso--exito" role="status">
+        <span class="aviso__icono"><%- include('icon', { nombre: 'check' }) %></span>
+        <p class="aviso__texto"><%= mensaje %></p>
+        <button type="button" class="aviso__cerrar" aria-label="Cerrar aviso">&times;</button>
+      </div>
+    <% }); %>
+    <% error.forEach((mensaje) => { %>
+      <div class="aviso aviso--error" role="alert">
+        <span class="aviso__icono"><%- include('icon', { nombre: 'alert' }) %></span>
+        <p class="aviso__texto"><%= mensaje %></p>
+        <button type="button" class="aviso__cerrar" aria-label="Cerrar aviso">&times;</button>
+      </div>
+    <% }); %>
+  </div>
+<% } %>

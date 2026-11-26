@@ -1,0 +1,229 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Comercial · <%= modo === 'crear' ? 'Nueva venta' : 'Editar venta' %></p>
+    <h2 class="pagina-cabecera__titulo">Alta de cliente e instalación</h2>
+    <p class="pagina-cabecera__texto">Registra la venta ahora; el inventario se descuenta al instalar.</p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <a class="boton boton--secundario" href="/ventas"><%- include('../partials/icon', { nombre: 'arrowLeft' }) %> Cancelar</a>
+  </div>
+</section>
+
+<% const v = typeof valores !== 'undefined' && valores ? valores : {}; %>
+<% const texto = (campo, respaldo) => (v[campo] !== undefined && v[campo] !== null && v[campo] !== '' ? v[campo] : (respaldo ?? '')); %>
+<% const sel = (campo, respaldo) => String(v[campo] !== undefined && v[campo] !== null && v[campo] !== '' ? v[campo] : (respaldo || '')); %>
+<% const itemIds = [].concat(v.itemId || []); %>
+<% const cantidades = [].concat(v.quantity || []); %>
+<% const precios = [].concat(v.unitPrice || []); %>
+<% const seriales = [].concat(v.serials || []); %>
+
+<% if (errores && errores.length) { %>
+  <div class="aviso aviso--error" role="alert">
+    <span class="aviso__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></span>
+    <div class="aviso__texto"><strong>Revisa los datos:</strong><ul class="lista-errores"><% errores.forEach((m) => { %><li><%= m %></li><% }); %></ul></div>
+  </div>
+<% } %>
+
+<form class="formulario" action="/ventas" method="post" novalidate data-form-venta data-ip-manual-libre>
+  <section class="tarjeta superficie formulario__seccion">
+    <div class="formulario__cabecera">
+      <span class="formulario__numero">01</span>
+      <div><h3>Datos del cliente</h3><p>Si el cliente ya existe se reutiliza por correo o identificación.</p></div>
+    </div>
+    <div class="formulario__rejilla">
+      <div class="campo<%= claseCampo(erroresCampo, 'firstName') %>"><label for="firstName">Nombre *</label><input id="firstName" name="firstName" type="text" maxlength="60" value="<%= texto('firstName', venta.customer?.firstName) %>" required><%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'firstName') }) %></div>
+      <div class="campo<%= claseCampo(erroresCampo, 'lastName') %>"><label for="lastName">Apellido *</label><input id="lastName" name="lastName" type="text" maxlength="60" value="<%= texto('lastName', venta.customer?.lastName) %>" required><%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'lastName') }) %></div>
+      <div class="campo<%= claseCampo(erroresCampo, 'taxId') %>"><label for="taxId">Identificación</label><input id="taxId" name="taxId" type="text" maxlength="40" value="<%= texto('taxId', venta.customer?.taxId) %>" placeholder="V-12345678"><%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'taxId') }) %></div>
+      <div class="campo<%= claseCampo(erroresCampo, 'phone') %>"><label for="phone">Teléfono</label><input id="phone" name="phone" type="text" maxlength="40" value="<%= texto('phone', venta.customer?.phone) %>"><%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'phone') }) %></div>
+      <div class="campo<%= claseCampo(erroresCampo, 'email') %>"><label for="email">Correo</label><input id="email" name="email" type="email" maxlength="120" value="<%= texto('email', venta.customer?.email) %>"><%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'email') }) %></div>
+      <div class="campo<%= claseCampo(erroresCampo, 'city') %>"><label for="city">Ciudad</label><input id="city" name="city" type="text" maxlength="80" value="<%= texto('city', venta.customer?.city) %>"><%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'city') }) %></div>
+      <div class="campo campo--ancho<%= claseCampo(erroresCampo, 'address') %>"><label for="address">Dirección</label><input id="address" name="address" type="text" maxlength="200" value="<%= texto('address', venta.customer?.address) %>"><%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'address') }) %></div>
+      <div class="campo<%= claseCampo(erroresCampo, 'state') %>"><label for="state">Estado / departamento</label><input id="state" name="state" type="text" maxlength="80" value="<%= texto('state', venta.customer?.state) %>"><%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'state') }) %></div>
+    </div>
+  </section>
+
+  <section class="tarjeta superficie formulario__seccion">
+    <div class="formulario__cabecera">
+      <span class="formulario__numero">02</span>
+      <div><h3>Servicio contratado</h3><p>Opcional en el alta. Si falta, el técnico lo completa antes de instalar.</p></div>
+    </div>
+    <div class="formulario__rejilla">
+      <div class="campo campo--ancho<%= claseCampo(erroresCampo, 'planId') %>">
+        <label for="planId">Plan</label>
+        <select id="planId" name="planId" data-plan-venta>
+          <option value="">Sin asignar (lo completa el técnico)</option>
+          <% planes.forEach((plan) => { %>
+            <option value="<%= plan._id %>" data-plan-modo="<%= plan.trafficMode || 'simple_queue' %>" data-plan-routers="<%= (plan.routerIds || []).map((r) => r?._id || r).join(',') %>" data-plan-precio="<%= plan.price %>" data-plan-nombre="<%= plan.name %>" <%= sel('planId', venta.service?.planId) === String(plan._id) ? 'selected' : '' %>><%= plan.name %> · <%= formatearDinero(plan.price) %> · <%= plan.speedLabel %></option>
+          <% }); %>
+        </select>
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'planId') }) %>
+      </div>
+      <div class="campo<%= claseCampo(erroresCampo, 'connectionType') %>">
+        <label for="connectionType">Tipo de conexión</label>
+        <select id="connectionType" name="connectionType" data-conexion>
+          <option value="pppoe" <%= sel('connectionType', venta.service?.connectionType || 'pppoe') === 'pppoe' ? 'selected' : '' %>>PPPoE</option>
+          <option value="static" <%= sel('connectionType', venta.service?.connectionType || 'pppoe') === 'static' ? 'selected' : '' %>>IP estática</option>
+          <option value="dhcp" <%= sel('connectionType', venta.service?.connectionType || 'pppoe') === 'dhcp' ? 'selected' : '' %>>DHCP</option>
+        </select>
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'connectionType') }) %>
+      </div>
+      <div class="campo<%= claseCampo(erroresCampo, 'routerId') %>">
+        <label for="routerId">Router</label>
+        <select id="routerId" name="routerId" data-router-venta>
+          <option value="">Sin asignar</option>
+          <% routers.forEach((router) => { %>
+            <option value="<%= router._id %>" data-router-plan-mode="<%= router.planMode || 'simple_queue' %>" <%= sel('routerId', venta.service?.routerId) === String(router._id) ? 'selected' : '' %>><%= router.name %> · <%= etiquetas[router.mode] %></option>
+          <% }); %>
+        </select>
+        <span class="campo__ayuda">Todo el aprovisionamiento (PPPoE, IP y cola) se crea en este router.</span>
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'routerId') }) %>
+      </div>
+      <div class="campo<%= claseCampo(erroresCampo, 'ipPoolId') %>">
+        <label for="ipPoolId">Pool de IP</label>
+        <select id="ipPoolId" name="ipPoolId" data-pool-servicio data-pool-venta>
+          <option value="">Sin asignar</option>
+          <% pools.forEach((pool) => { %>
+            <option
+              value="<%= pool._id %>"
+              data-router="<%= pool.routerId?._id || pool.routerId || '' %>"
+              data-ips-url="/ventas/api/pools/<%= pool._id %>/ips"
+              <%= sel('ipPoolId', venta.service?.ipPoolId) === String(pool._id) ? 'selected' : '' %>
+            ><%= pool.name %> · <%= pool.cidr %></option>
+          <% }); %>
+        </select>
+        <span class="campo__ayuda" data-pool-ayuda>Solo se muestran los pools del router elegido.</span>
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'ipPoolId') }) %>
+      </div>
+      <div class="campo">
+        <label for="ipAddressSelect">IP disponible</label>
+        <select id="ipAddressSelect" data-ip-servicio disabled>
+          <option value="">Selecciona un pool</option>
+        </select>
+        <span class="campo__ayuda" data-ip-ayuda>Lista las IP libres del pool seleccionado.</span>
+      </div>
+      <div class="campo<%= claseCampo(erroresCampo, 'ipAddress') %>" data-campo="ip-manual" hidden>
+        <label for="ipAddress">IP manual (solo estática)</label>
+        <input id="ipAddress" name="ipAddress" type="text" maxlength="45" value="<%= texto('ipAddress', venta.service?.ipAddress) %>" placeholder="192.168.10.20" data-ip-manual>
+        <span class="campo__ayuda">Debe pertenecer al pool. Para PPPoE se usa la IP elegida de la lista.</span>
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'ipAddress') }) %>
+      </div>
+      <div class="campo<%= claseCampo(erroresCampo, 'pppoeUsername') %>" data-campo="pppoe">
+        <label for="pppoeUsername">Usuario PPPoE</label>
+        <input id="pppoeUsername" name="pppoeUsername" type="text" maxlength="60" value="<%= texto('pppoeUsername', venta.service?.pppoeUsername) %>" placeholder="Se genera automáticamente">
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'pppoeUsername') }) %>
+      </div>
+      <div class="campo" data-campo="pppoe">
+        <label for="pppoePassword">Contraseña PPPoE</label>
+        <input id="pppoePassword" name="pppoePassword" type="password" maxlength="80" placeholder="Se genera si se deja vacía" autocomplete="new-password">
+        <span class="campo__ayuda">Por seguridad, vuelve a escribirla si el formulario mostró un error.</span>
+      </div>
+      <div class="campo">
+        <label for="macAddress">MAC del equipo</label>
+        <input id="macAddress" name="macAddress" type="text" maxlength="40" value="<%= texto('macAddress', venta.service?.macAddress) %>" placeholder="AA:BB:CC:DD:EE:FF" data-mac-servicio data-auto-mac="<%= venta.service?.macAddress ? '0' : '1' %>">
+        <span class="campo__ayuda">Se rellena al elegir un serial del inventario. Puedes editarla.</span>
+      </div>
+      <div class="campo">
+        <label class="check"><input type="checkbox" name="macAuthEnabled" <%= venta.service?.macAuthEnabled ? 'checked' : '' %>> Autenticación por MAC</label>
+        <span class="campo__ayuda">DHCP: reserva la IP a esa MAC. PPPoE: agrega caller-id. Si está apagada, la MAC solo se guarda.</span>
+      </div>
+      <div class="campo<%= claseCampo(erroresCampo, 'scheduledAt') %>">
+        <label for="scheduledAt">Fecha de instalación</label>
+        <input id="scheduledAt" name="scheduledAt" type="date" value="<%= texto('scheduledAt', venta.scheduledAt ? fechaParaInput(venta.scheduledAt) : '') %>">
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'scheduledAt') }) %>
+      </div>
+    </div>
+    <div class="formulario__rejilla">
+      <div class="campo<%= claseCampo(erroresCampo, 'technicianId') %>">
+        <label for="technicianId">Técnico instalador *</label>
+        <select id="technicianId" name="technicianId" required>
+          <option value="">Selecciona un técnico</option>
+          <% (typeof usuarios !== 'undefined' ? usuarios : []).forEach((u) => { %>
+            <option value="<%= u._id %>" <%= sel('technicianId', venta.technicianId) === String(u._id) ? 'selected' : '' %>><%= u.name %> · @<%= u.username %></option>
+          <% }); %>
+        </select>
+        <span class="campo__ayuda">Responsable de la instalación en campo.</span>
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'technicianId') }) %>
+      </div>
+      <div class="campo<%= claseCampo(erroresCampo, 'promoterId') %>">
+        <label for="promoterId">Promotor / vendedor *</label>
+        <select id="promoterId" name="promoterId" required>
+          <option value="">Selecciona un promotor</option>
+          <% (typeof usuarios !== 'undefined' ? usuarios : []).forEach((u) => { %>
+            <option value="<%= u._id %>" <%= sel('promoterId', venta.promoterId) === String(u._id) ? 'selected' : '' %>><%= u.name %> · @<%= u.username %></option>
+          <% }); %>
+        </select>
+        <span class="campo__ayuda">Quien captó o cerró la venta.</span>
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'promoterId') }) %>
+      </div>
+    </div>
+  </section>
+
+  <section class="tarjeta superficie formulario__seccion">
+    <div class="formulario__cabecera">
+      <span class="formulario__numero">03</span>
+      <div><h3>Materiales</h3><p>Solo los artículos con existencias están disponibles. Los serializados piden serial.</p></div>
+    </div>
+
+    <% const serialesPorItem = {}; const macPorSerial = {}; items.forEach((item) => { const disponibles = (item.serials || []).filter((s) => s.status === 'available'); serialesPorItem[String(item._id)] = disponibles.map((s) => s.serial); disponibles.forEach((s) => { if (s.mac) macPorSerial[s.serial] = s.mac; }); }); %>
+    <script type="application/json" data-seriales-por-item><%- JSON.stringify(serialesPorItem).replace(/</g, '\\u003c') %></script>
+    <script type="application/json" data-mac-por-serial><%- JSON.stringify(macPorSerial).replace(/</g, '\\u003c') %></script>
+    <div class="tabla-scroll">
+      <table class="tabla tabla--venta">
+        <thead><tr><th>Artículo</th><th>Cantidad</th><th>Precio unitario</th><th>Serial(es)</th><th>Importe</th></tr></thead>
+        <tbody>
+          <% for (let i = 0; i < 5; i += 1) { %>
+            <% const itemId = itemIds[i] || ''; %>
+            <tr data-linea-venta>
+              <td data-etiqueta="Artículo">
+                <select name="itemId" class="campo-mini" data-item-venta>
+                  <option value="">Sin artículo</option>
+                  <% items.forEach((item) => { %>
+                    <option value="<%= item._id %>" data-precio="<%= item.price %>" data-tipo="<%= item.tracking %>" data-stock="<%= item.stock %>" data-unidad="<%= item.unit %>" <%= String(itemId) === String(item._id) ? 'selected' : '' %>><%= item.name %> · <%= item.code %> (<%= item.stock %> <%= item.unit %>)</option>
+                  <% }); %>
+                </select>
+              </td>
+              <td data-etiqueta="Cantidad"><input name="quantity" type="number" class="campo-mini" min="1" value="<%= cantidades[i] !== undefined ? cantidades[i] : 1 %>" data-cantidad-venta></td>
+              <td data-etiqueta="Precio unitario"><input name="unitPrice" type="number" class="campo-mini" min="0" step="0.01" value="<%= precios[i] !== undefined ? precios[i] : 0 %>" data-precio-venta></td>
+              <td data-etiqueta="Serial" data-celda-serial><select name="serials" class="campo-mini" data-seriales-venta data-serial-inicial="<%= seriales[i] || '' %>"><option value="">Elegir serial</option></select><span class="texto-suave" data-serial-no-aplica hidden>No aplica</span></td>
+              <td data-etiqueta="Importe"><strong data-importe-venta><%= formatearDinero(0) %></strong></td>
+            </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+    <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'items') }) %>
+  </section>
+
+  <section class="tarjeta superficie formulario__seccion">
+    <div class="formulario__cabecera">
+      <span class="formulario__numero">04</span>
+      <div><h3>Cierre económico</h3><p>El total se calcula en vivo. La factura se emite al instalar.</p></div>
+    </div>
+    <div class="formulario__rejilla">
+      <div class="campo<%= claseCampo(erroresCampo, 'installationCost') %>"><label for="installationCost">Costo de instalación</label><input id="installationCost" name="installationCost" type="number" min="0" step="0.01" value="<%= texto('installationCost', venta.installationCost ?? 0) %>" data-instalacion-venta><%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'installationCost') }) %></div>
+      <% if (config.billing.taxEnabled !== false) { %>
+        <div class="campo<%= claseCampo(erroresCampo, 'taxRatePercent') %>"><label for="taxRatePercent">IVA (%)</label><input id="taxRatePercent" name="taxRatePercent" type="number" min="0" max="100" step="0.01" value="<%= texto('taxRatePercent', venta.taxRatePercent ?? 0) %>" data-iva-venta><%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'taxRatePercent') }) %></div>
+      <% } else { %>
+        <input type="hidden" name="taxRatePercent" value="0">
+        <div class="campo campo--ancho"><label>IVA</label><p class="campo__ayuda">Desactivado en todo el sistema.</p></div>
+      <% } %>
+      <div class="campo campo--ancho<%= claseCampo(erroresCampo, 'notes') %>"><label for="notes">Notas</label><textarea id="notes" name="notes" rows="2" maxlength="500"><%= texto('notes', venta.notes) %></textarea><%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'notes') }) %></div>
+    </div>
+
+    <div class="resumen-servicio resumen-servicio--venta">
+      <div><small>Materiales</small><strong data-total-materiales><%= formatearDinero(0) %></strong></div>
+      <div><small>Instalación</small><strong data-total-instalacion><%= formatearDinero(0) %></strong></div>
+      <div><small>Subtotal</small><strong data-total-subtotal><%= formatearDinero(0) %></strong></div>
+      <% if (config.billing.taxEnabled !== false) { %>
+        <div><small>IVA</small><strong data-total-iva><%= formatearDinero(0) %></strong></div>
+      <% } %>
+      <div><small>Total</small><strong data-total-final><%= formatearDinero(0) %></strong></div>
+    </div>
+    <p class="nota nota--morado"><%- include('../partials/icon', { nombre: 'box' }) %> Al guardar, la venta queda <strong>En espera</strong> y no modifica el inventario. Al instalar se descuenta el stock y se emite la factura de instalación.</p>
+  </section>
+
+  <div class="formulario__acciones">
+    <a class="boton boton--secundario" href="/ventas">Cancelar</a>
+    <button type="submit" class="boton boton--primario"><%- include('../partials/icon', { nombre: 'check' }) %> Registrar venta</button>
+  </div>
+</form>

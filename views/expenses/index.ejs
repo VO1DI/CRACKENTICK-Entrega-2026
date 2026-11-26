@@ -1,0 +1,145 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Administración · Finanzas</p>
+    <h2 class="pagina-cabecera__titulo">Gastos mensuales</h2>
+    <p class="pagina-cabecera__texto">Proveedores, empleados, autos, renta y cualquier egreso recurrente de la empresa.</p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <a class="boton boton--secundario boton--sm" href="/finanzas?mes=<%= filtros.mes %>"><%- include('../partials/icon', { nombre: 'activity' }) %> Ver resultado</a>
+    <a class="boton boton--primario boton--sm" href="/admin/gastos/nuevo?mes=<%= filtros.mes %>"><%- include('../partials/icon', { nombre: 'plus' }) %> Nuevo movimiento</a>
+  </div>
+</section>
+
+<section class="rejilla rejilla--cuatro">
+  <article class="tarjeta superficie kpi kpi--rojo">
+    <div class="kpi__cabecera"><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'trendUp' }) %></span><span class="kpi__periodo">Egresos</span></div>
+    <p class="kpi__valor"><%= formatearDinero(resumen.gastos) %></p>
+    <p class="kpi__etiqueta">Gastos del mes</p>
+  </article>
+  <article class="tarjeta superficie kpi kpi--verde">
+    <div class="kpi__cabecera"><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'dollar' }) %></span><span class="kpi__periodo">Ingresos</span></div>
+    <p class="kpi__valor"><%= formatearDinero(resumen.ingresos) %></p>
+    <p class="kpi__etiqueta">Ingresos manuales</p>
+  </article>
+  <article class="tarjeta superficie kpi kpi--ambar">
+    <div class="kpi__cabecera"><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'clock' }) %></span><span class="kpi__periodo">Pendiente</span></div>
+    <p class="kpi__valor"><%= formatearDinero(resumen.pendienteTotal) %></p>
+    <p class="kpi__etiqueta">Por pagar</p>
+  </article>
+  <article class="tarjeta superficie kpi kpi--morado">
+    <div class="kpi__cabecera"><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'fileText' }) %></span><span class="kpi__periodo">Registros</span></div>
+    <p class="kpi__valor"><%= resumen.cantidad %></p>
+    <p class="kpi__etiqueta">Movimientos del mes</p>
+  </article>
+</section>
+
+<section class="tarjeta superficie panel">
+  <form class="formulario formulario--compacto" action="/admin/gastos" method="get">
+    <div class="formulario__rejilla">
+      <div class="campo">
+        <label for="mes">Mes</label>
+        <input id="mes" name="mes" type="month" value="<%= filtros.mes %>" data-auto-enviar>
+      </div>
+      <div class="campo">
+        <label for="tipo">Tipo</label>
+        <select id="tipo" name="tipo" data-auto-enviar>
+          <option value="">Todos</option>
+          <% tiposMovimiento.forEach((tipo) => { %>
+            <option value="<%= tipo %>" <%= filtros.tipo === tipo ? 'selected' : '' %>><%= etiquetas[tipo] || tipo %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="categoria">Categoría</label>
+        <select id="categoria" name="categoria" data-auto-enviar>
+          <option value="">Todas</option>
+          <% categoriasFinanzas.forEach((categoria) => { %>
+            <option value="<%= categoria %>" <%= filtros.categoria === categoria ? 'selected' : '' %>><%= etiquetasCategoria[categoria] || categoria %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="campo campo--ancho">
+        <label for="q">Buscar</label>
+        <input id="q" name="q" type="search" value="<%= filtros.q %>" placeholder="Concepto, proveedor o referencia">
+      </div>
+    </div>
+    <div class="formulario__acciones formulario__acciones--izquierda">
+      <button type="submit" class="boton boton--secundario boton--sm"><%- include('../partials/icon', { nombre: 'filter' }) %> Filtrar</button>
+      <a class="boton boton--secundario boton--sm" href="/admin/gastos?mes=<%= filtros.mes %>"><%- include('../partials/icon', { nombre: 'refresh' }) %> Limpiar</a>
+    </div>
+  </form>
+</section>
+
+<div class="dash-grid">
+  <section class="tarjeta superficie panel panel--tabla panel--ocho">
+    <div class="panel__cabecera">
+      <div><p class="etiqueta">Movimientos</p><h3>Registros del mes</h3></div>
+      <span class="texto-suave"><%= movimientos.length %> resultado(s)</span>
+    </div>
+    <% if (!movimientos.length) { %>
+      <div class="vacio vacio--compacto">
+        <p class="vacio__icono vacio__icono--verde"><%- include('../partials/icon', { nombre: 'check' }) %></p>
+        <p class="vacio__texto">No hay movimientos con estos filtros.</p>
+        <a class="boton boton--primario boton--sm" href="/admin/gastos/nuevo?mes=<%= filtros.mes %>">Registrar el primero</a>
+      </div>
+    <% } else { %>
+      <div class="tabla-scroll">
+        <table class="tabla tabla--movimientos">
+          <thead><tr><th>Fecha</th><th>Concepto</th><th>Categoría</th><th>Tipo</th><th>Método</th><th>Estado</th><th>Monto</th><th>Acciones</th></tr></thead>
+          <tbody>
+            <% movimientos.forEach((movimiento) => { %>
+              <tr>
+                <td data-etiqueta="Fecha"><%= formatearFecha(movimiento.date) %><% if (movimiento.recurring) { %><small class="mono">recurrente</small><% } %></td>
+                <td data-etiqueta="Concepto"><strong><%= movimiento.concept %></strong><small><%= movimiento.vendor || movimiento.reference || movimiento.notes || '—' %></small></td>
+                <td data-etiqueta="Categoría"><%= etiquetasCategoria[movimiento.category] || movimiento.category %></td>
+                <td data-etiqueta="Tipo"><span class="insignia insignia--<%= movimiento.type === 'income' ? 'active' : 'overdue' %>"><%= etiquetas[movimiento.type] || movimiento.type %></span></td>
+                <td data-etiqueta="Método"><%= movimiento.paymentMethod ? (etiquetas[movimiento.paymentMethod] || movimiento.paymentMethod) : '—' %></td>
+                <td data-etiqueta="Estado"><span class="insignia insignia--<%= movimiento.status === 'paid' ? 'active' : 'pending' %>"><%= etiquetas[movimiento.status] || movimiento.status %></span></td>
+                <td data-etiqueta="Monto"><strong class="<%= movimiento.type === 'income' ? 'monto--ok' : 'monto--deuda' %>"><%= movimiento.type === 'income' ? '+' : '−' %><%= formatearDinero(movimiento.amount, movimiento.currency) %></strong></td>
+                <td data-etiqueta="Acciones" class="tabla__acciones">
+                  <a class="boton-icono boton-icono--sm" href="/admin/gastos/<%= movimiento._id %>/editar" title="Editar"><%- include('../partials/icon', { nombre: 'edit' }) %></a>
+                  <form action="/admin/gastos/<%= movimiento._id %>/estado" method="post">
+                    <button type="submit" class="boton-icono boton-icono--sm" title="<%= movimiento.status === 'paid' ? 'Marcar pendiente' : 'Marcar pagado' %>"><%- include('../partials/icon', { nombre: movimiento.status === 'paid' ? 'clock' : 'check' }) %></button>
+                  </form>
+                  <form action="/admin/gastos/<%= movimiento._id %>" method="post" data-confirmar="¿Eliminar el movimiento «<%= movimiento.concept %>»?">
+                    <input type="hidden" name="_method" value="DELETE">
+                    <button type="submit" class="boton-icono boton-icono--sm" title="Eliminar"><%- include('../partials/icon', { nombre: 'trash' }) %></button>
+                  </form>
+                </td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </section>
+
+  <aside class="pila panel--cuatro">
+    <section class="tarjeta superficie panel">
+      <div class="panel__cabecera"><div><p class="etiqueta">Recordatorios</p><h3>Pendientes de pago</h3></div></div>
+      <% if (!pendientes.length) { %>
+        <p class="texto-suave">No hay gastos pendientes registrados.</p>
+      <% } else { %>
+        <ul class="lista-simple lista-simple--vertical">
+          <% pendientes.forEach((movimiento) => { %>
+            <li>
+              <div><strong><%= movimiento.concept %></strong><small><%= formatearFecha(movimiento.date) %> · <%= etiquetasCategoria[movimiento.category] || movimiento.category %></small></div>
+              <strong class="monto--deuda"><%= formatearDinero(movimiento.amount, movimiento.currency) %></strong>
+            </li>
+          <% }); %>
+        </ul>
+      <% } %>
+    </section>
+
+    <section class="tarjeta superficie panel">
+      <div class="panel__cabecera"><div><p class="etiqueta">Atajos</p><h3>Meses</h3></div></div>
+      <div class="pila">
+        <% meses.forEach((item) => { %>
+          <a class="boton boton--secundario boton--bloque <%= item.clave === filtros.mes ? 'boton--activo' : '' %>" href="/admin/gastos?mes=<%= item.clave %>">
+            <%- include('../partials/icon', { nombre: 'calendar' }) %> <%= item.etiqueta %>
+          </a>
+        <% }); %>
+      </div>
+    </section>
+  </aside>
+</div>

@@ -1,0 +1,133 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Firewall · Laboratorio</p>
+    <h2 class="pagina-cabecera__titulo">Visor de comandos</h2>
+    <p class="pagina-cabecera__texto">Mira exactamente qué comando RouterOS se enviaría antes de cortar o restaurar un servicio.</p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <a class="boton boton--secundario" href="/admin/configuracion/provision/simulador"><%- include('../partials/icon', { nombre: 'network' }) %> Aprovisionamiento</a>
+    <a class="boton boton--secundario" href="/admin/configuracion?tab=firewall"><%- include('../partials/icon', { nombre: 'settings' }) %> Configurar firewall</a>
+  </div>
+</section>
+
+<nav class="tabs" aria-label="Visores">
+  <a class="tabs__enlace is-activo" href="/configuracion/firewall/simulador">Corte y restauración</a>
+  <a class="tabs__enlace" href="/configuracion/provision/simulador?vista=servicio">Servicio</a>
+  <a class="tabs__enlace" href="/configuracion/provision/simulador?vista=plan">Plan</a>
+  <a class="tabs__enlace" href="/configuracion/provision/simulador?vista=pool">Pool</a>
+</nav>
+
+<div class="nota nota--morado">
+  <%- include('../partials/icon', { nombre: 'shield' }) %>
+  Este visor <strong>no ejecuta</strong> el comando en el router; solo lo genera y lo registra en auditoría.
+</div>
+
+<div class="rejilla rejilla--simulador">
+  <section class="tarjeta superficie panel">
+    <div class="panel__cabecera">
+      <div><p class="etiqueta">Selección</p><h3>Preparar comando</h3></div>
+      <span class="insignia insignia--<%= accion === 'block' ? 'suspended' : 'active' %>"><%= accion === 'block' ? 'Corte' : 'Restauración' %></span>
+    </div>
+
+    <form method="get" action="/configuracion/firewall/simulador" class="formulario formulario--compacto">
+      <div class="formulario__rejilla">
+        <div class="campo campo--ancho">
+          <label for="suscripcion">Servicio</label>
+          <select id="suscripcion" name="suscripcion" data-auto-enviar required>
+            <% if (!suscripciones.length) { %><option value="">Sin servicios contratados</option><% } %>
+            <% suscripciones.forEach((sub) => { %>
+              <option value="<%= sub._id %>" <%= String(seleccionada) === String(sub._id) ? 'selected' : '' %>>
+                <%= sub.clientId ? `${sub.clientId.clientCode} · ${sub.clientId.firstName} ${sub.clientId.lastName}` : 'Cliente' %> — <%= sub.planSnapshot?.name || 'Sin plan' %>
+              </option>
+            <% }); %>
+          </select>
+        </div>
+        <div class="campo">
+          <label for="accion">Acción</label>
+          <select id="accion" name="accion" data-auto-enviar>
+            <option value="block" <%= accion === 'block' ? 'selected' : '' %>>Cortar servicio (MOROSOS)</option>
+            <option value="unblock" <%= accion === 'unblock' ? 'selected' : '' %>>Restaurar servicio</option>
+          </select>
+        </div>
+      </div>
+      <div class="formulario__acciones formulario__acciones--izquierda">
+        <button type="submit" class="boton boton--secundario boton--sm"><%- include('../partials/icon', { nombre: 'refresh' }) %> Actualizar vista</button>
+      </div>
+    </form>
+
+    <% if (!preview) { %>
+      <div class="vacio vacio--compacto">
+        <p class="vacio__icono"><%- include('../partials/icon', { nombre: 'shield' }) %></p>
+        <p class="vacio__texto">Selecciona un servicio con configuración técnica para generar el comando.</p>
+        <a class="boton boton--secundario boton--sm" href="/clientes">Ir a clientes</a>
+      </div>
+    <% } else { %>
+      <div class="comando-panel">
+        <div class="comando-panel__cabecera">
+          <p class="etiqueta">Comando RouterOS</p>
+          <span class="insignia insignia--none"><%= preview.tipo %></span>
+        </div>
+        <pre class="bloque-codigo" id="comandoSimulado"><code><%= preview.comando %></code></pre>
+        <div class="comando-panel__acciones">
+          <button type="button" class="boton boton--secundario boton--sm" data-copiar="#comandoSimulado">
+            <%- include('../partials/icon', { nombre: 'copy' }) %> Copiar comando
+          </button>
+          <form action="/configuracion/firewall/simular" method="post" data-confirmar="Se registrará el comando en auditoría. No se modificará el servicio. ¿Continuar?">
+            <input type="hidden" name="subscriptionId" value="<%= preview.subscription._id %>">
+            <input type="hidden" name="action" value="<%= accion %>">
+            <button type="submit" class="boton boton--primario boton--sm">
+              <%- include('../partials/icon', { nombre: 'play' }) %> Registrar simulación
+            </button>
+          </form>
+        </div>
+        <p class="texto-suave"><%= preview.descripcion %></p>
+      </div>
+
+      <div class="resumen-servicio resumen-servicio--simulador">
+        <div><small>Cliente</small><strong><%= preview.subscription.clientId ? `${preview.subscription.clientId.firstName} ${preview.subscription.clientId.lastName}` : '—' %></strong></div>
+        <div><small>Código</small><strong><%= preview.subscription.clientId?.clientCode || '—' %></strong></div>
+        <div><small>Conexión</small><strong><%= etiquetas[preview.subscription.serviceConfig.connectionType] || preview.subscription.serviceConfig.connectionType %></strong></div>
+        <div><small>Estado</small><strong><%= etiquetas[preview.subscription.status] || preview.subscription.status %></strong></div>
+        <div><small>Firewall</small><strong><%= etiquetas[preview.subscription.firewallState] || preview.subscription.firewallState %></strong></div>
+      </div>
+    <% } %>
+  </section>
+
+  <aside class="pila">
+    <section class="tarjeta superficie panel">
+      <div class="panel__cabecera"><div><p class="etiqueta">Referencia</p><h3>Plantillas de comando</h3></div></div>
+      <div class="plantilla-comando">
+        <p class="etiqueta">PPPoE</p>
+        <code>/ppp/secret/disable [find name="usuario"]</code>
+        <code>/ppp/secret/enable [find name="usuario"]</code>
+      </div>
+      <div class="plantilla-comando">
+        <p class="etiqueta">IP estática / DHCP</p>
+        <code>/ip/firewall/address-list/add list=MOROSOS ...</code>
+        <code>/ip/firewall/address-list/remove [find ...]</code>
+      </div>
+    </section>
+
+    <section class="tarjeta superficie panel">
+      <div class="panel__cabecera">
+        <div><p class="etiqueta">Historial</p><h3>Últimas simulaciones</h3></div>
+        <a class="enlace-flecha" href="/logs?modulo=firewall">Logs <span aria-hidden="true">→</span></a>
+      </div>
+      <% if (!historial.length) { %>
+        <div class="vacio vacio--compacto"><p class="vacio__texto">Aún no hay comandos registrados.</p></div>
+      <% } else { %>
+        <ul class="timeline timeline--compacta">
+          <% historial.forEach((log) => { %>
+            <li>
+              <span class="timeline__punto <%= log.status === 'failed' ? 'timeline__punto--rojo' : 'timeline__punto--morado' %>"></span>
+              <div class="timeline__contenido">
+                <p><%= log.description %></p>
+                <small><%= formatearFechaHora(log.timestamp) %> · <%= log.action %></small>
+              </div>
+            </li>
+          <% }); %>
+        </ul>
+      <% } %>
+    </section>
+  </aside>
+</div>

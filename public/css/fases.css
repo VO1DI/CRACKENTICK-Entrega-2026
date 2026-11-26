@@ -1,0 +1,121 @@
+/* Fases del plan visual: contraste, foco, tablas móviles y detalles. */
+
+/* Contraste de textos secundarios en los tres temas. */
+:root { --faint: #8b8b9e; }
+[data-tema='claro'] { --faint: #6c5946; }
+[data-tema='claro-suave'] { --faint: #746f8b; }
+
+/* Foco visible para teclado sin cambiar el diseño del ratón. */
+:focus-visible {
+  outline: 2px solid var(--violet);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.saltar:focus-visible { outline-offset: 3px; }
+
+/* Jerarquía y espaciado base. */
+.contenido { gap: 20px; }
+.pagina-cabecera__texto { max-width: 72ch; }
+.topbar__miga {
+  letter-spacing: 0.01em;
+}
+.topbar__miga a { color: var(--muted); }
+.topbar__miga a:hover { color: var(--violet-soft); }
+
+/* Estados vacíos más claros y con acción. */
+.vacio {
+  padding: 34px 20px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface-2) 58%, transparent);
+}
+.vacio__icono {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 8px;
+  border-radius: 50%;
+  background: var(--violet-dim);
+  color: var(--violet-soft);
+}
+.vacio__texto { max-width: 44ch; margin: 0 auto; color: var(--muted); }
+
+/* Tablas de listado convertidas en tarjetas en pantallas pequeñas. */
+@media (max-width: 700px) {
+  .panel--tabla .tabla-scroll { overflow: visible; }
+  .panel--tabla .tabla,
+  .panel--tabla .tabla tbody { display: block; width: 100%; }
+  .panel--tabla .tabla thead { display: none; }
+  .panel--tabla .tabla tbody { display: flex; flex-direction: column; gap: 10px; }
+  .panel--tabla .tabla tr {
+    display: block;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+  }
+  .panel--tabla .tabla td {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    width: 100%;
+    padding: 5px 0;
+    border: 0;
+    text-align: right;
+  }
+  .panel--tabla .tabla td::before {
+    content: attr(data-etiqueta);
+    flex: none;
+    color: var(--faint);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-align: left;
+    text-transform: uppercase;
+  }
+  .panel--tabla .tabla td:not([data-etiqueta])::before,
+  .panel--tabla .tabla td[data-etiqueta='']::before { content: ''; }
+  .panel--tabla .tabla td.tabla__acciones {
+    justify-content: flex-end;
+    border-top: 1px solid var(--border);
+    margin-top: 4px;
+    padding-top: 10px;
+  }
+  .panel--tabla .tabla td.tabla__acciones::before { content: none; }
+}
+
+/* Modo compacto de tablas y menú. */
+body.vista-compacta .tabla th,
+body.vista-compacta .tabla td {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+body.vista-compacta .sidebar__enlace {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+body.vista-compacta .contenido {
+  gap: 14px;
+}
+body.vista-compacta .tarjeta,
+body.vista-compacta .superficie {
+  border-radius: 12px;
+}
+
+/* Esqueleto reutilizable para futuras cargas diferidas. */
+.esqueleto {
+  display: block;
+  min-height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--surface-2), var(--surface-3), var(--surface-2));
+  background-size: 200% 100%;
+  animation: esqueleto 1.4s ease-in-out infinite;
+}
+@keyframes esqueleto {
+  to { background-position: -200% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .esqueleto { animation: none; }
+}

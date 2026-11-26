@@ -1,0 +1,94 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Comercial</p>
+    <h2 class="pagina-cabecera__titulo">Planes</h2>
+    <p class="pagina-cabecera__texto"><%= resumen.total %> plan(es) · <%= resumen.activos %> activo(s) · <%= resumen.servicios %> servicio(s) activo(s)</p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <a class="boton boton--primario" href="/planes/nuevo"><%- include('../partials/icon', { nombre: 'plus' }) %> Nuevo plan</a>
+  </div>
+</section>
+
+<div class="tabs tabs--sub">
+  <a class="tabs__enlace <%= filtros.modo === 'simple_queue' ? 'is-activo' : '' %>" href="/planes?modo=simple_queue">Colas simples <span class="chip"><%= modos.simple_queue.total %></span></a>
+  <a class="tabs__enlace <%= filtros.modo === 'address_list' ? 'is-activo' : '' %>" href="/planes?modo=address_list">Address list <span class="chip"><%= modos.address_list.total %></span></a>
+</div>
+
+<section class="tarjeta superficie filtros">
+  <form method="get" action="/planes" class="filtros__form">
+    <input type="hidden" name="modo" value="<%= filtros.modo %>">
+    <div class="campo campo--busqueda">
+      <label class="sr-only" for="q">Buscar plan</label>
+      <div class="campo__control">
+        <%- include('../partials/icon', { nombre: 'search' }) %>
+        <input id="q" type="search" name="q" value="<%= filtros.q %>" placeholder="Nombre del plan">
+      </div>
+    </div>
+    <div class="campo">
+      <label for="estado">Estado</label>
+      <select id="estado" name="estado" data-auto-enviar>
+        <option value="">Todos</option>
+        <option value="activos" <%= filtros.estado === 'activos' ? 'selected' : '' %>>Activos</option>
+        <option value="inactivos" <%= filtros.estado === 'inactivos' ? 'selected' : '' %>>Inactivos</option>
+      </select>
+    </div>
+    <button type="submit" class="boton boton--secundario boton--sm">Filtrar</button>
+  </form>
+</section>
+
+<% if (planes.length === 0) { %>
+  <section class="tarjeta superficie vacio">
+    <p class="vacio__icono"><%- include('../partials/icon', { nombre: 'layers' }) %></p>
+    <h3 class="vacio__titulo">No hay planes</h3>
+    <p class="vacio__texto">Crea el primer plan para poder contratar servicios.</p>
+    <a class="boton boton--primario" href="/planes/nuevo">Crear plan</a>
+  </section>
+<% } else { %>
+  <div class="rejilla rejilla--planes">
+    <% planes.forEach((plan) => { %>
+      <article class="tarjeta superficie plan-card <%= plan.active ? '' : 'plan-card--inactivo' %>">
+        <div class="plan-card__cabecera">
+          <div>
+            <p class="etiqueta"><%= etiquetas[plan.billingInterval] %> · <%= plan.trafficMode === 'address_list' ? 'Address list' : 'Cola simple' %></p>
+            <h3><%= plan.name %></h3>
+          </div>
+          <span class="insignia insignia--<%= plan.active ? 'active' : 'cancelled' %>"><%= plan.active ? 'Activo' : 'Inactivo' %></span>
+        </div>
+        <p class="plan-card__precio"><%= formatearDinero(plan.price) %><small>/ <%= etiquetas[plan.billingInterval].toLowerCase() %></small></p>
+        <p class="texto-suave">
+          IVA:
+          <% if (config.billing.taxEnabled === false) { %>
+            <strong class="monto--deuda">Desactivado</strong>
+          <% } else { %>
+            <strong><%= plan.taxRate === null || plan.taxRate === undefined ? `global (${Math.round(config.billing.taxRate * 100)} %)` : `${Math.round(plan.taxRate * 10000) / 100} %` %></strong>
+          <% } %>
+        </p>
+        <div class="plan-card__velocidades">
+          <div><strong><%= plan.downloadSpeed %></strong><span>Mbps baja</span></div>
+          <div><strong><%= plan.uploadSpeed %></strong><span>Mbps subida</span></div>
+        </div>
+        <p class="plan-card__descripcion"><%= plan.description || 'Sin descripción.' %></p>
+        <% if (plan.trafficMode === 'address_list') { %>
+          <p class="texto-suave">Routers: <%= (plan.routerIds || []).map((r) => r?.name).filter(Boolean).join(', ') || 'Sin routers' %></p>
+          <p class="texto-suave">Lista: <span class="mono"><%= plan.addressListName %></span></p>
+        <% } %>
+        <div class="plan-card__pie">
+          <span class="texto-suave"><%= plan.servicios %> servicio(s)</span>
+          <div class="plan-card__acciones">
+            <a class="boton-icono boton-icono--sm" href="/planes/<%= plan._id %>/editar" aria-label="Editar <%= plan.name %>" title="Editar"><%- include('../partials/icon', { nombre: 'edit' }) %></a>
+            <form action="/planes/<%= plan._id %>/estado" method="post">
+              <button type="submit" class="boton-icono boton-icono--sm" aria-label="<%= plan.active ? 'Desactivar' : 'Activar' %> <%= plan.name %>" title="<%= plan.active ? 'Desactivar' : 'Activar' %>"><%- include('../partials/icon', { nombre: plan.active ? 'ban' : 'check' }) %></button>
+            </form>
+            <% if (plan.servicios === 0) { %>
+              <form action="/planes/<%= plan._id %>" method="post" data-confirmar="¿Eliminar el plan <%= plan.name %>?">
+                <input type="hidden" name="_method" value="DELETE">
+                <button type="submit" class="boton-icono boton-icono--sm boton-icono--peligro" aria-label="Eliminar <%= plan.name %>" title="Eliminar"><%- include('../partials/icon', { nombre: 'trash' }) %></button>
+              </form>
+            <% } %>
+          </div>
+        </div>
+      </article>
+    <% }); %>
+  </div>
+  <%- include('../partials/pagination', { paginacion, filtros }) %>
+<% } %>

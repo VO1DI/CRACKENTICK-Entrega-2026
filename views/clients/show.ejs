@@ -1,0 +1,575 @@
+<% const puedeDatos = puedeEditar('clientes.datos'); const puedeServicio = puedeEditar('clientes.servicio'); const puedeCortes = puedeEditar('clientes.cortes'); %>
+<section class="ficha-cabecera">
+  <div class="ficha-cabecera__identidad">
+    <span class="avatar avatar--lg"><%= cliente.initials %></span>
+    <div>
+      <div class="ficha-cabecera__linea">
+        <h2><%= cliente.fullName %></h2>
+        <span class="insignia insignia--<%= cliente.status %>"><%= etiquetas[cliente.status] %></span>
+        <% if (subscription) { %>
+          <span class="insignia insignia--<%= subscription.status %>"><%= etiquetas[subscription.status] %></span>
+        <% } %>
+      </div>
+      <p class="ficha-cabecera__meta">
+        <span class="codigo"><%= cliente.clientCode %></span>
+        <span><%= cliente.email || 'Sin correo' %></span>
+        <span><%= cliente.phone || 'Sin teléfono' %></span>
+      </p>
+    </div>
+  </div>
+  <div class="ficha-cabecera__acciones">
+    <% if (puedeFacturacion) { %>
+    <div class="ficha-cabecera__deuda">
+      <small>Deuda total</small>
+      <strong class="<%= deuda.total > 0 ? 'monto--deuda' : 'monto--ok' %>"><%= formatearDinero(deuda.total) %></strong>
+      <span><%= deuda.cantidad %> factura(s) pendiente(s)</span>
+    </div>
+    <% } %>
+    <% if (puedeDatos) { %><a class="boton boton--secundario boton--sm" href="/clientes/<%= cliente._id %>/editar"><%- include('../partials/icon', { nombre: 'edit' }) %> Editar</a><% } %>
+    <% if (subscription) { %>
+      <a class="boton boton--secundario boton--sm" href="/clientes/<%= cliente._id %>?tab=monitoreo"><%- include('../partials/icon', { nombre: 'gauge' }) %> Monitorear</a>
+      <a class="boton boton--secundario boton--sm" href="/soporte/tickets/nuevo?cliente=<%= cliente._id %>"><%- include('../partials/icon', { nombre: 'ticket' }) %> Ticket</a>
+    <% } %>
+    <% if (!subscription && puedeServicio) { %>
+      <a class="boton boton--primario boton--sm" href="/clientes/<%= cliente._id %>/servicio/nuevo"><%- include('../partials/icon', { nombre: 'plus' }) %> Nuevo servicio</a>
+    <% } %>
+  </div>
+</section>
+
+<nav class="tabs" aria-label="Secciones del cliente">
+  <a class="tabs__enlace <%= tab === 'general' ? 'is-activo' : '' %>" href="/clientes/<%= cliente._id %>?tab=general" <%= tab === 'general' ? 'aria-current="page"' : '' %>>Datos generales</a>
+  <% if (tabsPermitidos.includes('servicio')) { %><a class="tabs__enlace <%= tab === 'servicio' ? 'is-activo' : '' %>" href="/clientes/<%= cliente._id %>?tab=servicio" <%= tab === 'servicio' ? 'aria-current="page"' : '' %>>Servicio</a><% } %>
+  <% if (tabsPermitidos.includes('monitoreo')) { %><a class="tabs__enlace <%= tab === 'monitoreo' ? 'is-activo' : '' %>" href="/clientes/<%= cliente._id %>?tab=monitoreo" <%= tab === 'monitoreo' ? 'aria-current="page"' : '' %>>Monitoreo</a><% } %>
+  <% if (tabsPermitidos.includes('facturacion')) { %><a class="tabs__enlace <%= tab === 'facturacion' ? 'is-activo' : '' %>" href="/clientes/<%= cliente._id %>?tab=facturacion" <%= tab === 'facturacion' ? 'aria-current="page"' : '' %>>Facturación</a><% } %>
+  <% if (tabsPermitidos.includes('tickets')) { %><a class="tabs__enlace <%= tab === 'tickets' ? 'is-activo' : '' %>" href="/clientes/<%= cliente._id %>?tab=tickets" <%= tab === 'tickets' ? 'aria-current="page"' : '' %>>Tickets<% if (tickets.length) { %> <span class="chip"><%= tickets.length %></span><% } %></a><% } %>
+  <% if (tabsPermitidos.includes('historial')) { %><a class="tabs__enlace <%= tab === 'historial' ? 'is-activo' : '' %>" href="/clientes/<%= cliente._id %>?tab=historial" <%= tab === 'historial' ? 'aria-current="page"' : '' %>>Historial</a><% } %>
+</nav>
+
+<% if (tab === 'general') { %>
+  <div class="rejilla rejilla--ficha">
+    <div class="pila">
+      <section class="tarjeta superficie panel">
+        <div class="panel__cabecera"><div><p class="etiqueta">Contacto</p><h3>Datos generales</h3></div></div>
+        <dl class="datos">
+          <div><dt>Nombre completo</dt><dd><%= cliente.fullName %></dd></div>
+          <div><dt>Identificación</dt><dd><%= cliente.taxId || '—' %></dd></div>
+          <div><dt>Correo</dt><dd><%= cliente.email || '—' %></dd></div>
+          <div><dt>Teléfono</dt><dd><%= cliente.phone || '—' %></dd></div>
+          <div><dt>Cliente desde</dt><dd><%= formatearFecha(cliente.createdAt) %></dd></div>
+          <div><dt>Última actualización</dt><dd><%= formatearFecha(cliente.updatedAt) %></dd></div>
+        </dl>
+      </section>
+
+      <section class="tarjeta superficie panel">
+        <div class="panel__cabecera"><div><p class="etiqueta">Ubicación</p><h3>Dirección</h3></div></div>
+        <dl class="datos">
+          <div><dt>Dirección</dt><dd><%= cliente.address?.street || '—' %></dd></div>
+          <div><dt>Ciudad</dt><dd><%= cliente.address?.city || '—' %></dd></div>
+          <div><dt>Departamento / estado</dt><dd><%= cliente.address?.state || '—' %></dd></div>
+          <div><dt>Código postal</dt><dd><%= cliente.address?.postalCode || '—' %></dd></div>
+        </dl>
+      </section>
+
+      <section class="tarjeta superficie panel">
+        <div class="panel__cabecera"><div><p class="etiqueta">Facturación</p><h3>Datos fiscales</h3></div></div>
+        <dl class="datos">
+          <div><dt>Razón social</dt><dd><%= cliente.billingData?.legalName || cliente.fullName %></dd></div>
+          <div><dt>Identificación fiscal</dt><dd><%= cliente.billingData?.taxId || cliente.taxId || '—' %></dd></div>
+          <div><dt>Correo</dt><dd><%= cliente.billingData?.email || cliente.email || '—' %></dd></div>
+          <div><dt>Dirección</dt><dd><%= cliente.billingData?.address || cliente.address?.street || '—' %></dd></div>
+        </dl>
+      </section>
+
+      <section class="tarjeta superficie panel">
+        <div class="panel__cabecera"><div><p class="etiqueta">Interno</p><h3>Notas</h3></div></div>
+        <p class="texto-suave"><%= cliente.notes || 'Sin notas registradas.' %></p>
+      </section>
+
+      <section class="tarjeta superficie panel">
+        <div class="panel__cabecera">
+          <div><p class="etiqueta">Portal</p><h3>Acceso del cliente</h3></div>
+          <span class="insignia insignia--<%= cliente.portalEnabled ? 'active' : 'none' %>"><%= cliente.portalEnabled ? 'Habilitado' : 'Sin acceso' %></span>
+        </div>
+        <p class="texto-suave">Entra en <span class="mono">/portal</span> con el código <strong class="mono"><%= cliente.clientCode %></strong> y la clave generada aquí.</p>
+        <% if (cliente.portalLastLoginAt) { %><p class="texto-suave">Último acceso: <%= formatearFechaHora(cliente.portalLastLoginAt) %></p><% } %>
+        <% if (puedeDatos) { %>
+        <div class="tabla__acciones">
+          <form action="/clientes/<%= cliente._id %>/portal" method="post" data-confirmar="¿Generar una clave nueva para el portal? La anterior dejará de funcionar.">
+            <input type="hidden" name="accion" value="habilitar">
+            <button type="submit" class="boton boton--secundario boton--sm"><%= cliente.portalEnabled ? 'Restablecer clave' : 'Habilitar portal' %></button>
+          </form>
+          <% if (cliente.portalEnabled) { %>
+            <form action="/clientes/<%= cliente._id %>/portal" method="post" data-confirmar="¿Quitar el acceso al portal de este cliente?">
+              <input type="hidden" name="accion" value="deshabilitar">
+              <button type="submit" class="boton boton--secundario boton--sm">Deshabilitar</button>
+            </form>
+          <% } %>
+        </div>
+        <% } %>
+      </section>
+    </div>
+
+    <div class="pila">
+      <section class="tarjeta superficie panel panel--resumen">
+        <div class="panel__cabecera"><div><p class="etiqueta">Resumen</p><h3>Estado del cliente</h3></div></div>
+        <div class="resumen-linea"><span>Plan actual</span><strong><%= subscription ? subscription.planSnapshot?.name : 'Sin servicio' %></strong></div>
+        <div class="resumen-linea"><span>Servicio</span><span class="insignia insignia--<%= subscription ? subscription.status : 'vacio' %>"><%= subscription ? etiquetas[subscription.status] : 'Sin servicio' %></span></div>
+        <div class="resumen-linea"><span>Firewall</span><span class="insignia insignia--<%= subscription ? subscription.firewallState : 'none' %>"><%= subscription ? etiquetas[subscription.firewallState] : 'Sin acción' %></span></div>
+        <% if (puedeFacturacion) { %>
+        <div class="resumen-linea"><span>Deuda</span><strong class="<%= deuda.total > 0 ? 'monto--deuda' : 'monto--ok' %>"><%= formatearDinero(deuda.total) %></strong></div>
+        <div class="resumen-linea"><span>Facturas</span><strong><%= invoices.length %></strong></div>
+        <a class="boton boton--secundario boton--bloque" href="/clientes/<%= cliente._id %>?tab=facturacion">Ver facturación</a>
+        <% } %>
+      </section>
+
+      <section class="tarjeta superficie panel">
+        <div class="panel__cabecera"><div><p class="etiqueta">Acciones</p><h3>Operación rápida</h3></div></div>
+        <div class="pila">
+          <a class="boton boton--secundario boton--bloque" href="/clientes/<%= cliente._id %>?tab=servicio"><%- include('../partials/icon', { nombre: 'wifi' }) %> Gestionar servicio</a>
+          <a class="boton boton--secundario boton--bloque" href="/finanzas/facturacion/previsualizar"><%- include('../partials/icon', { nombre: 'receipt' }) %> Previsualizar facturación</a>
+          <a class="boton boton--secundario boton--bloque" href="/admin/configuracion/firewall/simulador?suscripcion=<%= subscription ? subscription._id : '' %>"><%- include('../partials/icon', { nombre: 'shield' }) %> Ver comando</a>
+          <% if (puedeDatos) { %>
+          <% if (!bloqueos.servicios && !bloqueos.facturas && !bloqueos.tickets && !bloqueos.ventas && !bloqueos.averias && !bloqueos.instalaciones) { %>
+            <form action="/clientes/<%= cliente._id %>" method="post" data-confirmar="¿Eliminar definitivamente a <%= cliente.fullName %>? Esta acción no se puede deshacer.">
+              <input type="hidden" name="_method" value="DELETE">
+              <button type="submit" class="boton boton--peligro boton--bloque"><%- include('../partials/icon', { nombre: 'trash' }) %> Eliminar cliente</button>
+            </form>
+          <% } else { %>
+            <p class="texto-suave">Este cliente tiene historial. Usa <strong>Retirado</strong> en su ficha en lugar de eliminarlo.</p>
+          <% } %>
+          <% } %>
+        </div>
+      </section>
+    </div>
+  </div>
+<% } %>
+
+<% if (tab === 'servicio') { %>
+  <% if (!puedeServicio && !puedeCortes) { %>
+    <div class="aviso aviso--advertencia" role="note">
+      <span class="aviso__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></span>
+      <div class="aviso__texto"><strong>Solo lectura técnica.</strong> Puedes consultar el servicio, pero crear, editar o eliminar requiere el permiso <span class="mono">clientes.servicio</span> y cortar/restaurar el permiso <span class="mono">clientes.cortes</span>.</div>
+    </div>
+  <% } %>
+  <% if (!subscription) { %>
+    <section class="tarjeta superficie vacio">
+      <p class="vacio__icono"><%- include('../partials/icon', { nombre: 'wifi' }) %></p>
+      <h3 class="vacio__titulo">Este cliente aún no tiene servicio</h3>
+      <p class="vacio__texto">Asigna un plan y una configuración técnica para empezar a facturar y gestionar cortes.</p>
+      <% if (puedeServicio) { %><a class="boton boton--primario" href="/clientes/<%= cliente._id %>/servicio/nuevo">Contratar servicio</a><% } else { %><p class="texto-suave">Solicita a un técnico con permiso de instalación que complete el servicio.</p><% } %>
+    </section>
+  <% } else { %>
+    <% const sv = servicioForm?.valores || {}; %>
+    <% const svc = subscription.serviceConfig; %>
+    <% const svSel = (campo, respaldo) => String(sv[campo] !== undefined && sv[campo] !== null && sv[campo] !== '' ? sv[campo] : (respaldo || '')); %>
+    <% const svTexto = (campo, respaldo) => (sv[campo] !== undefined && sv[campo] !== null && sv[campo] !== '' ? sv[campo] : (respaldo ?? '')); %>
+    <% const svErr = servicioForm?.campos || {}; %>
+    <div class="rejilla rejilla--ficha">
+      <div class="pila">
+        <section class="tarjeta superficie panel panel--servicio">
+          <div class="panel__cabecera">
+            <div><p class="etiqueta">Plan contratado</p><h3><%= subscription.planSnapshot.name %></h3></div>
+            <span class="insignia insignia--<%= subscription.status %>"><%= etiquetas[subscription.status] %></span>
+          </div>
+          <div class="servicio-hero">
+            <div><strong><%= subscription.planSnapshot.downloadSpeed %></strong><span>Mbps baja</span></div>
+            <div><strong><%= subscription.planSnapshot.uploadSpeed %></strong><span>Mbps subida</span></div>
+            <div><strong><%= formatearDinero(subscription.planSnapshot.price) %></strong><span><%= etiquetas[subscription.planSnapshot.billingInterval] || subscription.planSnapshot.billingInterval %></span></div>
+          </div>
+          <dl class="datos datos--dos">
+            <div><dt>Conexión</dt><dd><%= etiquetas[subscription.serviceConfig.connectionType] || subscription.serviceConfig.connectionType %></dd></div>
+            <div><dt>Router</dt><dd><%= subscription.serviceConfig.routerId?.name || 'Automático' %></dd></div>
+            <div><dt>Pool</dt><dd class="mono"><%= subscription.serviceConfig.ipPoolId?.cidr || '—' %></dd></div>
+            <div><dt>IP asignada</dt><dd class="mono"><%= subscription.serviceConfig.ipAddress || '—' %></dd></div>
+            <div><dt>Usuario PPPoE</dt><dd class="mono"><%= subscription.serviceConfig.pppoeUsername || '—' %></dd></div>
+            <% const esAL = (subscription.planSnapshot?.trafficMode || subscription.planId?.trafficMode) === 'address_list'; %>
+            <div><dt><%= esAL ? 'Address list' : 'Cola simple' %></dt><dd class="mono"><%= esAL ? (subscription.serviceConfig.ipAddress || '—') : (subscription.serviceConfig.queueName || '—') %></dd></div>
+            <div><dt>Aprovisionamiento</dt><dd><span class="insignia insignia--<%= subscription.serviceConfig.provisioningState === 'ok' ? 'active' : subscription.serviceConfig.provisioningState === 'error' ? 'overdue' : 'none' %>"><%= subscription.serviceConfig.provisioningState === 'ok' ? 'OK' : subscription.serviceConfig.provisioningState === 'error' ? 'Error' : 'Pendiente' %></span></dd></div>
+            <div><dt>Instalado</dt><dd><%= formatearFecha(subscription.installedAt) %></dd></div>
+            <div><dt>Periodo actual</dt><dd><%= formatearFecha(subscription.currentPeriodStart) %> → <%= formatearFecha(subscription.currentPeriodEnd) %></dd></div>
+            <div><dt>Último cambio</dt><dd><%= formatearFecha(subscription.lastStatusChangeAt) %></dd></div>
+          </dl>
+          <% if (subscription.serviceConfig.connectionType === 'dhcp') { %>
+            <p class="nota nota--ambar"><%- include('../partials/icon', { nombre: 'alert' }) %> En DHCP la IP puede cambiar. Para cortes estables se recomienda PPPoE o reserva DHCP.</p>
+          <% } %>
+        </section>
+
+        <% if (puedeServicio) { %>
+        <section class="tarjeta superficie panel">
+          <div class="panel__cabecera"><div><p class="etiqueta">Técnico</p><h3>Configuración del servicio</h3></div></div>
+          <% if (servicioForm?.errores?.length) { %>
+            <div class="aviso aviso--error" role="alert">
+              <span class="aviso__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></span>
+              <div class="aviso__texto"><strong>Revisa los datos:</strong><ul class="lista-errores"><% servicioForm.errores.forEach((m) => { %><li><%= m %></li><% }); %></ul></div>
+            </div>
+          <% } %>
+          <form action="/clientes/<%= cliente._id %>/servicio" method="post" class="formulario formulario--compacto">
+            <input type="hidden" name="_method" value="PUT">
+            <div class="formulario__rejilla">
+              <div class="campo<%= claseCampo(svErr, 'connectionType') %>">
+                <label for="connectionType">Tipo de conexión</label>
+                <select id="connectionType" name="connectionType" data-conexion>
+                  <option value="pppoe" <%= svSel('connectionType', svc.connectionType) === 'pppoe' ? 'selected' : '' %>>PPPoE</option>
+                  <option value="static" <%= svSel('connectionType', svc.connectionType) === 'static' ? 'selected' : '' %>>IP estática</option>
+                  <option value="dhcp" <%= svSel('connectionType', svc.connectionType) === 'dhcp' ? 'selected' : '' %>>DHCP</option>
+                </select>
+                <%- include('../partials/campo-error', { mensaje: errorCampo(svErr, 'connectionType') }) %>
+              </div>
+              <div class="campo<%= claseCampo(svErr, 'routerId') %>">
+                <label for="routerId">Router</label>
+                <select id="routerId" name="routerId" data-router-servicio>
+                  <option value="">Automático</option>
+                  <% routers.forEach((router) => { %>
+                    <option value="<%= router._id %>" <%= svSel('routerId', svc.routerId?._id || svc.routerId) === String(router._id) ? 'selected' : '' %>><%= router.name %> · <%= etiquetas[router.mode] %></option>
+                  <% }); %>
+                </select>
+                <%- include('../partials/campo-error', { mensaje: errorCampo(svErr, 'routerId') }) %>
+              </div>
+              <div class="campo<%= claseCampo(svErr, 'ipPoolId') %>">
+                <label for="ipPoolId">Pool de IP</label>
+                <select id="ipPoolId" name="ipPoolId" data-pool-servicio>
+                  <option value="">Sin pool</option>
+                  <% pools.forEach((pool) => { %>
+                    <option
+                      value="<%= pool._id %>"
+                      data-router="<%= pool.routerId?._id || pool.routerId || '' %>"
+                      data-ips-url="/clientes/api/pools/<%= pool._id %>/ips"
+                      <%= svSel('ipPoolId', svc.ipPoolId?._id || svc.ipPoolId) === String(pool._id) ? 'selected' : '' %>
+                    ><%= pool.name %> · <%= pool.cidr %></option>
+                  <% }); %>
+                </select>
+                <span class="campo__ayuda" data-pool-ayuda>Al elegir un pool se muestran las IP disponibles.</span>
+                <%- include('../partials/campo-error', { mensaje: errorCampo(svErr, 'ipPoolId') }) %>
+              </div>
+              <div class="campo<%= claseCampo(svErr, 'pppoeUsername') %>" data-campo="pppoe">
+                <label for="pppoeUsername">Usuario PPPoE</label>
+                <input id="pppoeUsername" name="pppoeUsername" type="text" value="<%= svTexto('pppoeUsername', svc.pppoeUsername) %>" maxlength="60">
+                <%- include('../partials/campo-error', { mensaje: errorCampo(svErr, 'pppoeUsername') }) %>
+              </div>
+              <div class="campo" data-campo="pppoe">
+                <label for="pppoePassword">Nueva contraseña PPPoE</label>
+                <input id="pppoePassword" name="pppoePassword" type="password" placeholder="Dejar en blanco para conservar" maxlength="80" autocomplete="new-password">
+                <span class="campo__ayuda">Por seguridad, vuelve a escribirla si el formulario mostró un error.</span>
+              </div>
+              <div class="campo<%= claseCampo(svErr, 'macAddress') %>">
+                <label for="macAddress">MAC del equipo</label>
+                <input id="macAddress" name="macAddress" type="text" value="<%= svTexto('macAddress', svc.macAddress) %>" maxlength="40" placeholder="AA:BB:CC:DD:EE:FF">
+                <span class="campo__ayuda">Se puede usar para autenticación por MAC. Editable manualmente.</span>
+                <%- include('../partials/campo-error', { mensaje: errorCampo(svErr, 'macAddress') }) %>
+              </div>
+              <div class="campo">
+                <label class="check"><input type="checkbox" name="macAuthEnabled" <%= svc.macAuthEnabled ? 'checked' : '' %>> Autenticación por MAC</label>
+                <span class="campo__ayuda">DHCP: reserva la IP a esa MAC. PPPoE: agrega caller-id.</span>
+              </div>
+              <div class="campo<%= claseCampo(svErr, 'ipAddress') %>" data-campo="ip">
+                <label for="ipAddress">Dirección IP</label>
+                <input id="ipAddress" name="ipAddress" type="text" value="<%= svTexto('ipAddress', svc.ipAddress) %>" maxlength="45" placeholder="192.168.10.20" data-ip-manual>
+                <select id="ipAddressSelect" data-ip-servicio data-ip-actual="<%= svTexto('ipAddress', svc.ipAddress) %>" hidden></select>
+                <span class="campo__ayuda" data-ip-ayuda>Selecciona un pool para elegir una IP disponible.</span>
+                <%- include('../partials/campo-error', { mensaje: errorCampo(svErr, 'ipAddress') }) %>
+              </div>
+              <div class="campo campo--ancho<%= claseCampo(svErr, 'notes') %>">
+                <label for="serviceNotes">Notas técnicas</label>
+                <textarea id="serviceNotes" name="notes" rows="2" maxlength="500"><%= svTexto('notes', subscription.notes) %></textarea>
+                <%- include('../partials/campo-error', { mensaje: errorCampo(svErr, 'notes') }) %>
+              </div>
+            </div>
+            <div class="formulario__acciones formulario__acciones--izquierda">
+              <button type="submit" class="boton boton--primario boton--sm"><%- include('../partials/icon', { nombre: 'check' }) %> Guardar configuración</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="tarjeta superficie panel">
+          <div class="panel__cabecera"><div><p class="etiqueta">Plan</p><h3>Cambiar de plan</h3></div></div>
+          <p class="texto-suave">El nuevo plan aplica a las próximas facturas. Las ya emitidas conservan su snapshot.</p>
+          <form action="/clientes/<%= cliente._id %>/servicio/plan" method="post" class="formulario formulario--compacto">
+            <input type="hidden" name="_method" value="PUT">
+            <div class="formulario__rejilla">
+              <div class="campo campo--ancho">
+                <label for="planId">Nuevo plan</label>
+                <select id="planId" name="planId" required>
+                  <% planes.forEach((plan) => { %>
+                    <option value="<%= plan._id %>" <%= String(subscription.planId?._id || subscription.planId) === String(plan._id) ? 'selected' : '' %>><%= plan.name %> · <%= formatearDinero(plan.price) %> · <%= plan.speedLabel %></option>
+                  <% }); %>
+                </select>
+              </div>
+            </div>
+            <div class="formulario__acciones formulario__acciones--izquierda">
+              <button type="submit" class="boton boton--secundario boton--sm">Cambiar plan</button>
+            </div>
+          </form>
+        </section>
+        <% } %>
+      </div>
+
+      <div class="pila">
+        <section class="tarjeta superficie panel panel--firewall">
+          <div class="panel__cabecera">
+            <div><p class="etiqueta">Firewall</p><h3>Estado y acciones</h3></div>
+            <div class="panel__acciones">
+              <span class="insignia insignia--<%= subscription.firewallState %>"><%= etiquetas[subscription.firewallState] %></span>
+              <% if (subscription.pppoeDisabled) { %><span class="insignia insignia--blocked">PPPoE desactivado</span><% } %>
+            </div>
+          </div>
+          <div class="modo-firewall">
+            <span class="punto punto--verde"></span>
+            RouterOS
+            <a href="/admin/configuracion?tab=firewall">Configurar</a>
+          </div>
+
+          <% if (ultimoFirewall) { %>
+            <div class="ultimo-comando">
+              <p class="etiqueta">Última acción</p>
+              <p><%= ultimoFirewall.description %></p>
+              <code class="comando"><%= ultimoFirewall.command || 'Sin comando registrado' %></code>
+              <small><%= formatearFechaHora(ultimoFirewall.timestamp) %> · <%= ultimoFirewall.status === 'success' ? 'Correcta' : 'Fallida' %></small>
+            </div>
+          <% } else { %>
+            <p class="texto-suave">Todavía no hay acciones de firewall para este servicio.</p>
+          <% } %>
+
+          <% if (puedeCortes) { %>
+          <div class="pila pila--separada">
+            <form action="/suscripciones/<%= subscription._id %>/cortar" method="post" class="formulario formulario--compacto" data-confirmar="El cliente se agregará a la lista MOROSOS y se asegurarán las reglas de corte. ¿Continuar?">
+              <div class="campo">
+                <label for="motivoCorte">Motivo del corte (MOROSOS) *</label>
+                <input id="motivoCorte" name="motivo" type="text" placeholder="Ej. mora, solicitud del cliente" required maxlength="160">
+              </div>
+              <button type="submit" class="boton boton--peligro boton--bloque"><%- include('../partials/icon', { nombre: 'ban' }) %> Cortar servicio (MOROSOS)</button>
+            </form>
+
+            <form action="/suscripciones/<%= subscription._id %>/restaurar" method="post" class="formulario formulario--compacto" data-confirmar="Se quitará la IP de MOROSOS y se habilitará el PPPoE si estaba desactivado. ¿Continuar?">
+              <div class="campo">
+                <label for="motivoRestaurar">Motivo de la restauración *</label>
+                <input id="motivoRestaurar" name="motivo" type="text" placeholder="Ej. pago confirmado" required maxlength="160">
+              </div>
+              <button type="submit" class="boton boton--exito boton--bloque"><%- include('../partials/icon', { nombre: 'power' }) %> Restaurar servicio</button>
+            </form>
+
+            <% if (subscription.serviceConfig.connectionType === 'pppoe') { %>
+              <% if (!subscription.pppoeDisabled) { %>
+                <form action="/suscripciones/<%= subscription._id %>/pppoe/desactivar" method="post" class="formulario formulario--compacto" data-confirmar="Se deshabilitará el secret PPPoE en el router. ¿Continuar?">
+                  <div class="campo">
+                    <label for="motivoPppoeOff">Motivo de la desactivación PPPoE *</label>
+                    <input id="motivoPppoeOff" name="motivo" type="text" placeholder="Ej. mantenimiento, suspensión técnica" required maxlength="160">
+                  </div>
+                  <button type="submit" class="boton boton--peligro boton--bloque"><%- include('../partials/icon', { nombre: 'ban' }) %> Desactivar PPPoE</button>
+                </form>
+              <% } else { %>
+                <form action="/suscripciones/<%= subscription._id %>/pppoe/activar" method="post" class="formulario formulario--compacto" data-confirmar="Se habilitará el secret PPPoE en el router. ¿Continuar?">
+                  <div class="campo">
+                    <label for="motivoPppoeOn">Motivo de la activación PPPoE *</label>
+                    <input id="motivoPppoeOn" name="motivo" type="text" placeholder="Ej. fin de mantenimiento" required maxlength="160">
+                  </div>
+                  <button type="submit" class="boton boton--exito boton--bloque"><%- include('../partials/icon', { nombre: 'power' }) %> Activar PPPoE</button>
+                </form>
+              <% } %>
+            <% } %>
+          </div>
+          <% } %>
+
+          <a class="boton boton--secundario boton--bloque" href="/admin/configuracion/firewall/simulador?suscripcion=<%= subscription._id %>&accion=block">
+            <%- include('../partials/icon', { nombre: 'shield' }) %> Ver comando
+          </a>
+        </section>
+
+        <section class="tarjeta superficie panel">
+          <div class="panel__cabecera"><div><p class="etiqueta">Periodo</p><h3>Facturación actual</h3></div></div>
+          <div class="resumen-linea"><span>Inicio</span><strong><%= formatearFecha(subscription.currentPeriodStart) %></strong></div>
+          <div class="resumen-linea"><span>Fin</span><strong><%= formatearFecha(subscription.currentPeriodEnd) %></strong></div>
+          <div class="resumen-linea"><span>Próximo vencimiento</span><strong><%= formatearFecha(sumarDias(subscription.currentPeriodEnd, config.billing.dueDays)) %></strong></div>
+          <a class="boton boton--secundario boton--bloque" href="/clientes/<%= cliente._id %>?tab=facturacion">Ver facturas</a>
+        </section>
+
+        <% if (puedeServicio) { %>
+        <section class="tarjeta superficie panel">
+          <div class="panel__cabecera"><div><p class="etiqueta">Servicio</p><h3>Eliminar servicio</h3></div></div>
+          <p class="texto-suave">Borra el servicio y retira del MikroTik el PPPoE, la cola y las entradas de firewall. El cliente y sus facturas se conservan.</p>
+          <form action="/suscripciones/<%= subscription._id %>/eliminar" method="post" data-confirmar="¿Eliminar el servicio de <%= cliente.fullName %> y borrar su PPPoE del router?">
+            <button type="submit" class="boton boton--peligro boton--bloque"><%- include('../partials/icon', { nombre: 'trash' }) %> Eliminar servicio</button>
+          </form>
+        </section>
+        <% } %>
+      </div>
+    </div>
+  <% } %>
+<% } %>
+
+<% if (tab === 'monitoreo') { %>
+  <% if (!subscription) { %>
+    <section class="tarjeta superficie vacio">
+      <p class="vacio__icono"><%- include('../partials/icon', { nombre: 'gauge' }) %></p>
+      <h3 class="vacio__titulo">Sin servicio contratado</h3>
+      <p class="vacio__texto">El monitoreo por cliente requiere un servicio activo con IP o PPPoE.</p>
+      <% if (puedeServicio) { %><a class="boton boton--primario" href="/clientes/<%= cliente._id %>/servicio/nuevo">Contratar servicio</a><% } %>
+    </section>
+  <% } else { %>
+    <section
+      class="tarjeta panel monitor-cliente"
+      data-monitor-cliente
+      data-subscription="<%= subscription._id %>"
+      data-base="/red/monitoreo/api/cliente/<%= subscription._id %>"
+      data-ttl="60000"
+      data-intervalo="3000"
+      data-tope="<%= Math.max(1, (Number(subscription.planSnapshot?.downloadSpeed) || 100) * 1e6, (Number(subscription.planSnapshot?.uploadSpeed) || 50) * 1e6) %>"
+    >
+      <div class="panel__cabecera">
+        <div><p class="etiqueta">Tráfico en tiempo real</p><h3>Monitor del cliente</h3></div>
+        <div class="panel__acciones">
+          <span class="insignia insignia--none" data-monitor-modo>Sin iniciar</span>
+          <span class="insignia insignia--none" data-monitor-estado>Sin iniciar</span>
+        </div>
+      </div>
+
+      <div class="monitor-cliente__metricas">
+        <div><small>Bajada actual</small><strong data-monitor-rx>—</strong></div>
+        <div><small>Subida actual</small><strong data-monitor-tx>—</strong></div>
+        <div><small>Límite del plan</small><strong><%= subscription.planSnapshot?.downloadSpeed || 0 %> / <%= subscription.planSnapshot?.uploadSpeed || 0 %> Mbps</strong></div>
+        <div><small>Expira en</small><strong data-monitor-ttl>—</strong></div>
+      </div>
+
+      <p class="nota nota--morado monitor-cliente__enlace">
+        <%- include('../partials/icon', { nombre: 'wifi' }) %>
+        Leyendo por <strong data-monitor-enlace><%= subscription.serviceConfig.connectionType === 'pppoe' ? (subscription.serviceConfig.pppoeUsername || 'PPPoE') : (subscription.serviceConfig.ipAddress || 'IP') %></strong>
+        · cola <span class="mono"><%= subscription.serviceConfig.queueName || 'sin cola' %></span>
+      </p>
+
+      <svg class="wan-chart wan-chart--grande" viewBox="0 0 640 140" preserveAspectRatio="none" role="img" aria-label="Tráfico del cliente">
+        <polyline class="wan-chart__linea wan-chart__linea--rx" data-monitor-linea-rx points=""></polyline>
+        <polyline class="wan-chart__linea wan-chart__linea--tx" data-monitor-linea-tx points=""></polyline>
+      </svg>
+
+      <div class="leyenda">
+        <span><i class="leyenda__punto leyenda__punto--verde"></i> Bajada</span>
+        <span><i class="leyenda__punto leyenda__punto--ambar"></i> Subida</span>
+        <a class="enlace-flecha" href="/red/monitoreo/cliente/<%= subscription._id %>">Abrir en ventana completa <span aria-hidden="true">→</span></a>
+      </div>
+
+      <p class="nota nota--ambar" data-monitor-aviso hidden></p>
+
+      <div class="formulario__acciones formulario__acciones--izquierda">
+        <button type="button" class="boton boton--primario boton--sm" data-monitor-iniciar><%- include('../partials/icon', { nombre: 'play' }) %> Iniciar lectura</button>
+        <button type="button" class="boton boton--peligro boton--sm" data-monitor-detener disabled><%- include('../partials/icon', { nombre: 'ban' }) %> Detener monitor</button>
+      </div>
+    </section>
+  <% } %>
+<% } %>
+
+<% if (tab === 'facturacion') { %>
+  <section class="rejilla rejilla--tres">
+    <article class="tarjeta superficie kpi kpi--ambar">
+      <p class="kpi__etiqueta">Deuda total</p>
+      <p class="kpi__valor"><%= formatearDinero(deuda.total) %></p>
+      <p class="kpi__detalle"><%= deuda.cantidad %> factura(s) pendiente(s)</p>
+    </article>
+    <article class="tarjeta superficie kpi kpi--rojo">
+      <p class="kpi__etiqueta">Facturas vencidas</p>
+      <p class="kpi__valor"><%= invoices.filter((f) => f.status === 'overdue').length %></p>
+      <p class="kpi__detalle"><%= formatearDinero(invoices.filter((f) => f.status === 'overdue').reduce((s, f) => s + f.total, 0)) %></p>
+    </article>
+    <article class="tarjeta superficie kpi kpi--verde">
+      <p class="kpi__etiqueta">Facturas pagadas</p>
+      <p class="kpi__valor"><%= invoices.filter((f) => f.status === 'paid').length %></p>
+      <p class="kpi__detalle">Historial conservado</p>
+    </article>
+  </section>
+
+  <section class="tarjeta superficie tabla-panel">
+    <div class="panel__cabecera panel__cabecera--pad">
+      <div><p class="etiqueta">Financiero</p><h3>Facturas del cliente</h3></div>
+      <a class="boton boton--secundario boton--sm" href="/finanzas/facturacion/previsualizar">Previsualizar</a>
+    </div>
+    <% if (invoices.length === 0) { %>
+      <div class="vacio vacio--compacto">
+        <p class="vacio__icono"><%- include('../partials/icon', { nombre: 'receipt' }) %></p>
+        <p class="vacio__texto">Este cliente todavía no tiene facturas.</p>
+      </div>
+    <% } else { %>
+      <div class="tabla-scroll">
+        <table class="tabla">
+          <thead><tr><th>Número</th><th>Periodo</th><th>Emisión</th><th>Vencimiento</th><th>Total</th><th>Estado</th><th class="tabla__acciones">Acciones</th></tr></thead>
+          <tbody>
+            <% invoices.forEach((factura) => { %>
+              <tr>
+                <td data-etiqueta="Número"><a class="codigo" href="/finanzas/facturas/<%= factura._id %>"><%= factura.invoiceNumber %></a></td>
+                <td data-etiqueta="Periodo"><%= formatearFecha(factura.periodStart) %> → <%= formatearFecha(factura.periodEnd) %></td>
+                <td data-etiqueta="Emisión"><%= formatearFecha(factura.issueDate) %></td>
+                <td data-etiqueta="Vencimiento"><%= formatearFecha(factura.dueDate) %></td>
+                <td data-etiqueta="Total"><strong><%= formatearDinero(factura.total, factura.currency) %></strong></td>
+                <td data-etiqueta="Estado"><span class="insignia insignia--<%= factura.status %>"><%= etiquetas[factura.status] %></span></td>
+                <td data-etiqueta="Acciones" class="tabla__acciones">
+                  <a class="boton-icono boton-icono--sm" href="/finanzas/facturas/<%= factura._id %>" aria-label="Ver factura <%= factura.invoiceNumber %>" title="Ver"><%- include('../partials/icon', { nombre: 'eye' }) %></a>
+                  <% if (['open', 'overdue'].includes(factura.status)) { %>
+                    <a class="boton boton--exito boton--xs" href="/finanzas/facturas/<%= factura._id %>#pago">Pagar</a>
+                  <% } %>
+                </td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </section>
+<% } %>
+
+<% if (tab === 'tickets') { %>
+  <section class="tarjeta panel panel--tabla">
+    <div class="panel__cabecera">
+      <div><p class="etiqueta">Soporte</p><h3>Tickets del cliente</h3></div>
+      <a class="boton boton--primario boton--sm" href="/soporte/tickets/nuevo?cliente=<%= cliente._id %>"><%- include('../partials/icon', { nombre: 'plus' }) %> Abrir ticket</a>
+    </div>
+    <% if (!tickets.length) { %>
+      <div class="vacio vacio--compacto">
+        <p class="vacio__icono"><%- include('../partials/icon', { nombre: 'ticket' }) %></p>
+        <p class="vacio__texto">Este cliente no tiene tickets de soporte.</p>
+      </div>
+    <% } else { %>
+      <div class="tabla-scroll">
+        <table class="tabla">
+          <thead><tr><th>Ticket</th><th>Asunto</th><th>Prioridad</th><th>Estado</th><th>Mensajes</th><th>Creado</th><th></th></tr></thead>
+          <tbody>
+            <% tickets.forEach((ticket) => { %>
+              <tr>
+                <td data-etiqueta="Ticket"><a href="/soporte/tickets/<%= ticket._id %>"><strong><%= ticket.code %></strong></a></td>
+                <td data-etiqueta="Asunto"><%= ticket.subject %></td>
+                <td data-etiqueta="Prioridad"><span class="insignia insignia--<%= ['urgent', 'high'].includes(ticket.priority) ? 'overdue' : ticket.priority === 'medium' ? 'pending' : 'none' %>"><%= etiquetas[ticket.priority] %></span></td>
+                <td data-etiqueta="Estado"><span class="insignia insignia--<%= ticket.status %>"><%= etiquetas[ticket.status] %></span></td>
+                <td data-etiqueta="Mensajes"><%= ticket.totalMensajes %></td>
+                <td data-etiqueta="Creado"><%= formatearFecha(ticket.createdAt) %></td>
+                <td><a class="boton-icono boton-icono--sm" href="/soporte/tickets/<%= ticket._id %>" aria-label="Abrir ticket"><%- include('../partials/icon', { nombre: 'eye' }) %></a></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </section>
+<% } %>
+
+<% if (tab === 'historial') { %>
+  <section class="tarjeta superficie panel">
+    <div class="panel__cabecera">
+      <div><p class="etiqueta">Auditoría</p><h3>Historial del cliente</h3></div>
+      <a class="enlace-flecha" href="/admin/auditoria?q=<%= cliente.clientCode %>">Ver en logs <span aria-hidden="true">→</span></a>
+    </div>
+    <% if (logs.length === 0) { %>
+      <div class="vacio vacio--compacto"><p class="vacio__texto">Sin eventos registrados para este cliente.</p></div>
+    <% } else { %>
+      <ul class="timeline timeline--amplia">
+        <% logs.forEach((log) => { %>
+          <li>
+            <span class="timeline__punto <%= log.status === 'failed' ? 'timeline__punto--rojo' : 'timeline__punto--verde' %>"></span>
+            <div class="timeline__contenido">
+              <p><%= log.description %></p>
+              <small><%= formatearFechaHora(log.timestamp) %> · <%= etiquetasModulo[log.module] || log.module %> · <%= log.action %> · <%= log.actorNombre || log.actor %></small>
+              <% if (log.command) { %><code class="comando comando--mini"><%= log.command %></code><% } %>
+              <% if (log.commandResult) { %><small class="texto-suave"><%= log.commandResult %></small><% } %>
+            </div>
+            <span class="insignia insignia--<%= log.status === 'success' ? 'active' : 'overdue' %>"><%= log.status === 'success' ? 'OK' : 'Falló' %></span>
+          </li>
+        <% }); %>
+      </ul>
+    <% } %>
+  </section>
+<% } %>

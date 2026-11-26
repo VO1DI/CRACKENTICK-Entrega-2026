@@ -1,0 +1,9 @@
+<section class="tarjeta superficie vacio">
+  <p class="vacio__icono"><%- include('../partials/icon', { nombre: 'shield' }) %></p>
+  <h3 class="vacio__titulo">Acceso restringido</h3>
+  <p class="vacio__texto"><%= typeof mensaje !== 'undefined' && mensaje ? mensaje : 'No tienes permiso para entrar a este nodo.' %></p>
+  <div class="pila pila--centrada">
+    <a class="boton boton--primario" href="/">Volver al dashboard</a>
+    <a class="boton boton--secundario" href="/login">Cambiar de usuario</a>
+  </div>
+</section>

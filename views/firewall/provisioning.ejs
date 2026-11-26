@@ -1,0 +1,175 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Red · Laboratorio</p>
+    <h2 class="pagina-cabecera__titulo">Visor de aprovisionamiento</h2>
+    <p class="pagina-cabecera__texto">Revisa los comandos RouterOS de PPPoE, cola, IP, pool y sincronización de plan antes de ejecutarlos.</p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <a class="boton boton--secundario" href="/routers"><%- include('../partials/icon', { nombre: 'server' }) %> Routers</a>
+  </div>
+</section>
+
+<nav class="tabs" aria-label="Visores">
+  <a class="tabs__enlace" href="/configuracion/firewall/simulador">Corte y restauración</a>
+  <a class="tabs__enlace <%= vista === 'servicio' ? 'is-activo' : '' %>" href="/configuracion/provision/simulador?vista=servicio">Servicio</a>
+  <a class="tabs__enlace <%= vista === 'plan' ? 'is-activo' : '' %>" href="/configuracion/provision/simulador?vista=plan">Plan</a>
+  <a class="tabs__enlace <%= vista === 'pool' ? 'is-activo' : '' %>" href="/configuracion/provision/simulador?vista=pool">Pool</a>
+</nav>
+
+<div class="nota nota--morado">
+  <%- include('../partials/icon', { nombre: 'shield' }) %>
+  Esta pantalla <strong>solo genera y audita</strong> los comandos. Los cambios reales se aplican desde la ficha del servicio, del plan o del pool.
+</div>
+
+<div class="rejilla rejilla--simulador">
+  <section class="tarjeta superficie panel">
+    <div class="panel__cabecera">
+      <div><p class="etiqueta">Selección</p><h3>Preparar comandos</h3></div>
+      <span class="insignia insignia--morado"><%= contexto ? contexto.tipo : 'Sin selección' %></span>
+    </div>
+
+    <form method="get" action="/configuracion/provision/simulador" class="formulario formulario--compacto">
+      <div class="formulario__rejilla">
+        <div class="campo">
+          <label for="vista">Qué revisar</label>
+          <select id="vista" name="vista" data-auto-enviar>
+            <option value="servicio" <%= vista === 'servicio' ? 'selected' : '' %>>Alta / cambio / baja de servicio</option>
+            <option value="plan" <%= vista === 'plan' ? 'selected' : '' %>>Sincronización de plan</option>
+            <option value="pool" <%= vista === 'pool' ? 'selected' : '' %>>Aplicación de pool</option>
+          </select>
+        </div>
+
+        <% if (vista === 'servicio') { %>
+          <div class="campo campo--ancho">
+            <label for="suscripcion">Servicio</label>
+            <select id="suscripcion" name="suscripcion" data-auto-enviar>
+              <option value="">Selecciona un servicio</option>
+              <% subscriptions.forEach((sub) => { %>
+                <option value="<%= sub._id %>" <%= String(seleccionada) === String(sub._id) ? 'selected' : '' %>><%= sub.clientId ? `${sub.clientId.clientCode} · ${sub.clientId.firstName} ${sub.clientId.lastName}` : 'Cliente' %> — <%= sub.planSnapshot?.name || sub.planId?.name || 'Plan' %></option>
+              <% }); %>
+            </select>
+          </div>
+          <div class="campo">
+            <label for="accion">Acción</label>
+            <select id="accion" name="accion" data-auto-enviar>
+              <option value="create" <%= accion === 'create' ? 'selected' : '' %>>Crear</option>
+              <option value="update" <%= accion === 'update' ? 'selected' : '' %>>Actualizar</option>
+              <option value="delete" <%= accion === 'delete' ? 'selected' : '' %>>Eliminar</option>
+            </select>
+          </div>
+        <% } %>
+
+        <% if (vista === 'plan') { %>
+          <div class="campo campo--ancho">
+            <label for="planId">Plan</label>
+            <select id="planId" name="planId" data-auto-enviar>
+              <% planes.forEach((plan) => { %>
+                <option value="<%= plan._id %>" <%= String(planId) === String(plan._id) ? 'selected' : '' %>><%= plan.name %> · <%= formatearDinero(plan.price) %></option>
+              <% }); %>
+            </select>
+          </div>
+        <% } %>
+
+        <% if (vista === 'pool') { %>
+          <div class="campo campo--ancho">
+            <label for="poolId">Pool</label>
+            <select id="poolId" name="poolId" data-auto-enviar>
+              <% pools.forEach((pool) => { %>
+                <option value="<%= pool._id %>" <%= String(poolId) === String(pool._id) ? 'selected' : '' %>><%= pool.name %> · <%= pool.cidr %></option>
+              <% }); %>
+            </select>
+          </div>
+        <% } %>
+      </div>
+      <div class="formulario__acciones formulario__acciones--izquierda">
+        <button type="submit" class="boton boton--secundario boton--sm"><%- include('../partials/icon', { nombre: 'refresh' }) %> Actualizar vista</button>
+      </div>
+    </form>
+
+    <% if (!comandos.length) { %>
+      <div class="vacio vacio--compacto">
+        <p class="vacio__icono"><%- include('../partials/icon', { nombre: 'network' }) %></p>
+        <p class="vacio__texto">No hay comandos para esta selección. Revisa que el servicio tenga router, IP o usuario PPPoE.</p>
+      </div>
+    <% } else { %>
+      <% if (contexto) { %>
+        <div class="resumen-servicio resumen-servicio--simulador">
+          <div><small>Tipo</small><strong><%= contexto.tipo %></strong></div>
+          <div><small>Referencia</small><strong><%= contexto.titulo %></strong></div>
+          <div><small>Detalle</small><strong><%= contexto.detalle %></strong></div>
+          <div><small>Router</small><strong><%= contexto.router || 'Automático' %></strong></div>
+          <div><small>Comandos</small><strong><%= comandos.length %></strong></div>
+        </div>
+      <% } %>
+
+      <div class="comandos-lista">
+        <% comandos.forEach((cmd, indice) => { %>
+          <article class="comando-panel">
+            <div class="comando-panel__cabecera">
+              <p class="etiqueta"><%= String(indice + 1).padStart(2, '0') %> · <%= cmd.tipo %></p>
+              <span class="insignia insignia--none"><%= cmd.op %></span>
+            </div>
+            <pre class="bloque-codigo" id="comandoAprovision<%= indice %>"><code><%= cmd.comando %></code></pre>
+            <div class="comando-panel__acciones">
+              <button type="button" class="boton boton--secundario boton--sm" data-copiar="#comandoAprovision<%= indice %>"><%- include('../partials/icon', { nombre: 'copy' }) %> Copiar</button>
+            </div>
+            <p class="texto-suave"><%= cmd.descripcion %></p>
+          </article>
+        <% }); %>
+      </div>
+
+      <form action="/configuracion/provision/simular" method="post" data-confirmar="Se registrará la revisión en auditoría. No se ejecutará ningún comando. ¿Continuar?">
+        <input type="hidden" name="vista" value="<%= vista %>">
+        <input type="hidden" name="accion" value="<%= accion %>">
+        <input type="hidden" name="suscripcion" value="<%= seleccionada %>">
+        <input type="hidden" name="planId" value="<%= planId %>">
+        <input type="hidden" name="poolId" value="<%= poolId %>">
+        <button type="submit" class="boton boton--primario"><%- include('../partials/icon', { nombre: 'play' }) %> Registrar simulación</button>
+      </form>
+    <% } %>
+  </section>
+
+  <aside class="pila">
+    <section class="tarjeta superficie panel">
+      <div class="panel__cabecera"><div><p class="etiqueta">Referencia</p><h3>Qué se genera</h3></div></div>
+      <div class="plantilla-comando">
+        <p class="etiqueta">PPPoE</p>
+        <code>/ppp/secret/add name="usuario" service=pppoe</code>
+      </div>
+      <div class="plantilla-comando">
+        <p class="etiqueta">Cola simple</p>
+        <code>/queue/simple/add name="ct-usuario" max-limit=100M/50M</code>
+      </div>
+      <div class="plantilla-comando">
+        <p class="etiqueta">IP / pool</p>
+        <code>/ip/pool/add name="ct-pool" ranges=192.168.0.2-192.168.0.254</code>
+      </div>
+      <div class="plantilla-comando">
+        <p class="etiqueta">Sincronización de plan</p>
+        <code>/queue/simple/set [find name="cola"] max-limit=200M/100M</code>
+      </div>
+    </section>
+
+    <section class="tarjeta superficie panel">
+      <div class="panel__cabecera">
+        <div><p class="etiqueta">Historial</p><h3>Últimas simulaciones</h3></div>
+        <a class="enlace-flecha" href="/logs?modulo=provisioning">Logs <span aria-hidden="true">→</span></a>
+      </div>
+      <% if (!historial.length) { %>
+        <div class="vacio vacio--compacto"><p class="vacio__texto">Aún no hay simulaciones registradas.</p></div>
+      <% } else { %>
+        <ul class="timeline timeline--compacta">
+          <% historial.forEach((log) => { %>
+            <li>
+              <span class="timeline__punto <%= log.status === 'failed' ? 'timeline__punto--rojo' : 'timeline__punto--morado' %>"></span>
+              <div class="timeline__contenido">
+                <p><%= log.description %></p>
+                <small><%= formatearFechaHora(log.timestamp) %> · <%= log.action %></small>
+              </div>
+            </li>
+          <% }); %>
+        </ul>
+      <% } %>
+    </section>
+  </aside>
+</div>

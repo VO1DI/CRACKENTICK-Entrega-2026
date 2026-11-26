@@ -1,0 +1,102 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Red · IPAM</p>
+    <h2 class="pagina-cabecera__titulo">Direcciones IP</h2>
+    <p class="pagina-cabecera__texto">Ocupación de cada pool, direcciones libres y conflictos entre servicios y ventas.</p>
+  </div>
+</section>
+
+<section class="dash-kpis" aria-label="Resumen de IPAM">
+  <article class="kpi kpi--morado">
+    <div class="kpi__cabecera"><span class="kpi__titulo">Pools</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'layers' }) %></span></div>
+    <p class="kpi__valor"><%= totales.pools %></p>
+    <p class="kpi__detalle"><%= totales.total %> IP(s) útiles</p>
+  </article>
+  <article class="kpi kpi--ambar">
+    <div class="kpi__cabecera"><span class="kpi__titulo">Usadas</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'users' }) %></span></div>
+    <p class="kpi__valor"><%= totales.usadas %></p>
+    <p class="kpi__detalle"><%= totales.disponibles %> libre(s)</p>
+  </article>
+  <article class="kpi kpi--<%= totales.conflictos ? 'rojo' : 'verde' %>">
+    <div class="kpi__cabecera"><span class="kpi__titulo">Conflictos</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></span></div>
+    <p class="kpi__valor"><%= totales.conflictos %></p>
+    <p class="kpi__detalle"><%= duplicadas.length %> duplicada(s) · <%= fuera.length %> fuera de pool</p>
+  </article>
+</section>
+
+<section class="tarjeta superficie panel panel--tabla">
+  <div class="panel__cabecera"><div><p class="etiqueta">Pools</p><h3>Ocupación</h3></div></div>
+  <% if (!filas.length) { %>
+    <div class="vacio vacio--compacto">
+      <p class="vacio__icono"><%- include('../partials/icon', { nombre: 'network' }) %></p>
+      <p class="vacio__texto">Todavía no hay pools. Créalos en Red → Pools de IP.</p>
+    </div>
+  <% } else { %>
+    <div class="tabla-scroll">
+      <table class="tabla">
+        <thead><tr><th>Pool</th><th>Router</th><th>CIDR</th><th>Total</th><th>Usadas</th><th>Libres</th><th>Uso</th><th>Conflictos</th><th></th></tr></thead>
+        <tbody>
+          <% filas.forEach((fila) => { %>
+            <tr>
+              <td data-etiqueta="Pool"><strong><%= fila.pool.name %></strong></td>
+              <td data-etiqueta="Router"><%= fila.router %></td>
+              <td data-etiqueta="CIDR"><span class="mono"><%= fila.cidr %></span></td>
+              <td data-etiqueta="Total"><%= fila.total %></td>
+              <td data-etiqueta="Usadas"><%= fila.usadas %></td>
+              <td data-etiqueta="Libres"><strong><%= fila.disponibles %></strong></td>
+              <td data-etiqueta="Uso">
+                <div class="barra-progreso" role="progressbar" aria-valuenow="<%= fila.porcentaje %>" aria-valuemin="0" aria-valuemax="100"><span style="width:<%= fila.porcentaje %>%"></span></div>
+                <small class="texto-suave"><%= fila.porcentaje %>%</small>
+              </td>
+              <td data-etiqueta="Conflictos"><span class="insignia insignia--<%= fila.duplicadas ? 'overdue' : 'active' %>"><%= fila.duplicadas || 'OK' %></span></td>
+              <td><a class="boton-icono boton-icono--sm" href="/red/ipam/<%= fila.pool._id %>" title="Ver detalle"><%- include('../partials/icon', { nombre: 'eye' }) %></a></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</section>
+
+<% if (duplicadas.length) { %>
+  <section class="tarjeta superficie panel panel--tabla">
+    <div class="panel__cabecera"><div><p class="etiqueta">Conflictos</p><h3>IPs asignadas más de una vez</h3></div></div>
+    <div class="tabla-scroll">
+      <table class="tabla">
+        <thead><tr><th>IP</th><th>Usos</th></tr></thead>
+        <tbody>
+          <% duplicadas.forEach((fila) => { %>
+            <tr>
+              <td data-etiqueta="IP"><strong class="mono"><%= fila.ip %></strong></td>
+              <td data-etiqueta="Usos">
+                <% fila.usos.forEach((uso) => { %>
+                  <span class="insignia insignia--overdue"><%= uso.tipo %> · <%= uso.codigo %> · <%= uso.cliente %></span>
+                <% }); %>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+<% } %>
+
+<% if (fuera.length) { %>
+  <section class="tarjeta superficie panel panel--tabla">
+    <div class="panel__cabecera"><div><p class="etiqueta">Conflictos</p><h3>IPs fuera de todos los pools</h3></div></div>
+    <div class="tabla-scroll">
+      <table class="tabla">
+        <thead><tr><th>IP</th><th>Cliente</th><th>Tipo</th></tr></thead>
+        <tbody>
+          <% fuera.forEach((fila) => { %>
+            <tr>
+              <td data-etiqueta="IP"><strong class="mono"><%= fila.ip %></strong></td>
+              <td data-etiqueta="Cliente"><%= fila.usos[0].cliente %> (<%= fila.usos[0].codigo %>)</td>
+              <td data-etiqueta="Tipo"><%= fila.usos[0].tipo %></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+<% } %>

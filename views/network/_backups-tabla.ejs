@@ -1,0 +1,33 @@
+<% const aplicarPermitido = typeof puedeAplicar === 'undefined' ? true : puedeAplicar; %>
+<div class="tabla-scroll">
+  <table class="tabla">
+    <thead><tr><th>Archivo</th><th>Fecha</th><th>Tamaño</th><th>Autor</th><th>Tipo</th><th class="tabla__acciones">Acciones</th></tr></thead>
+    <tbody>
+      <% respaldos.forEach((respaldo) => { %>
+        <tr>
+          <td data-etiqueta="Archivo"><strong class="mono"><%= respaldo.name %></strong></td>
+          <td data-etiqueta="Fecha"><%= formatearFechaHora(respaldo.createdAt) %></td>
+          <td data-etiqueta="Tamaño"><%= respaldo.size < 1024 ? `${respaldo.size} B` : `${Math.round(respaldo.size / 1024)} KB` %></td>
+          <td data-etiqueta="Autor"><%= respaldo.actor || 'system' %></td>
+          <td data-etiqueta="Tipo">
+            <span class="insignia insignia--<%= respaldo.simulated ? 'pending' : 'active' %>"><%= respaldo.simulated ? 'Simulado' : (respaldo.format === 'ios' ? 'Cisco' : respaldo.format === 'backup' ? 'Binario' : respaldo.format === 'api' ? 'Lógico (API)' : 'RouterOS') %></span>
+          </td>
+          <td>
+            <div class="tabla__acciones">
+              <a class="boton-icono boton-icono--sm" href="/red/respaldos/<%= respaldo._id %>/descargar" title="Descargar" aria-label="Descargar <%= respaldo.name %>"><%- include('../partials/icon', { nombre: 'box' }) %></a>
+              <% if (aplicarPermitido && !respaldo.simulated && respaldo.format !== 'api') { %>
+                <% const esBinario = respaldo.format === 'backup'; %>
+                <form action="/red/respaldos/<%= respaldo._id %>/restaurar" method="post" data-confirmar="<%= esBinario ? `¿Aplicar el respaldo binario ${respaldo.name} en ${routerNombre}? El equipo se reiniciará inmediatamente y perderá la configuración actual.` : `¿Importar los comandos de ${respaldo.name} en ${routerNombre}? Se aplican sobre la configuración actual; los objetos duplicados pueden fallar y no se borra nada.` %>">
+                  <button type="submit" class="boton-icono boton-icono--sm" title="<%= esBinario ? 'Aplicar respaldo (reinicia)' : 'Importar comandos (experimental)' %>" aria-label="<%= esBinario ? 'Aplicar' : 'Importar' %> <%= respaldo.name %>"><%- include('../partials/icon', { nombre: 'refresh' }) %></button>
+                </form>
+              <% } %>
+              <form action="/red/respaldos/<%= respaldo._id %>/eliminar" method="post" data-confirmar="¿Eliminar el respaldo <%= respaldo.name %>?">
+                <button type="submit" class="boton-icono boton-icono--sm boton-icono--peligro" title="Eliminar" aria-label="Eliminar <%= respaldo.name %>"><%- include('../partials/icon', { nombre: 'trash' }) %></button>
+              </form>
+            </div>
+          </td>
+        </tr>
+      <% }); %>
+    </tbody>
+  </table>
+</div>

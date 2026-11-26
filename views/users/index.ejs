@@ -1,0 +1,93 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Administración · Accesos</p>
+    <h2 class="pagina-cabecera__titulo">Usuarios y permisos</h2>
+    <p class="pagina-cabecera__texto">Cada usuario recibe acceso por nodo. Los administradores siempre tienen acceso total.</p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <form class="buscador" action="/admin/usuarios" method="get" role="search">
+      <%- include('../partials/icon', { nombre: 'search' }) %>
+      <input type="search" name="q" value="<%= filtros.q %>" placeholder="Buscar usuario…" aria-label="Buscar usuario">
+    </form>
+    <a class="boton boton--secundario boton--sm" href="/admin/usuarios/presets"><%- include('../partials/icon', { nombre: 'shield' }) %> Presets</a>
+    <a class="boton boton--primario boton--sm" href="/admin/usuarios/nuevo"><%- include('../partials/icon', { nombre: 'plus' }) %> Nuevo usuario</a>
+  </div>
+</section>
+
+<nav class="tabs" aria-label="Usuarios">
+  <a class="tabs__enlace is-activo" href="/admin/usuarios" aria-current="page">Usuarios</a>
+  <a class="tabs__enlace" href="/admin/usuarios/presets">Presets de permisos</a>
+</nav>
+
+<section class="rejilla rejilla--tres">
+  <article class="tarjeta superficie kpi kpi--morado">
+    <div class="kpi__cabecera"><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'users' }) %></span><span class="kpi__periodo">Total</span></div>
+    <p class="kpi__valor"><%= resumen.total %></p>
+    <p class="kpi__etiqueta">Usuarios creados</p>
+  </article>
+  <article class="tarjeta superficie kpi kpi--verde">
+    <div class="kpi__cabecera"><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'check' }) %></span><span class="kpi__periodo">Activos</span></div>
+    <p class="kpi__valor"><%= resumen.activos %></p>
+    <p class="kpi__etiqueta">Pueden iniciar sesión</p>
+  </article>
+  <article class="tarjeta superficie kpi kpi--ambar">
+    <div class="kpi__cabecera"><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'shield' }) %></span><span class="kpi__periodo">Admins</span></div>
+    <p class="kpi__valor"><%= resumen.admins %></p>
+    <p class="kpi__etiqueta">Acceso completo</p>
+  </article>
+</section>
+
+<section class="tarjeta superficie panel panel--tabla">
+  <div class="panel__cabecera">
+    <div><p class="etiqueta">Equipo</p><h3>Usuarios registrados</h3></div>
+    <span class="texto-suave"><%= usuarios.length %> resultado(s)</span>
+  </div>
+  <% if (!usuarios.length) { %>
+    <div class="vacio vacio--compacto">
+      <p class="vacio__icono"><%- include('../partials/icon', { nombre: 'users' }) %></p>
+      <p class="vacio__texto">No hay usuarios con ese criterio.</p>
+    </div>
+  <% } else { %>
+    <div class="tabla-scroll">
+      <table class="tabla">
+        <thead><tr><th>Usuario</th><th>Rol</th><th>Nodos habilitados</th><th>Estado</th><th>Último acceso</th><th>Acciones</th></tr></thead>
+        <tbody>
+          <% usuarios.forEach((u) => { const esYo = String(u._id) === String(usuario._id); %>
+            <tr>
+              <td data-etiqueta="Usuario">
+                <div class="usuario-celda">
+                  <span class="avatar avatar--sm"><%= u.initials || String(u.name || '?').slice(0, 2).toUpperCase() %></span>
+                  <div><strong><%= u.name %><%= esYo ? ' (tú)' : '' %></strong><small class="mono">@<%= u.username %><%= u.email ? ` · ${u.email}` : '' %></small></div>
+                </div>
+              </td>
+              <td data-etiqueta="Rol"><span class="insignia insignia--<%= u.role === 'admin' ? 'morado' : 'none' %>"><%= etiquetasRol[u.role] || u.role %></span></td>
+              <td data-etiqueta="Nodos habilitados">
+                <% if (u.role === 'admin') { %>
+                  <span class="insignia insignia--active">Todos los nodos</span>
+                <% } else if (!u.permissions || !u.permissions.length) { %>
+                  <span class="texto-suave">Sin permisos</span>
+                <% } else { %>
+                  <div class="chips"><% u.permissions.slice(0, 5).forEach((permiso) => { %><span class="chip"><%= etiquetasPermiso[String(permiso).replace(/:read$/, '')] || permiso %></span><% }); %><% if (u.permissions.length > 5) { %><span class="chip">+<%= u.permissions.length - 5 %></span><% } %></div>
+                <% } %>
+              </td>
+              <td data-etiqueta="Estado"><span class="insignia insignia--<%= u.active ? 'active' : 'overdue' %>"><%= u.active ? 'Activo' : 'Inactivo' %></span></td>
+              <td data-etiqueta="Último acceso"><%= u.lastLoginAt ? formatearFechaHora(u.lastLoginAt) : 'Nunca' %></td>
+              <td data-etiqueta="Acciones" class="tabla__acciones">
+                <a class="boton-icono boton-icono--sm" href="/admin/usuarios/<%= u._id %>/editar" title="Editar"><%- include('../partials/icon', { nombre: 'edit' }) %></a>
+                <% if (!esYo) { %>
+                  <form action="/admin/usuarios/<%= u._id %>/estado" method="post">
+                    <button type="submit" class="boton-icono boton-icono--sm" title="<%= u.active ? 'Desactivar' : 'Activar' %>"><%- include('../partials/icon', { nombre: u.active ? 'ban' : 'check' }) %></button>
+                  </form>
+                  <form action="/admin/usuarios/<%= u._id %>" method="post" data-confirmar="¿Eliminar al usuario <%= u.username %>? Esta acción no se puede deshacer.">
+                    <input type="hidden" name="_method" value="DELETE">
+                    <button type="submit" class="boton-icono boton-icono--sm" title="Eliminar"><%- include('../partials/icon', { nombre: 'trash' }) %></button>
+                  </form>
+                <% } %>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</section>

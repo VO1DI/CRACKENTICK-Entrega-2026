@@ -1,0 +1,111 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Almacén · <%= item.code %></p>
+    <h2 class="pagina-cabecera__titulo"><%= item.name %></h2>
+    <p class="pagina-cabecera__texto"><%= etiquetas[item.category] %> · <%= etiquetas[item.tracking] %> · <%= item.stock %> <%= item.unit %> disponible(s)</p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <a class="boton boton--secundario" href="/inventario"><%- include('../partials/icon', { nombre: 'arrowLeft' }) %> Volver</a>
+    <a class="boton boton--secundario" href="/inventario/<%= item._id %>/editar"><%- include('../partials/icon', { nombre: 'edit' }) %> Editar</a>
+  </div>
+</section>
+
+<div class="dash-grid">
+  <section class="tarjeta panel panel--ocho">
+    <% if (item.tracking === 'serial') { %>
+      <div class="panel__cabecera"><div><p class="etiqueta">Seriales</p><h3><%= item.serials.length %> registrado(s)</h3></div><span class="insignia insignia--morado"><%= item.availableSerials %> disponible(s)</span></div>
+      <% if (item.serials.length === 0) { %>
+        <p class="texto-suave">Sin seriales cargados.</p>
+      <% } else { %>
+        <div class="tabla-scroll">
+          <table class="tabla tabla--compacta">
+            <thead><tr><th>Serial</th><th>MAC</th><th>Estado</th><th>Cliente</th><th>Cambiar</th></tr></thead>
+            <tbody>
+              <% item.serials.forEach((serial) => { %>
+                <tr>
+                  <td data-etiqueta="Serial"><span class="mono"><%= serial.serial %></span></td>
+                                    <td data-etiqueta="MAC">
+                    <form action="/inventario/<%= item._id %>/seriales/<%= serial._id %>/mac" method="post" class="tabla__acciones">
+                      <input name="mac" value="<%= serial.mac || '' %>" class="campo-mini" maxlength="40" placeholder="AA:BB:CC:DD:EE:FF" aria-label="MAC del serial <%= serial.serial %>">
+                      <button type="submit" class="boton-icono boton-icono--sm" title="Guardar MAC"><%- include('../partials/icon', { nombre: 'check' }) %></button>
+                    </form>
+                  </td>
+                  <td data-etiqueta="Estado"><span class="insignia insignia--<%= serial.status === 'available' ? 'active' : serial.status === 'defective' ? 'error' : 'morado' %>"><%= etiquetas[serial.status] %></span></td>
+                  <td data-etiqueta="Cliente"><%= serial.clientId ? serial.clientId.fullName : '—' %></td>
+                  <td data-etiqueta="Cambiar">
+                    <% if (!['installed', 'sold'].includes(serial.status)) { %>
+                      <form action="/inventario/<%= item._id %>/seriales/<%= serial._id %>/estado" method="post" class="tabla__acciones">
+                        <select name="status" class="campo-mini">
+                          <option value="available" <%= serial.status === 'available' ? 'selected' : '' %>>Disponible</option>
+                          <option value="defective" <%= serial.status === 'defective' ? 'selected' : '' %>>Defectuoso</option>
+                        </select>
+                        <button type="submit" class="boton-icono boton-icono--sm" title="Guardar"><%- include('../partials/icon', { nombre: 'check' }) %></button>
+                      </form>
+                    <% } else { %>
+                      <small>Asignado por venta</small>
+                    <% } %>
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    <% } else { %>
+      <div class="panel__cabecera"><div><p class="etiqueta">Existencias</p><h3>Movimientos</h3></div><span class="insignia insignia--<%= item.bajoMinimo ? 'overdue' : 'active' %>"><%= item.stock %> <%= item.unit %></span></div>
+    <% } %>
+
+    <div class="panel__cabecera"><div><p class="etiqueta">Trazabilidad</p><h3>Últimos movimientos</h3></div></div>
+    <% if (movimientos.length === 0) { %>
+      <p class="texto-suave">Sin movimientos registrados.</p>
+    <% } else { %>
+      <div class="tabla-scroll">
+        <table class="tabla tabla--compacta">
+          <thead><tr><th>Fecha</th><th>Tipo</th><th>Cantidad</th><th>Motivo</th></tr></thead>
+          <tbody>
+            <% movimientos.forEach((mov) => { %>
+              <tr>
+                <td data-etiqueta="Fecha"><%= formatearFechaHora(mov.date) %></td>
+                <td data-etiqueta="Tipo"><span class="insignia insignia--<%= mov.quantity < 0 ? 'overdue' : 'active' %>"><%= etiquetas[mov.type] || mov.type %></span></td>
+                <td data-etiqueta="Cantidad"><%= mov.quantity > 0 ? '+' : '' %><%= mov.quantity %></td>
+                <td data-etiqueta="Motivo"><%= mov.reason || '—' %></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </section>
+
+  <aside class="pila">
+    <section class="tarjeta panel">
+      <div class="panel__cabecera"><div><p class="etiqueta">Resumen</p><h3>Ficha</h3></div></div>
+      <div class="resumen-linea"><span>Estado</span><strong><span class="insignia insignia--<%= item.active ? 'active' : 'cancelled' %>"><%= item.active ? 'Activo' : 'Inactivo' %></span></strong></div>
+      <div class="resumen-linea"><span>Costo</span><strong><%= formatearDinero(item.cost) %></strong></div>
+      <div class="resumen-linea"><span>Precio</span><strong><%= formatearDinero(item.price) %></strong></div>
+      <div class="resumen-linea"><span>Mínimo</span><strong><%= item.minStock %> <%= item.unit %></strong></div>
+      <div class="resumen-linea"><span>Ubicación</span><strong><%= item.location || '—' %></strong></div>
+      <div class="resumen-linea"><span>Proveedor</span><strong><%= item.supplier || '—' %></strong></div>
+    </section>
+
+    <% if (item.tracking === 'bulk') { %>
+      <section class="tarjeta panel">
+        <div class="panel__cabecera"><div><p class="etiqueta">Ajuste</p><h3>Entrada / salida</h3></div></div>
+        <form action="/inventario/<%= item._id %>/ajustar" method="post" class="pila pila--separada">
+          <div class="campo"><label for="action">Operación</label><select id="action" name="action"><option value="agregar">Agregar</option><option value="quitar">Quitar</option></select></div>
+          <div class="campo"><label for="cantidad">Cantidad</label><input id="cantidad" name="cantidad" type="number" min="1" value="1" required></div>
+          <div class="campo"><label for="reason">Motivo</label><input id="reason" name="reason" type="text" maxlength="200" placeholder="Compra, merma, devolución…"></div>
+          <button type="submit" class="boton boton--secundario boton--bloque">Aplicar ajuste</button>
+        </form>
+      </section>
+    <% } else { %>
+      <section class="tarjeta panel">
+        <div class="panel__cabecera"><div><p class="etiqueta">Seriales</p><h3>Agregar equipos</h3></div></div>
+        <form action="/inventario/<%= item._id %>/seriales" method="post" class="pila pila--separada">
+          <div class="campo"><label for="seriales">Seriales (serial, MAC)</label><textarea id="seriales" name="seriales" rows="4" placeholder="RBD12345678, AA:BB:CC:DD:EE:01" required></textarea></div>
+          <button type="submit" class="boton boton--secundario boton--bloque">Agregar seriales</button>
+        </form>
+      </section>
+    <% } %>
+  </aside>
+</div>

@@ -1,0 +1,58 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Red · IPAM · <%= pool.name %></p>
+    <h2 class="pagina-cabecera__titulo"><%= pool.cidr %></h2>
+    <p class="pagina-cabecera__texto"><%= router %> · <%= usadas %> usada(s) · <%= disponibles %> libre(s)</p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <a class="boton boton--secundario" href="/red/ipam"><%- include('../partials/icon', { nombre: 'arrowLeft' }) %> Volver</a>
+  </div>
+</section>
+
+<section class="dash-kpis">
+  <article class="kpi kpi--morado">
+    <p class="kpi__etiqueta">Total útil</p>
+    <p class="kpi__valor"><%= total %></p>
+    <p class="kpi__detalle">Direcciones asignables</p>
+  </article>
+  <article class="kpi kpi--ambar">
+    <p class="kpi__etiqueta">Usadas</p>
+    <p class="kpi__valor"><%= usadas %></p>
+    <p class="kpi__detalle"><%= porcentaje %>% del pool</p>
+  </article>
+  <article class="kpi kpi--verde">
+    <p class="kpi__etiqueta">Libres</p>
+    <p class="kpi__valor"><%= disponibles %></p>
+    <p class="kpi__detalle">Disponibles para asignar</p>
+  </article>
+</section>
+
+<section class="tarjeta superficie panel panel--tabla">
+  <div class="panel__cabecera"><div><p class="etiqueta">Direcciones</p><h3><%= direcciones.length %> asignada(s)</h3></div></div>
+  <% if (!direcciones.length) { %>
+    <div class="vacio vacio--compacto">
+      <p class="vacio__icono"><%- include('../partials/icon', { nombre: 'network' }) %></p>
+      <p class="vacio__texto">Este pool no tiene direcciones asignadas.</p>
+    </div>
+  <% } else { %>
+    <div class="tabla-scroll">
+      <table class="tabla">
+        <thead><tr><th>IP</th><th>Cliente</th><th>Código</th><th>Tipo</th><th>Estado</th></tr></thead>
+        <tbody>
+          <% direcciones.forEach((fila) => { %>
+            <tr>
+              <td data-etiqueta="IP"><strong class="mono"><%= fila.ip %></strong></td>
+              <td data-etiqueta="Cliente"><%= fila.usos.map((uso) => uso.cliente).join(' / ') %></td>
+              <td data-etiqueta="Código"><span class="mono"><%= fila.usos.map((uso) => uso.codigo).join(' / ') %></span></td>
+              <td data-etiqueta="Tipo"><%= fila.usos.map((uso) => uso.tipo).join(' / ') %></td>
+              <td data-etiqueta="Estado">
+                <% if (fila.usos.length > 1) { %><span class="insignia insignia--overdue">Duplicada</span>
+                <% } else { %><span class="insignia insignia--active"><%= fila.usos[0].estado %></span><% } %>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</section>

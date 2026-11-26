@@ -1,0 +1,68 @@
+<%
+  const estados = { open: 'Pendiente', overdue: 'Vencida', paid: 'Pagada', void: 'Anulada' };
+  const clases = { open: 'pendiente', overdue: 'vencida', paid: 'pagada', void: 'anulada' };
+  const filtros = [
+    ['todas', 'Todas'],
+    ['pendientes', 'Por pagar'],
+    ['vencidas', 'Vencidas'],
+    ['pagadas', 'Pagadas'],
+  ];
+  const enlace = (clave, pagina) => {
+    const query = new URLSearchParams();
+    if (clave !== 'todas') query.set('estado', clave);
+    if (pagina > 1) query.set('pagina', String(pagina));
+    const texto = query.toString();
+    return `/portal/facturas${texto ? `?${texto}` : ''}`;
+  };
+%>
+<section class="p-page-head" data-motion="fade">
+  <div>
+    <span class="p-eyebrow">Facturación</span>
+    <h1>Mis facturas</h1>
+    <p>Revisa montos, vencimientos y el detalle de cada factura.</p>
+  </div>
+  <div class="p-page-head__acciones">
+    <a class="p-btn p-btn--secundario" href="/portal"><%- include('_icono', { nombre: 'arrowLeft' }) %> Volver al resumen</a>
+  </div>
+</section>
+
+<section class="p-mini-resumen" data-motion="fade">
+  <div><small>Saldo pendiente</small><strong><%= formatearDinero(cuenta.deuda) %></strong></div>
+  <div><small>Por pagar</small><strong><%= cuenta.facturas.pendientes %></strong></div>
+  <div><small>Vencidas</small><strong class="<%= cuenta.facturas.vencidas ? 'p-texto--error' : '' %>"><%= cuenta.facturas.vencidas %></strong></div>
+  <div><small>Pagadas</small><strong><%= cuenta.facturas.pagadas %></strong></div>
+</section>
+
+<nav class="p-tabs" aria-label="Filtrar facturas" data-motion="fade">
+  <% filtros.forEach(([clave, etiqueta]) => { %>
+    <a class="p-tabs__link <%= estado === clave ? 'is-activo' : '' %>" href="<%= enlace(clave, 1) %>"><%= etiqueta %></a>
+  <% }); %>
+</nav>
+
+<section class="p-card" data-motion="fade">
+  <% if (!facturas.length) { %>
+    <div class="p-vacio"><span class="p-vacio__icono"><%- include('_icono', { nombre: 'check' }) %></span><strong>No hay facturas en este filtro</strong><p>Prueba con otro estado o vuelve al resumen.</p></div>
+  <% } else { %>
+    <div class="p-tabla-cabecera"><span>Factura</span><span>Emisión</span><span>Vence</span><span>Estado</span><span class="p-der">Total</span><span></span></div>
+    <div class="p-lista p-lista--facturas">
+      <% facturas.forEach((factura) => { %>
+        <a class="p-fila p-fila--tabla" href="/portal/facturas/<%= factura._id %>">
+          <span class="p-fila__texto"><strong class="p-mono"><%= factura.invoiceNumber %></strong><small><%= factura.type === 'service' ? 'Servicio' : factura.type === 'installation' ? 'Instalación' : 'Factura' %></small></span>
+          <span class="p-fila__fecha"><%= formatearFecha(factura.issueDate) %></span>
+          <span class="p-fila__fecha"><%= formatearFecha(factura.dueDate) %></span>
+          <span><span class="p-status p-status--<%= clases[factura.status] || 'pendiente' %>"><%= estados[factura.status] || factura.status %></span></span>
+          <span class="p-fila__monto p-der"><%= formatearDinero(factura.total, factura.currency) %></span>
+          <%- include('_icono', { nombre: 'arrowRight' }) %>
+        </a>
+      <% }); %>
+    </div>
+
+    <% if (paginacion.paginas > 1) { %>
+      <nav class="p-paginacion" aria-label="Páginas de facturas">
+        <% if (paginacion.actual > 1) { %><a class="p-btn p-btn--secundario p-btn--pequeno" href="<%= enlace(estado, paginacion.actual - 1) %>">Anterior</a><% } else { %><span></span><% } %>
+        <span>Página <%= paginacion.actual %> de <%= paginacion.paginas %></span>
+        <% if (paginacion.actual < paginacion.paginas) { %><a class="p-btn p-btn--secundario p-btn--pequeno" href="<%= enlace(estado, paginacion.actual + 1) %>">Siguiente</a><% } else { %><span></span><% } %>
+      </nav>
+    <% } %>
+  <% } %>
+</section>

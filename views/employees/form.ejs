@@ -1,0 +1,113 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Administración · Nómina</p>
+    <h2 class="pagina-cabecera__titulo"><%= modo === 'crear' ? 'Nuevo trabajador' : `Editar ${empleado.name}` %></h2>
+    <p class="pagina-cabecera__texto">Datos del trabajador, área, cargo y sueldo quincenal. El pago se registra como gasto de nómina.</p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <a class="boton boton--secundario" href="/admin/empleados"><%- include('../partials/icon', { nombre: 'arrowLeft' }) %> Volver</a>
+  </div>
+</section>
+
+<% if (errores && errores.length) { %>
+  <div class="aviso aviso--error" role="alert">
+    <span class="aviso__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></span>
+    <div class="aviso__texto"><strong>Revisa los datos:</strong><ul class="lista-errores"><% errores.forEach((m) => { %><li><%= m %></li><% }); %></ul></div>
+  </div>
+<% } %>
+
+<form class="formulario" action="<%= modo === 'crear' ? '/admin/empleados' : `/admin/empleados/${empleado._id}` %>" method="post" novalidate>
+  <% if (modo === 'editar') { %><input type="hidden" name="_method" value="PUT"><% } %>
+
+  <section class="tarjeta superficie formulario__seccion">
+    <div class="formulario__cabecera">
+      <span class="formulario__numero">01</span>
+      <div><h3>Datos del trabajador</h3><p>Nombre, área de trabajo y cargo.</p></div>
+    </div>
+    <div class="formulario__rejilla">
+      <div class="campo campo--ancho">
+        <label for="name">Nombre completo *</label>
+        <input id="name" name="name" type="text" maxlength="120" value="<%= empleado.name || '' %>" required>
+      </div>
+      <div class="campo">
+        <label for="area">Área *</label>
+        <select id="area" name="area" required>
+          <% areas.forEach((area) => { %>
+            <option value="<%= area %>" <%= empleado.area === area ? 'selected' : '' %>><%= etiquetasArea[area] %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="position">Cargo *</label>
+        <input id="position" name="position" type="text" maxlength="80" value="<%= empleado.position || '' %>" placeholder="Administradora, técnico instalador…" required>
+      </div>
+      <div class="campo">
+        <label for="userId">Usuario del sistema</label>
+        <select id="userId" name="userId">
+          <option value="">Sin usuario vinculado</option>
+          <% (usuarios || []).forEach((usuario) => { %>
+            <option value="<%= usuario._id %>" <%= String(empleado.userId || '') === String(usuario._id) ? 'selected' : '' %>><%= usuario.name %> (@<%= usuario.username %>)</option>
+          <% }); %>
+        </select>
+        <span class="campo__ayuda">Une al trabajador con su cuenta para medir su rendimiento.</span>
+      </div>
+      <div class="campo">
+        <label for="email">Correo</label>
+        <input id="email" name="email" type="email" maxlength="120" value="<%= empleado.email || '' %>">
+      </div>
+      <div class="campo">
+        <label for="phone">Teléfono</label>
+        <input id="phone" name="phone" type="text" maxlength="40" value="<%= empleado.phone || '' %>">
+      </div>
+      <div class="campo">
+        <label for="startDate">Fecha de ingreso *</label>
+        <input id="startDate" name="startDate" type="date" value="<%= String(empleado.startDate || '').slice(0, 10) %>" required>
+      </div>
+    </div>
+  </section>
+
+  <section class="tarjeta superficie formulario__seccion">
+    <div class="formulario__cabecera">
+      <span class="formulario__numero">02</span>
+      <div><h3>Sueldo y forma de pago</h3><p>El sueldo es por quincena; el mensual se calcula duplicándolo.</p></div>
+    </div>
+    <div class="formulario__rejilla">
+      <div class="campo">
+        <label for="salary">Sueldo quincenal *</label>
+        <input id="salary" name="salary" type="number" min="0.01" step="0.01" value="<%= empleado.salary ?? '' %>" required>
+      </div>
+      <div class="campo">
+        <label for="currency">Moneda *</label>
+        <select id="currency" name="currency" required>
+          <% monedas.forEach((codigo) => { %>
+            <option value="<%= codigo %>" <%= empleado.currency === codigo ? 'selected' : '' %>><%= codigo === 'VES' ? 'Bs (VES)' : 'USD' %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="paymentMethod">Método de pago *</label>
+        <select id="paymentMethod" name="paymentMethod" required>
+          <% metodos.forEach((metodo) => { %>
+            <option value="<%= metodo %>" <%= empleado.paymentMethod === metodo ? 'selected' : '' %>><%= etiquetas[metodo] || metodo %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="campo">
+        <label class="switch">
+          <input type="checkbox" name="active" <%= empleado.active ? 'checked' : '' %>>
+          <span class="switch__control"></span>
+          <span class="switch__texto">Trabajador activo (entra en la nómina automática)</span>
+        </label>
+      </div>
+      <div class="campo campo--ancho">
+        <label for="notes">Notas</label>
+        <textarea id="notes" name="notes" rows="2" maxlength="500"><%= empleado.notes || '' %></textarea>
+      </div>
+    </div>
+  </section>
+
+  <div class="formulario__acciones">
+    <a class="boton boton--secundario" href="/admin/empleados">Cancelar</a>
+    <button type="submit" class="boton boton--primario"><%- include('../partials/icon', { nombre: 'check' }) %> <%= modo === 'crear' ? 'Guardar trabajador' : 'Guardar cambios' %></button>
+  </div>
+</form>

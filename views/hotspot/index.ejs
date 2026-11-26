@@ -1,0 +1,211 @@
+<%
+  const estados = { available: 'Disponible', sold: 'Vendido', revoked: 'Revocado', expired: 'Vencido' };
+  const insignia = { available: 'pending', sold: 'active', revoked: 'cancelled', expired: 'overdue' };
+  const minutos = (valor) => {
+    const total = Math.max(0, Math.round(Number(valor) || 0));
+    if (!total) return 'sin límite';
+    const horas = Math.floor(total / 60);
+    const resto = total % 60;
+    return `${horas ? `${horas} h` : ''}${resto ? ` ${resto} min` : ''}`.trim();
+  };
+  const datos = (mb) => (mb ? `${mb} MB` : 'sin límite');
+  const planPorId = new Map(planes.map((plan) => [String(plan._id), plan]));
+%>
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Operación · Hotspot</p>
+    <h2 class="pagina-cabecera__titulo">Hotspot y vouchers</h2>
+    <p class="pagina-cabecera__texto">Planes con precio, tiempo y velocidad. Al vencer, el usuario se elimina del router y se desconecta.</p>
+  </div>
+</section>
+
+<nav class="tabs" aria-label="Secciones de hotspot">
+  <a class="tabs__enlace is-activo" href="/hotspot" aria-current="page">Vouchers</a>
+  <a class="tabs__enlace" href="/hotspot/planes">Planes</a>
+</nav>
+
+<section class="tarjeta superficie filtros">
+  <form method="get" action="/hotspot" class="filtros__form">
+    <div class="campo">
+      <label for="routerId">Router</label>
+      <select id="routerId" name="routerId" data-auto-enviar>
+        <% routers.forEach((fila) => { %>
+          <option value="<%= fila._id %>" <%= String(router?._id || '') === String(fila._id) ? 'selected' : '' %>><%= fila.name %><%= fila.hotspotEnabled ? ' · hotspot' : '' %></option>
+        <% }); %>
+      </select>
+    </div>
+    <button type="submit" class="boton boton--secundario boton--sm">Ver</button>
+  </form>
+</section>
+
+<% if (!router) { %>
+  <section class="tarjeta superficie panel">
+    <div class="vacio vacio--compacto">
+      <p class="vacio__icono"><%- include('../partials/icon', { nombre: 'wifi' }) %></p>
+      <p class="vacio__texto">No hay routers MikroTik activos. Registra uno en Red → Routers.</p>
+    </div>
+  </section>
+<% } else { %>
+  <% if (errorDeteccion) { %>
+    <div class="aviso aviso--advertencia" role="note">
+      <span class="aviso__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></span>
+      <div class="aviso__texto"><strong>No se pudo leer el hotspot del router:</strong> <%= errorDeteccion %></div>
+    </div>
+  <% } %>
+
+  <section class="dash-kpis" aria-label="Resumen de vouchers">
+    <article class="kpi kpi--verde">
+      <div class="kpi__cabecera"><span class="kpi__titulo">Disponibles</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'ticket' }) %></span></div>
+      <p class="kpi__valor"><%= resumen.disponibles %></p>
+      <p class="kpi__detalle">Para vender</p>
+    </article>
+    <article class="kpi kpi--morado">
+      <div class="kpi__cabecera"><span class="kpi__titulo">Vendidos</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'check' }) %></span></div>
+      <p class="kpi__valor"><%= resumen.vendidos %></p>
+      <p class="kpi__detalle"><%= resumen.revocados %> revocado(s)</p>
+    </article>
+    <article class="kpi kpi--ambar">
+      <div class="kpi__cabecera"><span class="kpi__titulo">Recaudado</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'dollar' }) %></span></div>
+      <p class="kpi__valor"><%= formatearDinero(resumen.recaudado) %></p>
+      <p class="kpi__detalle">Vouchers vendidos</p>
+    </article>
+  </section>
+
+  <section class="tarjeta superficie panel">
+    <div class="panel__cabecera">
+      <div><p class="etiqueta">Router</p><h3>Servidor, perfil y habilitación</h3></div>
+      <span class="insignia insignia--<%= router.hotspotEnabled ? 'active' : 'none' %>"><%= router.hotspotEnabled ? 'Hotspot activo' : 'Sin habilitar' %></span>
+    </div>
+    <form action="/hotspot/config/<%= router._id %>" method="post" class="formulario formulario--compacto">
+      <div class="formulario__rejilla">
+        <label class="check campo--ancho"><input type="checkbox" name="enabled" <%= router.hotspotEnabled ? 'checked' : '' %>> Usar este router para hotspot</label>
+        <div class="campo">
+          <label for="server">Servidor hotspot</label>
+          <input id="server" name="server" type="text" list="servidores-hotspot" maxlength="60" value="<%= router.hotspotServer || '' %>" placeholder="hotspot1">
+          <datalist id="servidores-hotspot"><% deteccion.servidores.forEach((fila) => { %><option value="<%= fila.name %>"><%= fila.interface %></option><% }); %></datalist>
+        </div>
+        <div class="campo">
+          <label for="profile">Perfil por defecto</label>
+          <input id="profile" name="profile" type="text" list="perfiles-hotspot" maxlength="60" value="<%= router.hotspotProfile || '' %>" placeholder="voucher-1h">
+          <datalist id="perfiles-hotspot"><% deteccion.perfiles.forEach((nombre) => { %><option value="<%= nombre %>"></option><% }); %></datalist>
+        </div>
+      </div>
+      <div class="formulario__acciones">
+        <button type="submit" class="boton boton--secundario">Guardar configuración</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="tarjeta superficie panel">
+    <div class="panel__cabecera"><div><p class="etiqueta">Lote</p><h3>Crear vouchers</h3></div></div>
+    <% if (!router.hotspotEnabled) { %>
+      <div class="aviso aviso--advertencia" role="note">
+        <span class="aviso__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></span>
+        <div class="aviso__texto">Este router no está habilitado para hotspot. Marca <strong>Usar este router para hotspot</strong> y guarda la configuración.</div>
+      </div>
+    <% } else if (!planes.length) { %>
+      <div class="aviso aviso--advertencia" role="note">
+        <span class="aviso__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></span>
+        <div class="aviso__texto">No hay planes de hotspot. <a href="/hotspot/planes">Crea uno</a> con precio, tiempo y velocidad.</div>
+      </div>
+    <% } else { %>
+      <form action="/hotspot/lotes" method="post" class="formulario formulario--compacto">
+        <input type="hidden" name="routerId" value="<%= router._id %>">
+        <div class="formulario__rejilla">
+          <div class="campo campo--ancho">
+            <label for="planId">Plan</label>
+            <select id="planId" name="planId" required>
+              <% planes.forEach((plan) => { %>
+                <option value="<%= plan._id %>"><%= plan.name %> · <%= minutos(plan.durationMinutes) %> · <%= plan.downloadMbps %>/<%= plan.uploadMbps %> Mbps · <%= formatearDinero(plan.price) %><%= plan.dataLimitMB ? ` · ${plan.dataLimitMB} MB` : '' %></option>
+              <% }); %>
+            </select>
+          </div>
+          <div class="campo"><label for="quantity">Cantidad</label><input id="quantity" name="quantity" type="number" min="1" max="200" value="10" required></div>
+        </div>
+        <p class="campo__ayuda">El perfil del plan se crea o actualiza en el router. Al terminar el tiempo, el usuario se elimina.</p>
+        <div class="formulario__acciones">
+          <button type="submit" class="boton boton--primario"><%- include('../partials/icon', { nombre: 'plus' }) %> Generar lote</button>
+        </div>
+      </form>
+    <% } %>
+  </section>
+
+  <% if (lotes.length) { %>
+    <section class="tarjeta superficie panel panel--tabla">
+      <div class="panel__cabecera"><div><p class="etiqueta">Lotes</p><h3>Últimos lotes</h3></div></div>
+      <div class="tabla-scroll">
+        <table class="tabla">
+          <thead><tr><th>Fecha</th><th>Plan</th><th>Cantidad</th><th>Duración</th><th>Datos</th><th>Precio</th><th></th></tr></thead>
+          <tbody>
+            <% lotes.forEach((lote) => { %>
+              <tr>
+                <td data-etiqueta="Fecha"><%= formatearFechaHora(lote.createdAt) %></td>
+                <td data-etiqueta="Plan"><span class="mono"><%= lote.profile %></span></td>
+                <td data-etiqueta="Cantidad"><%= lote.quantity %></td>
+                <td data-etiqueta="Duración"><%= minutos(lote.durationMinutes || lote.durationHours * 60) %></td>
+                <td data-etiqueta="Datos"><%= datos(lote.dataLimitMB) %></td>
+                <td data-etiqueta="Precio"><%= formatearDinero(lote.price) %></td>
+                <td><a class="boton-icono boton-icono--sm" href="/hotspot/lote/<%= lote._id %>/imprimir" title="Imprimir lote"><%- include('../partials/icon', { nombre: 'receipt' }) %></a></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  <% } %>
+
+  <section class="tarjeta superficie panel panel--tabla">
+    <div class="panel__cabecera"><div><p class="etiqueta">Vouchers</p><h3><%= vouchers.length %> reciente(s)</h3></div></div>
+    <% if (!vouchers.length) { %>
+      <div class="vacio vacio--compacto">
+        <p class="vacio__icono"><%- include('../partials/icon', { nombre: 'ticket' }) %></p>
+        <p class="vacio__texto">Todavía no hay vouchers. Genera un lote arriba.</p>
+      </div>
+    <% } else { %>
+      <div class="tabla-scroll">
+        <table class="tabla">
+          <thead><tr><th>Código</th><th>Clave</th><th>Plan</th><th>Duración</th><th>Precio</th><th>Estado</th><th class="tabla__acciones">Acciones</th></tr></thead>
+          <tbody>
+            <% vouchers.forEach((voucher) => { %>
+              <tr>
+                <td data-etiqueta="Código"><strong class="mono"><%= voucher.code %></strong></td>
+                <td data-etiqueta="Clave"><span class="mono"><%= voucher.password %></span></td>
+                <td data-etiqueta="Plan"><%= voucher.profile %></td>
+                <td data-etiqueta="Duración"><%= minutos(voucher.durationMinutes || voucher.durationHours * 60) %></td>
+                <td data-etiqueta="Precio"><%= formatearDinero(voucher.price) %></td>
+                <td data-etiqueta="Estado"><span class="insignia insignia--<%= insignia[voucher.status] %>"><%= estados[voucher.status] %></span></td>
+                <td>
+                  <div class="tabla__acciones">
+                    <% if (voucher.status === 'available') { %>
+                      <form action="/hotspot/<%= voucher._id %>/vender" method="post" data-confirmar="¿Vender el voucher <%= voucher.code %> por <%= formatearDinero(voucher.price) %>?">
+                        <input type="hidden" name="routerId" value="<%= router._id %>">
+                        <select name="paymentCurrency" class="campo-mini" aria-label="Moneda">
+                          <option value="USD">USD</option>
+                          <option value="VES">Bs</option>
+                        </select>
+                        <input name="paymentAmount" type="number" step="0.01" min="0.01" value="<%= voucher.price %>" class="campo-mini campo-mini--monto" aria-label="Monto cobrado">
+                        <select name="paymentMethod" class="campo-mini">
+                          <option value="cash">Efectivo</option>
+                          <option value="transfer">Transferencia</option>
+                          <option value="pago_movil">Pago móvil</option>
+                          <option value="zelle">Zelle</option>
+                        </select>
+                        <button type="submit" class="boton-icono boton-icono--sm" title="Vender"><%- include('../partials/icon', { nombre: 'check' }) %></button>
+                      </form>
+                    <% } %>
+                    <% if (voucher.status === 'sold' || voucher.status === 'available') { %>
+                      <form action="/hotspot/<%= voucher._id %>/revocar" method="post" data-confirmar="¿Revocar el voucher <%= voucher.code %>? Se deshabilita en el router.">
+                        <input type="hidden" name="routerId" value="<%= router._id %>">
+                        <button type="submit" class="boton-icono boton-icono--sm boton-icono--peligro" title="Revocar"><%- include('../partials/icon', { nombre: 'x' }) %></button>
+                      </form>
+                    <% } %>
+                  </div>
+                </td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </section>
+<% } %>

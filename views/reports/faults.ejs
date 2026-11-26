@@ -1,0 +1,184 @@
+<section class="pagina-cabecera reporte-diario">
+  <div>
+    <p class="etiqueta">Reportes · Red</p>
+    <h2 class="pagina-cabecera__titulo">Reporte diario de averías</h2>
+    <p class="pagina-cabecera__texto"><%= formatearFecha(fecha) %> · <%= resumen.total %> avería(s) · <%= resumen.instalaciones %> instalación(es) realizada(s)</p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <a class="boton boton--secundario" href="/red/zonas"><%- include('../partials/icon', { nombre: 'mapPin' }) %> Zonas</a>
+    <button type="button" class="boton boton--secundario" data-imprimir><%- include('../partials/icon', { nombre: 'fileText' }) %> Imprimir</button>
+    <a class="boton boton--primario" href="/red/reportes/averias/nuevo"><%- include('../partials/icon', { nombre: 'plus' }) %> Nueva avería</a>
+  </div>
+</section>
+
+<div class="solo-impresion reporte-impresion">
+  <h1>Reporte diario de averías</h1>
+  <p><%= formatearFecha(fecha) %> · CRACKENTICK</p>
+</div>
+
+<section class="tarjeta superficie filtros">
+  <form method="get" action="/red/reportes/averias" class="filtros__form">
+    <div class="campo">
+      <label for="fecha">Día</label>
+      <input id="fecha" name="fecha" type="date" value="<%= filtros.fecha %>" data-auto-enviar>
+    </div>
+    <div class="campo">
+      <label for="zona">Zona</label>
+      <select id="zona" name="zona" data-auto-enviar>
+        <option value="">Todas</option>
+        <% zonas.forEach((zona) => { %>
+          <option value="<%= zona._id %>" <%= filtros.zona === String(zona._id) ? 'selected' : '' %>><%= zona.name %><%= zona.active ? '' : ' (inactiva)' %></option>
+        <% }); %>
+        <option value="sin" <%= filtros.zona === 'sin' ? 'selected' : '' %>>Sin zona</option>
+      </select>
+    </div>
+    <div class="campo">
+      <label for="estado">Estado</label>
+      <select id="estado" name="estado" data-auto-enviar>
+        <option value="">Todos</option>
+        <option value="solved" <%= filtros.estado === 'solved' ? 'selected' : '' %>>Solventadas</option>
+        <option value="in_progress" <%= filtros.estado === 'in_progress' ? 'selected' : '' %>>En proceso</option>
+        <option value="unsolved" <%= filtros.estado === 'unsolved' ? 'selected' : '' %>>Sin solventar</option>
+      </select>
+    </div>
+    <button type="submit" class="boton boton--secundario boton--sm">Filtrar</button>
+  </form>
+</section>
+
+<section class="dash-kpis">
+  <article class="kpi kpi--rojo"><div class="kpi__cabecera"><span class="kpi__titulo">Reportadas</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></span></div><p class="kpi__valor"><%= resumen.total %></p><p class="kpi__detalle">En el día</p></article>
+  <article class="kpi kpi--verde"><div class="kpi__cabecera"><span class="kpi__titulo">Solventadas</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'check' }) %></span></div><p class="kpi__valor"><%= resumen.solventadas %></p><p class="kpi__detalle">Resueltas</p></article>
+  <article class="kpi kpi--ambar"><div class="kpi__cabecera"><span class="kpi__titulo">En proceso</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'clock' }) %></span></div><p class="kpi__valor"><%= resumen.enProceso %></p><p class="kpi__detalle">En atención</p></article>
+  <article class="kpi kpi--rojo"><div class="kpi__cabecera"><span class="kpi__titulo">Sin solventar</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'ban' }) %></span></div><p class="kpi__valor"><%= resumen.sinSolventar %></p><p class="kpi__detalle">Pendientes</p></article>
+  <article class="kpi kpi--morado"><div class="kpi__cabecera"><span class="kpi__titulo">Instalaciones</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'box' }) %></span></div><p class="kpi__valor"><%= resumen.instalaciones %></p><p class="kpi__detalle">Realizadas en el día</p></article>
+</section>
+
+<% if (grafico.length) { %>
+  <section class="tarjeta superficie panel reporte-grafico">
+    <div class="panel__cabecera">
+      <div><p class="etiqueta">Resumen por zona</p><h3>Averías del día</h3></div>
+    </div>
+    <div class="reporte-grafico__lienzo">
+      <canvas id="graficoAveriasZonas" aria-label="Averías solventadas y pendientes por zona" role="img"></canvas>
+    </div>
+  </section>
+<% } %>
+
+<% if (!grupos.length) { %>
+  <section class="tarjeta superficie">
+    <div class="vacio vacio--compacto"><p class="vacio__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></p><p class="vacio__texto">No hay zonas ni averías para este día. <a href="/red/zonas">Crea una zona</a> o registra la primera avería.</p></div>
+  </section>
+<% } %>
+
+<% grupos.forEach((grupo) => { %>
+  <% const solventadas = grupo.averias.filter((r) => r.status === 'solved').length; %>
+  <% const sinSolventar = grupo.averias.length - solventadas; %>
+  <section class="tarjeta panel panel--tabla reporte-zona">
+    <div class="panel__cabecera">
+      <div><p class="etiqueta">Zona</p><h3><%= grupo.nombre %></h3></div>
+      <div class="reporte-zona__resumen">
+        <span class="insignia insignia--verde">Solventadas: <%= solventadas %></span>
+        <span class="insignia insignia--rojo">Sin solventar: <%= sinSolventar %></span>
+        <span class="insignia insignia--morado">Instalaciones: <%= grupo.instalaciones %></span>
+      </div>
+    </div>
+    <% if (!grupo.averias.length) { %>
+      <p class="texto-suave reporte-zona__vacio">Sin averías reportadas en esta zona.</p>
+    <% } else { %>
+      <div class="tabla-scroll">
+        <table class="tabla tabla--reporte">
+          <thead>
+            <tr>
+              <th>N°</th><th>Prioridad</th><th>Cliente</th><th>Problema</th><th>Técnico</th><th>Estado</th><th>Ticket</th><th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% grupo.averias.forEach((reporte, indice) => { const cliente = reporte.clientId && reporte.clientId.firstName ? `${reporte.clientId.firstName} ${reporte.clientId.lastName}`.trim() : (reporte.clientName || '—'); %>
+              <tr>
+                <td data-etiqueta="N°"><%= indice + 1 %><small><%= formatearFecha(reporte.faultDate, { day: '2-digit', month: 'short' }) %> · <%= formatearFecha(reporte.reportedAt, { timeStyle: 'short' }) %></small></td>
+                <td data-etiqueta="Prioridad"><span class="insignia insignia--<%= reporte.priority === 'urgent' || reporte.priority === 'high' ? 'overdue' : reporte.priority === 'medium' ? 'pending' : 'none' %>"><%= etiquetas[reporte.priority] %></span></td>
+                <td data-etiqueta="Cliente"><%= cliente %><small><%= reporte.location || 'Sin ubicación' %></small></td>
+                <td data-etiqueta="Problema"><%= reporte.problem %><% if (reporte.note) { %><small><%= reporte.note %></small><% } %></td>
+                <td data-etiqueta="Técnico"><%= reporte.technician || '—' %></td>
+                <td data-etiqueta="Estado">
+                  <form action="/red/reportes/averias/<%= reporte._id %>/estado" method="post" class="reporte-estado">
+                    <select name="status" class="campo-mini" aria-label="Estado de la avería">
+                      <option value="unsolved" <%= reporte.status === 'unsolved' ? 'selected' : '' %>>Sin solventar</option>
+                      <option value="in_progress" <%= reporte.status === 'in_progress' ? 'selected' : '' %>>En proceso</option>
+                      <option value="solved" <%= reporte.status === 'solved' ? 'selected' : '' %>>Solventada</option>
+                    </select>
+                    <button type="submit" class="boton-icono boton-icono--sm" title="Actualizar estado" aria-label="Actualizar estado"><%- include('../partials/icon', { nombre: 'check' }) %></button>
+                  </form>
+                </td>
+                <td data-etiqueta="Ticket">
+                  <% if (reporte.ticketId) { %>
+                    <a href="/soporte/tickets/<%= reporte.ticketId._id %>"><%= reporte.ticketId.code %></a>
+                  <% } else { %>—<% } %>
+                </td>
+                <td>
+                  <div class="plan-card__acciones">
+                    <a class="boton-icono boton-icono--sm" href="/red/reportes/averias/<%= reporte._id %>/editar" aria-label="Editar avería" title="Editar"><%- include('../partials/icon', { nombre: 'edit' }) %></a>
+                    <form action="/red/reportes/averias/<%= reporte._id %>" method="post" data-confirmar="¿Eliminar esta avería del reporte?">
+                      <input type="hidden" name="_method" value="DELETE">
+                      <button type="submit" class="boton-icono boton-icono--sm" aria-label="Eliminar avería" title="Eliminar"><%- include('../partials/icon', { nombre: 'trash' }) %></button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+      <div class="solo-impresion reporte-lista">
+        <table>
+          <thead><tr><th>N°</th><th>Prioridad</th><th>Cliente</th><th>Problema</th><th>Técnico</th><th>Estado</th><th>Ticket</th></tr></thead>
+          <tbody>
+            <% grupo.averias.forEach((reporte, indice) => { const cliente = reporte.clientId && reporte.clientId.firstName ? `${reporte.clientId.firstName} ${reporte.clientId.lastName}`.trim() : (reporte.clientName || '—'); const estado = { solved: 'Solventada', in_progress: 'En proceso', unsolved: 'Sin solventar' }[reporte.status] || reporte.status; %>
+              <tr>
+                <td><%= indice + 1 %></td>
+                <td><%= etiquetas[reporte.priority] %></td>
+                <td><%= cliente %><% if (reporte.location) { %><br><small><%= reporte.location %></small><% } %></td>
+                <td><%= reporte.problem %><% if (reporte.note) { %><br><small><%= reporte.note %></small><% } %></td>
+                <td><%= reporte.technician || '—' %></td>
+                <td><%= estado %></td>
+                <td><%= reporte.ticketId ? reporte.ticketId.code : '—' %></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </section>
+<% }); %>
+
+<% if (grafico.length) { %>
+<script>
+  (function () {
+    var lienzo = document.getElementById('graficoAveriasZonas');
+    if (!lienzo || !window.Chart) return;
+    var datos = <%- JSON.stringify(grafico).replace(/</g, '\\u003c') %>;
+    var estilo = getComputedStyle(document.documentElement);
+    var colorTexto = (estilo.getPropertyValue('--text-soft') || '#c9c9d5').trim();
+    var colorRed = (estilo.getPropertyValue('--border') || '#2a2a33').trim();
+    new window.Chart(lienzo, {
+      type: 'bar',
+      data: {
+        labels: datos.map(function (fila) { return fila.zona; }),
+        datasets: [
+          { label: 'Solventadas', data: datos.map(function (fila) { return fila.solventadas; }), backgroundColor: '#22c55e', borderRadius: 4 },
+          { label: 'Pendientes', data: datos.map(function (fila) { return fila.pendientes; }), backgroundColor: '#f43f5e', borderRadius: 4 },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: colorTexto } } },
+        scales: {
+          x: { stacked: true, ticks: { color: colorTexto }, grid: { color: colorRed } },
+          y: { stacked: true, beginAtZero: true, ticks: { color: colorTexto, precision: 0 }, grid: { color: colorRed } },
+        },
+      },
+    });
+  })();
+</script>
+<% } %>

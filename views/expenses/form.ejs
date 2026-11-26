@@ -1,0 +1,119 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Administración · Finanzas</p>
+    <h2 class="pagina-cabecera__titulo"><%= modo === 'crear' ? 'Nuevo movimiento' : 'Editar movimiento' %></h2>
+    <p class="pagina-cabecera__texto">Registra un gasto operativo o un ingreso manual para el control mensual de la empresa.</p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <a class="boton boton--secundario" href="/admin/gastos"><%- include('../partials/icon', { nombre: 'arrowLeft' }) %> Volver</a>
+  </div>
+</section>
+
+<% if (errores && errores.length) { %>
+  <div class="aviso aviso--error" role="alert">
+    <span class="aviso__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></span>
+    <div class="aviso__texto"><strong>Revisa los datos:</strong><ul class="lista-errores"><% errores.forEach((m) => { %><li><%= m %></li><% }); %></ul></div>
+  </div>
+<% } %>
+
+<form class="formulario" action="<%= modo === 'crear' ? '/admin/gastos' : `/admin/gastos/${movimiento._id}` %>" method="post" novalidate>
+  <% if (modo === 'editar') { %><input type="hidden" name="_method" value="PUT"><% } %>
+
+  <section class="tarjeta superficie formulario__seccion">
+    <div class="formulario__cabecera">
+      <span class="formulario__numero">01</span>
+      <div><h3>Clasificación</h3><p>Tipo, categoría y estado del movimiento.</p></div>
+    </div>
+    <div class="formulario__rejilla">
+      <div class="campo">
+        <label for="type">Tipo *</label>
+        <select id="type" name="type" data-tipo-movimiento>
+          <% tiposMovimiento.forEach((tipo) => { %>
+            <option value="<%= tipo %>" <%= movimiento.type === tipo ? 'selected' : '' %>><%= etiquetas[tipo] || tipo %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="category">Categoría *</label>
+        <select id="category" name="category">
+          <% categoriasFinanzas.forEach((categoria) => { %>
+            <option value="<%= categoria %>" <%= movimiento.category === categoria ? 'selected' : '' %>><%= etiquetasCategoria[categoria] || categoria %></option>
+          <% }); %>
+        </select>
+        <span class="campo__ayuda">Las compras de equipos van en “Compra de inventario”: es un activo y no resta la utilidad. El costo se reconoce al vender.</span>
+      </div>
+      <div class="campo">
+        <label for="status">Estado *</label>
+        <select id="status" name="status">
+          <% estadosMovimiento.forEach((estado) => { %>
+            <option value="<%= estado %>" <%= movimiento.status === estado ? 'selected' : '' %>><%= etiquetas[estado] || estado %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="date">Fecha *</label>
+        <input id="date" name="date" type="date" value="<%= String(movimiento.date || '').slice(0, 10) %>" required>
+      </div>
+    </div>
+  </section>
+
+  <section class="tarjeta superficie formulario__seccion">
+    <div class="formulario__cabecera">
+      <span class="formulario__numero">02</span>
+      <div><h3>Detalle económico</h3><p>Concepto, monto y contraparte del movimiento.</p></div>
+    </div>
+    <div class="formulario__rejilla">
+      <div class="campo campo--ancho">
+        <label for="concept">Concepto *</label>
+        <input id="concept" name="concept" type="text" maxlength="160" value="<%= movimiento.concept || '' %>" placeholder="Ej. Pago de enlace NetUno, nómina, alquiler de oficina" required>
+      </div>
+      <div class="campo">
+        <label for="amount">Monto *</label>
+        <input id="amount" name="amount" type="number" min="0.01" step="0.01" value="<%= movimiento.amount ?? '' %>" required>
+      </div>
+      <div class="campo">
+        <label for="currency">Moneda *</label>
+        <select id="currency" name="currency" data-moneda-movimiento>
+          <% monedasPago.forEach((codigo) => { %>
+            <option value="<%= codigo %>" <%= movimiento.currency === codigo ? 'selected' : '' %>><%= codigo === 'VES' ? 'Bs (VES)' : 'USD' %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="paymentMethod">Método de pago <span data-requerido-metodo hidden>*</span></label>
+        <select id="paymentMethod" name="paymentMethod" data-metodo-movimiento>
+          <option value="">Sin método</option>
+          <option value="cash" data-moneda="USD VES" <%= movimiento.paymentMethod === 'cash' ? 'selected' : '' %>>Efectivo</option>
+          <option value="transfer" data-moneda="USD VES" <%= movimiento.paymentMethod === 'transfer' ? 'selected' : '' %>>Transferencia</option>
+          <option value="card" data-moneda="USD" <%= movimiento.paymentMethod === 'card' ? 'selected' : '' %>>Tarjeta</option>
+          <option value="pago_movil" data-moneda="VES" <%= movimiento.paymentMethod === 'pago_movil' ? 'selected' : '' %>>Pago Móvil</option>
+          <option value="zelle" data-moneda="USD" <%= movimiento.paymentMethod === 'zelle' ? 'selected' : '' %>>Zelle</option>
+          <option value="other" data-moneda="USD VES" <%= movimiento.paymentMethod === 'other' ? 'selected' : '' %>>Otro</option>
+        </select>
+        <span class="campo__ayuda" data-ayuda-metodo>En ingresos es obligatorio: indica moneda y cómo se pagó.</span>
+      </div>
+      <div class="campo">
+        <label for="vendor">Proveedor / beneficiario</label>
+        <input id="vendor" name="vendor" type="text" maxlength="120" value="<%= movimiento.vendor || '' %>" placeholder="NetUno, empleado, arrendador">
+      </div>
+      <div class="campo">
+        <label for="reference">Referencia</label>
+        <input id="reference" name="reference" type="text" maxlength="80" value="<%= movimiento.reference || '' %>" placeholder="Factura, transferencia, recibo">
+      </div>
+      <div class="campo campo--ancho">
+        <label for="notes">Notas</label>
+        <textarea id="notes" name="notes" rows="2" maxlength="500"><%= movimiento.notes || '' %></textarea>
+      </div>
+    </div>
+    <label class="switch">
+      <input type="checkbox" name="recurring" <%= movimiento.recurring ? 'checked' : '' %>>
+      <span class="switch__control"></span>
+      <span class="switch__texto">Gasto recurrente (se repite cada mes)</span>
+    </label>
+  </section>
+
+  <div class="formulario__acciones">
+    <a class="boton boton--secundario" href="/admin/gastos">Cancelar</a>
+    <button type="submit" class="boton boton--primario"><%- include('../partials/icon', { nombre: 'check' }) %> <%= modo === 'crear' ? 'Guardar movimiento' : 'Guardar cambios' %></button>
+  </div>
+</form>

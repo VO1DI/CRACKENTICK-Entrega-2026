@@ -1,0 +1,97 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Sistema · Trazabilidad</p>
+    <h2 class="pagina-cabecera__titulo">Auditoría</h2>
+    <p class="pagina-cabecera__texto"><%= paginacion.total %> evento(s) · registro inmutable de cambios y comandos</p>
+  </div>
+</section>
+
+<section class="tarjeta superficie filtros">
+  <form method="get" action="/logs" class="filtros__form">
+    <div class="campo campo--busqueda">
+      <label class="sr-only" for="q">Buscar</label>
+      <div class="campo__control">
+        <%- include('../partials/icon', { nombre: 'search' }) %>
+        <input id="q" type="search" name="q" value="<%= filtros.q %>" placeholder="Descripción, comando o identificador">
+      </div>
+    </div>
+    <div class="campo">
+      <label for="modulo">Módulo</label>
+      <select id="modulo" name="modulo" data-auto-enviar>
+        <option value="">Todos</option>
+        <% modulos.forEach((modulo) => { %>
+          <option value="<%= modulo %>" <%= filtros.modulo === modulo ? 'selected' : '' %>><%= etiquetasModulo[modulo] || modulo %></option>
+        <% }); %>
+      </select>
+    </div>
+    <div class="campo">
+      <label for="accion">Acción</label>
+      <select id="accion" name="accion" data-auto-enviar>
+        <option value="">Todas</option>
+        <% acciones.forEach((accion) => { %>
+          <option value="<%= accion %>" <%= filtros.accion === accion ? 'selected' : '' %>><%= accion %></option>
+        <% }); %>
+      </select>
+    </div>
+    <div class="campo">
+      <label for="estado">Resultado</label>
+      <select id="estado" name="estado" data-auto-enviar>
+        <option value="">Todos</option>
+        <option value="success" <%= filtros.estado === 'success' ? 'selected' : '' %>>Correcto</option>
+        <option value="failed" <%= filtros.estado === 'failed' ? 'selected' : '' %>>Fallido</option>
+      </select>
+    </div>
+    <div class="campo">
+      <label for="desde">Desde</label>
+      <input id="desde" type="date" name="desde" value="<%= filtros.desde %>">
+    </div>
+    <div class="campo">
+      <label for="hasta">Hasta</label>
+      <input id="hasta" type="date" name="hasta" value="<%= filtros.hasta %>">
+    </div>
+    <button type="submit" class="boton boton--secundario boton--sm">Filtrar</button>
+    <% if (filtros.q || filtros.modulo || filtros.accion || filtros.estado || filtros.desde || filtros.hasta) { %>
+      <a class="enlace-flecha" href="/logs">Limpiar</a>
+    <% } %>
+  </form>
+</section>
+
+<section class="tarjeta superficie tabla-panel">
+  <% if (logs.length === 0) { %>
+    <div class="vacio">
+      <p class="vacio__icono"><%- include('../partials/icon', { nombre: 'activity' }) %></p>
+      <h3 class="vacio__titulo">Sin eventos con esos filtros</h3>
+      <p class="vacio__texto">Las acciones de clientes, facturación y firewall aparecen aquí automáticamente.</p>
+      <a class="boton boton--secundario" href="/logs">Ver todos los logs</a>
+    </div>
+  <% } else { %>
+    <div class="tabla-scroll">
+      <table class="tabla">
+        <thead>
+          <tr><th>Fecha</th><th>Módulo</th><th>Acción</th><th>Descripción</th><th>Resultado</th><th>Duración</th><th></th></tr>
+        </thead>
+        <tbody>
+          <% logs.forEach((log) => { %>
+            <tr>
+              <td data-etiqueta="Fecha">
+                <strong><%= formatearFechaHoraExacta(log.timestamp) %></strong>
+                <small class="texto-suave"><%= log.actorNombre || log.actor %><% if (log.actorNombre && log.actorNombre !== log.actor) { %> · @<%= log.actor %><% } %></small>
+                <% if (log.aiAssisted) { %><small class="texto-suave">IA: <%= log.aiModel || 'asistida' %></small><% } %>
+              </td>
+              <td data-etiqueta="Módulo"><span class="insignia insignia--modulo"><%= etiquetasModulo[log.module] || log.module %></span></td>
+              <td data-etiqueta="Acción"><code class="codigo-accion"><%= log.action %></code></td>
+              <td data-etiqueta="Descripción">
+                <span><%= log.description %></span>
+                <% if (log.command) { %><small class="texto-suave"><code><%= log.command %></code></small><% } %>
+              </td>
+              <td data-etiqueta="Resultado"><span class="insignia insignia--<%= log.status === 'success' ? 'active' : 'overdue' %>"><%= log.status === 'success' ? 'Correcto' : 'Fallido' %></span></td>
+              <td data-etiqueta="Duración"><%= log.durationMs != null ? `${log.durationMs} ms` : '—' %></td>
+              <td><a class="boton-icono boton-icono--sm" href="/logs/<%= log._id %>" aria-label="Ver evento"><%- include('../partials/icon', { nombre: 'eye' }) %></a></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+    <%- include('../partials/pagination', { paginacion, filtros }) %>
+  <% } %>
+</section>

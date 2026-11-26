@@ -1,0 +1,75 @@
+<%
+  const routerActual = vlan.routerId && vlan.routerId.name ? vlan.routerId : null;
+  const routerIdActual = String(routerActual?._id || vlan.routerId || '');
+  const creando = modo === 'crear';
+%>
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Red · VLANs</p>
+    <h2 class="pagina-cabecera__titulo"><%= creando ? 'Nueva VLAN' : `Editar VLAN #${vlan.vlanId}` %></h2>
+    <p class="pagina-cabecera__texto"><%= creando ? 'Selecciona el router y aplica la VLAN al guardar.' : `${routerActual?.name || 'Router'} · ${routerActual?.vendor === 'cisco' ? 'Cisco experimental' : 'MikroTik'}` %></p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <a class="boton boton--secundario" href="/red/vlans"><%- include('../partials/icon', { nombre: 'arrowLeft' }) %> Volver</a>
+  </div>
+</section>
+
+<% if (errores && errores.length) { %>
+  <div class="aviso aviso--error" role="alert">
+    <span class="aviso__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></span>
+    <div class="aviso__texto"><strong>Revisa los datos:</strong><ul class="lista-errores"><% errores.forEach((m) => { %><li><%= m %></li><% }); %></ul></div>
+  </div>
+<% } %>
+
+<form class="formulario" action="<%= creando ? '/red/vlans' : `/red/vlans/${vlan._id}` %>" method="post">
+  <% if (!creando) { %><input type="hidden" name="_method" value="PUT"><% } %>
+  <section class="tarjeta superficie formulario__seccion">
+    <div class="formulario__cabecera"><span class="formulario__numero">01</span><div><h3>Datos de la VLAN</h3><p><%= creando ? 'El router y el VLAN ID definen dónde se crea.' : 'El router y el VLAN ID no se cambian desde aquí.' %></p></div></div>
+    <div class="formulario__rejilla">
+      <% if (creando) { %>
+        <div class="campo campo--ancho<%= claseCampo(erroresCampo, 'routerId') %>">
+          <label for="routerId">Router *</label>
+          <select id="routerId" name="routerId" required>
+            <option value="">Selecciona un router</option>
+            <% routers.forEach((router) => { %>
+              <option value="<%= router._id %>" <%= routerIdActual === String(router._id) ? 'selected' : '' %>><%= router.name %><%= router.vendor === 'cisco' ? ' · Cisco experimental' : ' · MikroTik' %><%= router.model ? ` · ${router.model}` : '' %></option>
+            <% }); %>
+          </select>
+          <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'routerId') }) %>
+        </div>
+        <div class="campo<%= claseCampo(erroresCampo, 'vlanId') %>">
+          <label for="vlanId">VLAN ID *</label>
+          <input id="vlanId" name="vlanId" type="number" min="1" max="4094" value="<%= vlan.vlanId || '' %>" required>
+          <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'vlanId') }) %>
+        </div>
+      <% } else { %>
+        <div class="campo"><label>Router</label><input type="text" value="<%= routerActual?.name || '—' %>" readonly></div>
+        <div class="campo"><label>VLAN ID</label><input type="text" value="<%= vlan.vlanId %>" readonly></div>
+      <% } %>
+      <div class="campo<%= claseCampo(erroresCampo, 'name') %>">
+        <label for="name">Nombre *</label>
+        <input id="name" name="name" type="text" maxlength="60" value="<%= vlan.name || '' %>" placeholder="vlan-clientes" required>
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'name') }) %>
+      </div>
+      <div class="campo<%= claseCampo(erroresCampo, 'interface') %>">
+        <label for="interface">Interfaz / puerto</label>
+        <input id="interface" name="interface" type="text" maxlength="60" value="<%= vlan.interface || '' %>" placeholder="ether2 / GigabitEthernet1/0/10">
+        <span class="campo__ayuda">MikroTik: interfaz padre obligatoria. Cisco: puerto de acceso opcional.</span>
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'interface') }) %>
+      </div>
+      <div class="campo<%= claseCampo(erroresCampo, 'address') %>">
+        <label for="address">Dirección (opcional)</label>
+        <input id="address" name="address" type="text" maxlength="45" value="<%= vlan.address || '' %>" placeholder="10.20.0.1/24">
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'address') }) %>
+      </div>
+      <div class="campo campo--ancho">
+        <label for="notes">Notas</label>
+        <textarea id="notes" name="notes" rows="2" maxlength="300"><%= vlan.notes || '' %></textarea>
+      </div>
+    </div>
+  </section>
+  <div class="formulario__acciones">
+    <a class="boton boton--secundario" href="/red/vlans">Cancelar</a>
+    <button type="submit" class="boton boton--primario"><%- include('../partials/icon', { nombre: 'check' }) %> <%= creando ? 'Crear y aplicar VLAN' : 'Guardar y aplicar' %></button>
+  </div>
+</form>

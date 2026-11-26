@@ -1,0 +1,101 @@
+<section class="pagina-cabecera reporte-diario">
+  <div>
+    <p class="etiqueta">Reportes · Red</p>
+    <h2 class="pagina-cabecera__titulo">Reporte diario de instalaciones</h2>
+    <p class="pagina-cabecera__texto"><%= formatearFecha(fecha) %> · <%= resumen.total %> instalación(es) · <%= resumen.sinZona %> sin zona asignada</p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <% if (puedeEditar('red.instalaciones')) { %><a class="boton boton--primario" href="/red/reportes/instalaciones/nueva"><%- include('../partials/icon', { nombre: 'plus' }) %> Nueva instalación</a><% } %>
+    <a class="boton boton--secundario" href="/red/zonas"><%- include('../partials/icon', { nombre: 'mapPin' }) %> Zonas</a>
+    <button type="button" class="boton boton--secundario" data-imprimir><%- include('../partials/icon', { nombre: 'fileText' }) %> Imprimir</button>
+  </div>
+</section>
+
+<div class="solo-impresion reporte-impresion">
+  <h1>Reporte diario de instalaciones</h1>
+  <p><%= formatearFecha(fecha) %> · CRACKENTICK</p>
+</div>
+
+<section class="tarjeta superficie filtros">
+  <form method="get" action="/red/reportes/instalaciones" class="filtros__form">
+    <div class="campo">
+      <label for="fecha">Día</label>
+      <input id="fecha" name="fecha" type="date" value="<%= filtros.fecha %>" data-auto-enviar>
+    </div>
+    <div class="campo">
+      <label for="zona">Zona</label>
+      <select id="zona" name="zona" data-auto-enviar>
+        <option value="">Todas</option>
+        <% zonas.forEach((zona) => { %>
+          <option value="<%= zona._id %>" <%= filtros.zona === String(zona._id) ? 'selected' : '' %>><%= zona.name %><%= zona.active ? '' : ' (inactiva)' %></option>
+        <% }); %>
+        <option value="sin" <%= filtros.zona === 'sin' ? 'selected' : '' %>>Sin zona</option>
+      </select>
+    </div>
+    <button type="submit" class="boton boton--secundario boton--sm">Filtrar</button>
+  </form>
+</section>
+
+<section class="dash-kpis">
+  <article class="kpi kpi--morado"><div class="kpi__cabecera"><span class="kpi__titulo">Instalaciones</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'box' }) %></span></div><p class="kpi__valor"><%= resumen.total %></p><p class="kpi__detalle">En el día</p></article>
+  <article class="kpi kpi--verde"><div class="kpi__cabecera"><span class="kpi__titulo">Con zona</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'mapPin' }) %></span></div><p class="kpi__valor"><%= resumen.conZona %></p><p class="kpi__detalle">Ubicadas</p></article>
+  <article class="kpi kpi--ambar"><div class="kpi__cabecera"><span class="kpi__titulo">Sin zona</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></span></div><p class="kpi__valor"><%= resumen.sinZona %></p><p class="kpi__detalle">Pendientes de asignar</p></article>
+</section>
+
+<% if (!grupos.length) { %>
+  <section class="tarjeta superficie">
+    <div class="vacio vacio--compacto"><p class="vacio__icono"><%- include('../partials/icon', { nombre: 'box' }) %></p><p class="vacio__texto">No hay instalaciones para este día. Usa <strong>Nueva instalación</strong> o instala una venta.</p></div>
+  </section>
+<% } %>
+
+<% grupos.forEach((grupo) => { %>
+  <section class="tarjeta panel panel--tabla reporte-zona">
+    <div class="panel__cabecera">
+      <div><p class="etiqueta">Zona</p><h3><%= grupo.nombre %></h3></div>
+      <div class="reporte-zona__resumen">
+        <span class="insignia insignia--morado">Instalaciones: <%= grupo.reportes.length %></span>
+      </div>
+    </div>
+    <% if (!grupo.reportes.length) { %>
+      <p class="texto-suave reporte-zona__vacio">Sin instalaciones en esta zona.</p>
+    <% } else { %>
+      <div class="tabla-scroll">
+        <table class="tabla tabla--reporte">
+          <thead><tr><th>N°</th><th>Fecha y hora</th><th>Cliente</th><th>Plan</th><th>Venta</th><th>Técnico</th><th>Notas</th><th></th></tr></thead>
+          <tbody>
+            <% grupo.reportes.forEach((reporte, indice) => { const cliente = reporte.clientId && reporte.clientId.firstName ? `${reporte.clientId.firstName} ${reporte.clientId.lastName}`.trim() : (reporte.clientName || '—'); %>
+              <tr>
+                <td data-etiqueta="N°"><%= indice + 1 %></td>
+                <td data-etiqueta="Fecha y hora"><%= formatearFechaHora(reporte.installedAt) %></td>
+                <td data-etiqueta="Cliente"><%= cliente %><small><%= reporte.clientId?.clientCode || '' %></small></td>
+                <td data-etiqueta="Plan"><%= reporte.planName || '—' %></td>
+                <td data-etiqueta="Venta"><%= reporte.saleId?.code || '—' %></td>
+                <td data-etiqueta="Técnico"><%= reporte.technician || '—' %></td>
+                <td data-etiqueta="Notas"><%= reporte.notes || '—' %></td>
+                <td><a class="boton-icono boton-icono--sm" href="/red/reportes/instalaciones/<%= reporte._id %>/editar" aria-label="Editar instalación" title="Editar"><%- include('../partials/icon', { nombre: 'edit' }) %></a></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+      <div class="solo-impresion reporte-lista">
+        <table>
+          <thead><tr><th>N°</th><th>Fecha y hora</th><th>Cliente</th><th>Plan</th><th>Venta</th><th>Técnico</th><th>Notas</th></tr></thead>
+          <tbody>
+            <% grupo.reportes.forEach((reporte, indice) => { const cliente = reporte.clientId && reporte.clientId.firstName ? `${reporte.clientId.firstName} ${reporte.clientId.lastName}`.trim() : (reporte.clientName || '—'); %>
+              <tr>
+                <td><%= indice + 1 %></td>
+                <td><%= formatearFechaHora(reporte.installedAt) %></td>
+                <td><%= cliente %><% if (reporte.clientId?.clientCode) { %><br><small><%= reporte.clientId.clientCode %></small><% } %></td>
+                <td><%= reporte.planName || '—' %></td>
+                <td><%= reporte.saleId?.code || '—' %></td>
+                <td><%= reporte.technician || '—' %></td>
+                <td><%= reporte.notes || '—' %></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </section>
+<% }); %>

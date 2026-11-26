@@ -1,0 +1,99 @@
+<header class="topbar">
+  <div class="topbar__izquierda">
+    <button type="button" class="boton-icono topbar__menu" id="btnMenu" aria-label="Mostrar u ocultar menú" aria-controls="sidebar" aria-expanded="true">
+      <%- include('icon', { nombre: 'menu' }) %>
+    </button>
+    <div class="topbar__titulo">
+      <p class="topbar__miga"><a href="/">CRACKENTICK</a> <span>/</span> <%= titulo || 'Panel' %></p>
+      <h1><%= titulo || 'Panel' %></h1>
+    </div>
+  </div>
+
+  <div class="topbar__derecha">
+    <% if (puede('general.clientes')) { %>
+      <form class="buscador" action="/clientes" method="get" role="search">
+        <%- include('icon', { nombre: 'search' }) %>
+        <input type="search" name="q" placeholder="Buscar cliente, código…" aria-label="Buscar cliente">
+      </form>
+      <% if (puedeEditar('general.clientes')) { %>
+      <a class="boton boton--primario boton--sm topbar__nuevo" href="/clientes/nuevo" aria-label="Nuevo cliente">
+        <%- include('icon', { nombre: 'plus' }) %> <span>Nuevo cliente</span>
+      </a>
+      <% } %>
+    <% } %>
+    <a class="boton-icono topbar__campana" href="/notificaciones" aria-label="Notificaciones<% if (notificacionesPendientes) { %>, <%= notificacionesPendientes %> pendientes<% } %>" title="Notificaciones">
+      <%- include('icon', { nombre: 'bell' }) %>
+      <% if (notificacionesPendientes) { %><span class="topbar__campana-badge"><%= notificacionesPendientes > 99 ? '99+' : notificacionesPendientes %></span><% } %>
+    </a>
+    <div class="topbar__tasa" data-tasa>
+      <button type="button" class="topbar__tasa-boton" data-tasa-boton aria-haspopup="dialog" aria-expanded="false" aria-controls="tasaPanel" title="Dólar BCV">
+        <span data-tasa-valor><%= tasaBcv.rate ? `Bs ${tasaBcv.rate.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'Bs —' %></span>
+      </button>
+      <div class="topbar__tasa-panel" id="tasaPanel" data-tasa-panel role="dialog" aria-label="Dólar BCV" hidden>
+        <div class="topbar__tasa-cabecera">
+          <div>
+            <p class="etiqueta">Dólar BCV</p>
+            <strong class="topbar__tasa-cifra" data-tasa-valor><%= tasaBcv.rate ? `Bs ${tasaBcv.rate.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'Sin tasa' %></strong>
+          </div>
+          <span class="insignia insignia--<%= tasaBcv.source === 'dolarapi' ? 'active' : 'pending' %>" data-tasa-origen><%= tasaBcv.source || 'sin datos' %></span>
+        </div>
+        <p class="topbar__tasa-fecha" data-tasa-fecha><%= tasaBcv.updatedAt ? `Actualizado: ${formatearFechaHora(tasaBcv.updatedAt)}` : 'Sin actualización registrada' %></p>
+        <p class="topbar__tasa-error" data-tasa-error hidden></p>
+        <% if (usuario && (usuario.role === 'admin' || puedeEditar('finanzas.gestion') || puedeEditar('finanzas.facturacion'))) { %>
+        <button type="button" class="boton boton--secundario boton--sm boton--bloque" data-tasa-actualizar>
+          <span class="topbar__tasa-spinner" aria-hidden="true"></span>
+          <span data-tasa-texto>Actualizar ahora</span>
+        </button>
+        <% } %>
+      </div>
+    </div>
+    <div class="tema-selector" data-tema-selector>
+      <button type="button" class="boton-icono" id="btnTema" aria-haspopup="true" aria-expanded="false" aria-controls="temaMenu" aria-label="Cambiar tema" title="Cambiar tema">
+        <span class="boton-tema__icono"><%- include('icon', { nombre: 'moon' }) %></span>
+      </button>
+      <div class="tema-menu" id="temaMenu" role="menu" aria-label="Elegir tema" hidden>
+        <p class="tema-menu__titulo">Tema de la interfaz</p>
+        <button type="button" class="tema-menu__opcion" role="menuitemradio" data-tema-opcion="oscuro" aria-checked="true">
+          <span class="tema-muestra tema-muestra--oscuro" aria-hidden="true"></span>
+          <span class="tema-menu__texto"><strong>Oscuro</strong><small>Predeterminado</small></span>
+          <%- include('icon', { nombre: 'check' }) %>
+        </button>
+        <button type="button" class="tema-menu__opcion" role="menuitemradio" data-tema-opcion="claro" aria-checked="false">
+          <span class="tema-muestra tema-muestra--arena" aria-hidden="true"></span>
+          <span class="tema-menu__texto"><strong>Claro arena</strong><small>Cálido y suave</small></span>
+          <%- include('icon', { nombre: 'check' }) %>
+        </button>
+        <button type="button" class="tema-menu__opcion" role="menuitemradio" data-tema-opcion="claro-suave" aria-checked="false">
+          <span class="tema-muestra tema-muestra--lavanda" aria-hidden="true"></span>
+          <span class="tema-menu__texto"><strong>Claro lavanda</strong><small>El estilo del portal</small></span>
+          <%- include('icon', { nombre: 'check' }) %>
+        </button>
+        <div class="tema-menu__separador" aria-hidden="true"></div>
+        <button type="button" class="tema-menu__opcion" role="menuitemcheckbox" data-vista-compacta aria-checked="false">
+          <span class="tema-muestra tema-muestra--compacta" aria-hidden="true"></span>
+          <span class="tema-menu__texto"><strong>Vista compacta</strong><small>Más filas en pantalla</small></span>
+          <%- include('icon', { nombre: 'check' }) %>
+        </button>
+      </div>
+    </div>
+    <% if (typeof puede === 'function' && puede('soporte.asistente')) { %>
+      <button type="button" class="boton-icono" data-asistente-mostrar aria-label="Abrir el asistente IA" title="Asistente IA">
+        <%- include('icon', { nombre: 'message' }) %>
+      </button>
+    <% } %>
+    <% if (usuario) { const inicialesTop = String(usuario.name || usuario.username || '?').split(/\s+/).filter(Boolean).slice(0, 2).map((parte) => parte.charAt(0).toUpperCase()).join(''); %>
+      <div class="topbar__usuario">
+        <span class="avatar"><%= inicialesTop %></span>
+        <div class="topbar__usuario-texto">
+          <strong><%= usuario.name %></strong>
+          <small><%= etiquetasRol[usuario.role] || usuario.role %></small>
+        </div>
+        <form action="/salir" method="post" data-accion-segura>
+          <button type="submit" class="boton-icono" aria-label="Cerrar sesión" title="Salir">
+            <%- include('icon', { nombre: 'logout' }) %>
+          </button>
+        </form>
+      </div>
+    <% } %>
+  </div>
+</header>

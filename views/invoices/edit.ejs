@@ -1,0 +1,160 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Financiero · Factura <span class="codigo"><%= factura.invoiceNumber %></span></p>
+    <h2 class="pagina-cabecera__titulo">Editar IVA y condiciones de cobro</h2>
+    <p class="pagina-cabecera__texto">
+      Cliente: <strong><%= factura.clientId ? `${factura.clientId.firstName} ${factura.clientId.lastName}` : '—' %></strong>
+      · Estado actual: <span class="insignia insignia--<%= factura.status %>"><%= etiquetas[factura.status] %></span>
+    </p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <a class="boton boton--secundario" href="/facturas/<%= factura._id %>"><%- include('../partials/icon', { nombre: 'arrowLeft' }) %> Cancelar</a>
+  </div>
+</section>
+
+<%
+  const fechaVencimiento = new Date(factura.dueDate);
+  const vencimientoInput = `${fechaVencimiento.getFullYear()}-${String(fechaVencimiento.getMonth() + 1).padStart(2, '0')}-${String(fechaVencimiento.getDate()).padStart(2, '0')}`;
+  const v = typeof valores !== 'undefined' && valores ? valores : {};
+  const valor = (campo, respaldo) => (v[campo] !== undefined && v[campo] !== null && v[campo] !== '' ? v[campo] : (respaldo ?? ''));
+  const tipoDescuento = String(valor('discountType', factura.discountType || 'none'));
+%>
+
+<% if (errores && errores.length) { %>
+  <div class="aviso aviso--error" role="alert">
+    <span class="aviso__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></span>
+    <div class="aviso__texto"><strong>Revisa los datos:</strong><ul class="lista-errores"><% errores.forEach((m) => { %><li><%= m %></li><% }); %></ul></div>
+  </div>
+<% } %>
+
+<div class="rejilla rejilla--factura">
+  <form class="formulario" action="/facturas/<%= factura._id %>" method="post">
+    <input type="hidden" name="_method" value="PUT">
+
+    <section class="tarjeta superficie formulario__seccion">
+      <div class="formulario__cabecera">
+        <span class="formulario__numero">01</span>
+        <div><h3>Impuestos y descuento</h3><p><%= config.billing.taxEnabled !== false ? 'El IVA es libre: puedes cambiarlo para esta factura sin alterar el plan ni la configuración global.' : 'IVA desactivado globalmente: esta factura se recalculará sin IVA.' %></p></div>
+      </div>
+      <div class="formulario__rejilla">
+        <% if (config.billing.taxEnabled !== false) { %>
+          <div class="campo<%= claseCampo(erroresCampo, 'taxRatePercent') %>">
+            <label for="taxRatePercent">IVA (%) *</label>
+            <input id="taxRatePercent" name="taxRatePercent" type="number" min="0" max="100" step="0.01" value="<%= valor('taxRatePercent', Math.round(factura.taxRate * 10000) / 100) %>" required data-tasa>
+            <span class="campo__ayuda">Se aplica sobre la base imponible (subtotal menos descuento).</span>
+            <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'taxRatePercent') }) %>
+          </div>
+        <% } else { %>
+          <input id="taxRatePercent" type="hidden" name="taxRatePercent" value="0">
+          <div class="campo campo--ancho"><label>IVA</label><p class="campo__ayuda">Desactivado en todo el sistema.</p></div>
+        <% } %>
+        <div class="campo<%= claseCampo(erroresCampo, 'dueDate') %>">
+          <label for="dueDate">Fecha de vencimiento</label>
+          <input id="dueDate" name="dueDate" type="date" value="<%= valor('dueDate', vencimientoInput) %>">
+          <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'dueDate') }) %>
+        </div>
+        <div class="campo<%= claseCampo(erroresCampo, 'discountType') %>">
+          <label for="discountType">Tipo de descuento</label>
+          <select id="discountType" name="discountType" data-tipo-descuento>
+            <option value="none" <%= tipoDescuento === 'none' ? 'selected' : '' %>>Sin descuento</option>
+            <option value="percent" <%= tipoDescuento === 'percent' ? 'selected' : '' %>>Porcentaje</option>
+            <option value="amount" <%= tipoDescuento === 'amount' ? 'selected' : '' %>>Monto fijo</option>
+          </select>
+          <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'discountType') }) %>
+        </div>
+        <div class="campo<%= claseCampo(erroresCampo, 'discount') %>">
+          <label for="discount">Valor del descuento</label>
+          <input id="discount" name="discount" type="number" min="0" step="0.01" value="<%= valor('discount', factura.discount || 0) %>" data-descuento>
+          <span class="campo__ayuda">Porcentaje (0–100) o monto en <%= factura.currency %>. El monto no puede superar el subtotal.</span>
+          <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'discount') }) %>
+        </div>
+        <div class="campo campo--ancho<%= claseCampo(erroresCampo, 'notes') %>">
+          <label for="notes">Notas de la factura</label>
+          <textarea id="notes" name="notes" rows="3" maxlength="500" placeholder="Acuerdos de pago, referencias, observaciones…"><%= valor('notes', factura.notes) %></textarea>
+          <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'notes') }) %>
+        </div>
+      </div>
+      <p class="nota nota--morado">
+        <%- include('../partials/icon', { nombre: 'shield' }) %>
+        Solo las facturas pendientes o vencidas se pueden editar. Al registrar el pago, la factura queda inmutable.
+      </p>
+      <div class="formulario__acciones formulario__acciones--izquierda">
+        <button type="submit" class="boton boton--primario"><%- include('../partials/icon', { nombre: 'check' }) %> Guardar factura</button>
+      </div>
+    </section>
+  </form>
+
+  <aside class="pila">
+    <section class="tarjeta superficie panel">
+      <div class="panel__cabecera"><div><p class="etiqueta">Resumen</p><h3>Nuevo cálculo</h3></div></div>
+      <div class="resumen-linea"><span>Subtotal</span><strong id="vistaSubtotal"><%= formatearDinero(factura.subtotal, factura.currency) %></strong></div>
+      <div class="resumen-linea"><span>Descuento</span><strong id="vistaDescuento"><%= formatearDinero(factura.discountAmount || 0, factura.currency) %></strong></div>
+      <div class="resumen-linea"><span>Base imponible</span><strong id="vistaBase"><%= formatearDinero(factura.taxBase ?? factura.subtotal, factura.currency) %></strong></div>
+      <div class="resumen-linea"><span>IVA</span><strong id="vistaIva"><%= formatearDinero(factura.tax, factura.currency) %></strong></div>
+      <div class="resumen-linea"><span>Total</span><strong id="vistaTotal"><%= formatearDinero(factura.total, factura.currency) %></strong></div>
+      <p class="texto-suave">El cálculo se actualiza mientras editas. El total definitivo se valida al guardar.</p>
+    </section>
+
+    <section class="tarjeta superficie panel">
+      <div class="panel__cabecera"><div><p class="etiqueta">Referencia</p><h3>Datos originales</h3></div></div>
+      <div class="resumen-linea"><span>Emitida</span><strong><%= formatearFecha(factura.issueDate) %></strong></div>
+      <div class="resumen-linea"><span>Periodo</span><strong><%= formatearFecha(factura.periodStart) %> → <%= formatearFecha(factura.periodEnd) %></strong></div>
+      <div class="resumen-linea"><span>Moneda</span><strong><%= factura.currency %></strong></div>
+      <div class="resumen-linea"><span>Plan</span><strong><%= factura.planSnapshot?.name || '—' %></strong></div>
+    </section>
+  </aside>
+</div>
+
+<script>
+  (function () {
+    const subtotal = Number('<%= factura.subtotal %>') || 0;
+    const moneda = <%- JSON.stringify(factura.currency) %>;
+    const locale = <%- JSON.stringify(locale) %>;
+    const tipo = document.getElementById('discountType');
+    const valor = document.getElementById('discount');
+    const tasa = document.getElementById('taxRatePercent');
+
+    function formatear(numero) {
+      try {
+        return new Intl.NumberFormat(locale, {
+          style: 'currency',
+          currency: moneda,
+          minimumFractionDigits: moneda === 'CLP' ? 0 : 2,
+          maximumFractionDigits: moneda === 'CLP' ? 0 : 2,
+        }).format(numero);
+      } catch (error) {
+        return moneda + ' ' + numero.toFixed(2);
+      }
+    }
+
+    function redondear(numero) {
+      return Math.round((numero + Number.EPSILON) * 100) / 100;
+    }
+
+    function actualizar() {
+      const esPorcentaje = tipo.value === 'percent';
+      valor.disabled = tipo.value === 'none';
+      const entrada = Math.max(0, Number(valor.value) || 0);
+      let descuento = 0;
+      if (esPorcentaje) descuento = subtotal * (Math.min(entrada, 100) / 100);
+      if (tipo.value === 'amount') descuento = Math.min(entrada, subtotal);
+      descuento = redondear(descuento);
+      const base = redondear(subtotal - descuento);
+      const porcentaje = Math.max(0, Math.min(100, Number(tasa.value) || 0));
+      const iva = redondear(base * (porcentaje / 100));
+      const total = redondear(base + iva);
+
+      document.getElementById('vistaSubtotal').textContent = formatear(subtotal);
+      document.getElementById('vistaDescuento').textContent = formatear(descuento);
+      document.getElementById('vistaBase').textContent = formatear(base);
+      document.getElementById('vistaIva').textContent = formatear(iva);
+      document.getElementById('vistaTotal').textContent = formatear(total);
+    }
+
+    [tipo, valor, tasa].forEach(function (control) {
+      control.addEventListener('input', actualizar);
+      control.addEventListener('change', actualizar);
+    });
+    actualizar();
+  })();
+</script>

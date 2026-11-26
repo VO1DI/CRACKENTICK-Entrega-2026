@@ -1,0 +1,227 @@
+/* Temas del portal de clientes: oscuro, claro arena y claro lavanda. */
+
+[data-tema='claro'] {
+  --p-bg: #f4ecdf;
+  --p-bg-2: #ede1cf;
+  --p-surface: #fffaf2;
+  --p-surface-2: #faf0e2;
+  --p-ink: #241f19;
+  --p-ink-2: #3d342b;
+  --p-muted: #6b5b4b;
+  --p-faint: #806c57;
+  --p-line: #e1d1bb;
+  --p-line-2: #cfba9e;
+  --p-brand: #7c5cff;
+  --p-brand-2: #5b3df0;
+  --p-brand-soft: #efe9ff;
+  --p-teal: #0f9d85;
+  --p-teal-soft: #e3f6f0;
+  --p-amber: #a96804;
+  --p-amber-soft: #fdf1dc;
+  --p-red: #c73548;
+  --p-red-soft: #fde9ec;
+  --p-blue: #2b6fe8;
+  --p-blue-soft: #eaf2ff;
+  --p-shadow: 0 24px 60px -30px rgba(97, 66, 32, 0.32);
+  --p-shadow-sm: 0 10px 30px -18px rgba(97, 66, 32, 0.28);
+  color-scheme: light;
+}
+
+[data-tema='oscuro'] {
+  --p-bg: #0b0a12;
+  --p-bg-2: #12101c;
+  --p-surface: #171422;
+  --p-surface-2: #1e1a2c;
+  --p-ink: #f4f1ff;
+  --p-ink-2: #d9d3ea;
+  --p-muted: #a39cba;
+  --p-faint: #8b84a1;
+  --p-line: #2b263b;
+  --p-line-2: #3b3452;
+  --p-brand: #8b70ff;
+  --p-brand-2: #a78bfa;
+  --p-brand-soft: #241d45;
+  --p-teal: #2dd4bf;
+  --p-teal-soft: #123b37;
+  --p-amber: #fbbf24;
+  --p-amber-soft: #3a2b12;
+  --p-red: #fb7185;
+  --p-red-soft: #3a1620;
+  --p-blue: #60a5fa;
+  --p-blue-soft: #14243d;
+  --p-shadow: 0 30px 70px -30px rgba(0, 0, 0, 0.8);
+  --p-shadow-sm: 0 12px 34px -18px rgba(0, 0, 0, 0.7);
+  color-scheme: dark;
+}
+
+[data-tema='claro-suave'] {
+  color-scheme: light;
+}
+
+/* Fondos por tema */
+[data-tema='oscuro'] body.p-body {
+  background:
+    radial-gradient(900px 600px at 8% -10%, rgba(109, 74, 255, 0.22), transparent 62%),
+    radial-gradient(800px 600px at 105% 8%, rgba(45, 212, 191, 0.10), transparent 58%),
+    var(--p-bg);
+}
+
+[data-tema='claro'] body.p-body {
+  background:
+    radial-gradient(900px 600px at 8% -10%, rgba(245, 158, 11, 0.14), transparent 62%),
+    radial-gradient(800px 600px at 105% 8%, rgba(124, 92, 255, 0.08), transparent 58%),
+    var(--p-bg);
+}
+
+[data-tema='oscuro'] .p-topbar {
+  box-shadow: 0 1px 0 var(--p-line), 0 16px 36px -28px rgba(0, 0, 0, 0.8);
+}
+
+[data-tema='oscuro'] .p-card--servicio {
+  background: linear-gradient(160deg, var(--p-surface), var(--p-surface-2));
+}
+
+[data-tema='oscuro'] .p-card--ayuda {
+  background: linear-gradient(150deg, #6340ff, #2c159d);
+}
+
+[data-tema='oscuro'] .p-login__fondo {
+  background:
+    radial-gradient(700px 520px at 12% 8%, rgba(109, 74, 255, 0.38), transparent 62%),
+    radial-gradient(680px 520px at 90% 90%, rgba(45, 212, 191, 0.20), transparent 60%),
+    #0b0a12;
+}
+
+[data-tema='claro'] .p-login__fondo {
+  background:
+    radial-gradient(700px 520px at 12% 8%, rgba(245, 158, 11, 0.20), transparent 62%),
+    radial-gradient(680px 520px at 90% 90%, rgba(124, 92, 255, 0.10), transparent 60%),
+    #f4ecdf;
+}
+
+[data-tema='oscuro'] .p-login__card {
+  box-shadow: 0 46px 100px -44px rgba(0, 0, 0, 0.9);
+}
+
+[data-tema='oscuro'] .p-login__puntos li {
+  background: color-mix(in srgb, var(--p-surface) 82%, transparent);
+  border-color: var(--p-line);
+}
+
+[data-tema='oscuro'] .p-orb { opacity: 0.34; }
+
+[data-tema='oscuro'] .p-status--pagada,
+[data-tema='oscuro'] .p-status--resuelto,
+[data-tema='oscuro'] .p-status--activo {
+  background: #103a34;
+  color: #5eead4;
+}
+
+[data-tema='oscuro'] .p-status--pendiente,
+[data-tema='oscuro'] .p-status--abierto {
+  background: #3b2a0d;
+  color: #fcd34d;
+}
+
+[data-tema='oscuro'] .p-status--vencida {
+  background: #3d1620;
+  color: #fda4af;
+}
+
+[data-tema='oscuro'] .p-status--proceso {
+  background: #14243d;
+  color: #93c5fd;
+}
+
+[data-tema='oscuro'] .p-alerta--aviso { color: #fcd34d; }
+
+/* Selector de tema */
+.p-tema-selector { position: relative; flex: none; }
+
+.p-tema-btn {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--p-line);
+  border-radius: 11px;
+  background: var(--p-surface);
+  color: var(--p-muted);
+  cursor: pointer;
+  transition: color 160ms ease, border-color 160ms ease, background-color 160ms ease;
+}
+
+.p-tema-btn:hover { color: var(--p-brand-2); border-color: var(--p-line-2); }
+.p-tema-btn .p-icon { width: 18px; height: 18px; }
+
+.p-tema-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 90;
+  width: 236px;
+  padding: 8px;
+  border: 1px solid var(--p-line);
+  border-radius: 14px;
+  background: var(--p-surface);
+  box-shadow: var(--p-shadow);
+}
+
+.p-tema-menu__titulo {
+  margin: 4px 8px 8px;
+  color: var(--p-faint);
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.p-tema-menu__opcion {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 8px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--p-ink);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+.p-tema-menu__opcion:hover { background: var(--p-surface-2); border-color: var(--p-line); }
+.p-tema-menu__opcion.is-activo { background: var(--p-brand-soft); border-color: color-mix(in srgb, var(--p-brand) 24%, transparent); }
+.p-tema-menu__texto { display: flex; flex: 1; flex-direction: column; line-height: 1.2; }
+.p-tema-menu__texto strong { font-size: 0.8rem; }
+.p-tema-menu__texto small { color: var(--p-faint); font-size: 0.68rem; }
+.p-tema-menu__opcion > .p-icon { width: 16px; height: 16px; color: var(--p-brand-2); opacity: 0; }
+.p-tema-menu__opcion.is-activo > .p-icon { opacity: 1; }
+
+.p-tema-muestra {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border: 1px solid var(--p-line);
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.25);
+}
+.p-tema-muestra--oscuro { background: linear-gradient(135deg, #0b0b10, #2a2540); }
+.p-tema-muestra--arena { background: linear-gradient(135deg, #f4ecdf, #cfb48f); }
+.p-tema-muestra--lavanda { background: linear-gradient(135deg, #ffffff, #d9cdff 60%, #b6f0e6); }
+
+.p-login__tema {
+  position: absolute;
+  top: 18px;
+  right: 20px;
+  z-index: 5;
+}
+
+.p-login__tema .p-tema-menu { right: 0; }
+
+@media (max-width: 560px) {
+  .p-topbar__interior { gap: 10px; }
+  .p-tema-menu { right: -6px; width: 218px; }
+  .p-login__tema { top: 12px; right: 12px; }
+}

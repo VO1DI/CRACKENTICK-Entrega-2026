@@ -1,0 +1,208 @@
+<aside class="sidebar" id="sidebar" aria-label="Menú principal">
+  <div class="sidebar__cabecera">
+    <a class="marca" href="/" aria-label="CRACKENTICK, ir al dashboard">
+      <span class="marca__icono marca__icono--logo" aria-hidden="true">
+        <svg viewBox="0 0 40 40" fill="none">
+          <path d="M20 3.5 34 11v18L20 36.5 6 29V11L20 3.5Z" stroke="#7C5CFF" stroke-width="1.8"/>
+          <path d="M13 24c1.8-3.2 4-4.8 7-4.8s5.2 1.6 7 4.8" stroke="#7C5CFF" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M15.5 18.5c1.2-1.5 2.7-2.3 4.5-2.3s3.3.8 4.5 2.3" stroke="#7C5CFF" stroke-width="1.8" stroke-linecap="round"/>
+          <circle cx="20" cy="27" r="1.8" fill="#7C5CFF"/>
+        </svg>
+      </span>
+      <span class="marca__texto">CRACKEN<span>TICK</span></span>
+    </a>
+    <button type="button" class="boton-icono sidebar__cerrar" id="btnCerrarMenu" aria-label="Ocultar menú">
+      <%- include('icon', { nombre: 'x' }) %>
+    </button>
+  </div>
+
+  <nav class="sidebar__nav">
+    <%
+      const nav = [
+        {
+          grupo: 'General',
+          items: [
+            { href: '/', icono: 'dashboard', texto: 'Dashboard', permiso: 'general.dashboard', exacto: true },
+            { href: '/clientes', icono: 'users', texto: 'Clientes', permisos: ['general.clientes', 'clientes.datos', 'clientes.servicio', 'clientes.cortes', 'clientes.facturacion'], prefijos: ['/clientes'] },
+          ],
+        },
+        {
+          grupo: 'Gestión de red',
+          items: [
+            { href: '/red/routers', icono: 'server', texto: 'Routers', permiso: 'red.routers', prefijos: ['/red/routers', '/routers'] },
+            { href: '/red/pools', icono: 'network', texto: 'Pools de IP', permiso: 'red.pools', prefijos: ['/red/pools', '/pools'] },
+            { href: '/red/ipam', icono: 'layers', texto: 'IPAM', permiso: 'red.pools', prefijos: ['/red/ipam'] },
+            { href: '/red/planes', icono: 'layers', texto: 'Planes', permiso: 'red.planes', prefijos: ['/red/planes', '/planes'] },
+            { href: '/red/monitoreo', icono: 'gauge', texto: 'Monitorización', permiso: 'red.monitoreo', prefijos: ['/red/monitoreo', '/monitoreo'] },
+            { href: '/red/zonas', icono: 'mapPin', texto: 'Zonas', permiso: 'red.zonas', prefijos: ['/red/zonas'] },
+            { href: '/red/consumo', icono: 'activity', texto: 'Consumo diario', permiso: 'red.monitoreo', prefijos: ['/red/consumo'] },
+            {
+              subgrupo: 'Avanzado',
+              items: [
+                { href: '/red/vlans', icono: 'network', texto: 'VLANs', permiso: 'red.vlans', prefijos: ['/red/vlans'] },
+                { href: '/red/respaldos', icono: 'box', texto: 'Respaldos', permiso: 'red.respaldos', prefijos: ['/red/respaldos'] },
+                {
+                  href: '/red/experimental',
+                  icono: 'zap',
+                  texto: 'Experimental',
+                  permisos: ['red.firewall', 'red.eoip', 'red.balanceo', 'red.dhcp', 'red.routers', 'red.respaldos'],
+                  prefijos: ['/red/experimental', '/red/firewall', '/red/eoip', '/red/balanceo', '/red/dhcp'],
+                },
+              ],
+            },
+          ],
+        },
+        {
+          grupo: 'Operación',
+          items: [
+            { href: '/ventas', icono: 'cart', texto: 'Ventas', permisos: ['ventas.ventas', 'ventas.instalar'], prefijos: ['/ventas'], exacto: true },
+            { href: '/ventas/inventario', icono: 'box', texto: 'Inventario', permiso: 'ventas.inventario', prefijos: ['/ventas/inventario', '/inventario'] },
+            { href: '/soporte/tickets', icono: 'ticket', texto: 'Tickets', permiso: 'soporte.tickets', prefijos: ['/soporte/tickets', '/tickets'] },
+            { href: '/agenda', icono: 'clock', texto: 'Agenda', permiso: 'agenda.gestion', prefijos: ['/agenda'] },
+            { href: '/hotspot', icono: 'wifi', texto: 'Hotspot', permiso: 'hotspot.gestion', prefijos: ['/hotspot'] },
+          ],
+        },
+        {
+          grupo: 'Reportes',
+          items: [
+            { href: '/reportes', icono: 'fileText', texto: 'Resumen de reportes', permiso: 'reportes.gestion', prefijos: ['/reportes'] },
+            { href: '/red/reportes/instalaciones', icono: 'box', texto: 'Instalaciones', permiso: 'red.instalaciones', prefijos: ['/red/reportes/instalaciones'] },
+            { href: '/red/reportes/averias', icono: 'alert', texto: 'Averías', permiso: 'red.averias', prefijos: ['/red/reportes/averias'] },
+          ],
+        },
+        {
+          grupo: 'Finanzas',
+          items: [
+            { href: '/finanzas', icono: 'activity', texto: 'Contabilidad', permiso: 'finanzas.gestion', prefijos: ['/finanzas'], exacto: true },
+            { href: '/finanzas/facturacion', icono: 'zap', texto: 'Facturación', permiso: 'finanzas.facturacion', prefijos: ['/finanzas/facturacion', '/facturacion'] },
+            { href: '/finanzas/facturas', icono: 'receipt', texto: 'Facturas', permiso: 'finanzas.facturas', prefijos: ['/finanzas/facturas', '/facturas'] },
+            { href: '/admin/gastos', icono: 'store', texto: 'Gastos', permiso: 'admin.gastos', prefijos: ['/admin/gastos'] },
+          ],
+        },
+        {
+          grupo: 'Administración',
+          items: [
+            { href: '/admin/usuarios', icono: 'key', texto: 'Usuarios', permiso: 'admin.usuarios', prefijos: ['/admin/usuarios'] },
+            { href: '/admin/empleados', icono: 'users', texto: 'Empleados', permiso: 'admin.empleados', prefijos: ['/admin/empleados'] },
+            { href: '/admin/configuracion', icono: 'settings', texto: 'Configuración', permiso: 'admin.configuracion', prefijos: ['/admin/configuracion', '/configuracion'] },
+            { href: '/admin/auditoria', icono: 'fileText', texto: 'Auditoría', permiso: 'admin.auditoria', prefijos: ['/admin/auditoria', '/logs'] },
+          ],
+        },
+      ];
+
+      const iniciales = String((usuario && (usuario.name || usuario.username)) || '?')
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((parte) => parte.charAt(0).toUpperCase())
+        .join('');
+
+      function puedeItem(item) {
+        if (item.permisos) return item.permisos.some((clave) => puede(clave));
+        return puede(item.permiso);
+      }
+
+      function soloLecturaItem(item) {
+        if (item.permisos) return !item.permisos.some((clave) => puedeEditar(clave));
+        return Boolean(item.permiso) && !puedeEditar(item.permiso);
+      }
+
+      function puntajeActivo(item) {
+        if (item.exacto) {
+          const coincide = item.href === '/'
+            ? rutaActual === '/' || rutaActual === '/dashboard'
+            : rutaActual === item.href;
+          return coincide ? 1000 + item.href.length : -1;
+        }
+        return (item.prefijos || [item.href]).reduce((mejor, prefijo) => {
+          if (prefijo === '/') {
+            return rutaActual === '/' || rutaActual === '/dashboard' ? Math.max(mejor, 1) : mejor;
+          }
+          const coincide = rutaActual === prefijo || rutaActual.startsWith(`${prefijo}/`);
+          return coincide ? Math.max(mejor, prefijo.length) : mejor;
+        }, -1);
+      }
+
+      // Gana la ruta más específica: /ventas/inventario no debe activar /ventas.
+      const candidatos = nav
+        .flatMap((seccion) => seccion.items)
+        .flatMap((item) => (item.subgrupo ? item.items : [item]))
+        .filter((item) => puedeItem(item));
+      let itemActivo = null;
+      let mejorPuntaje = 0;
+      candidatos.forEach((item) => {
+        const puntaje = puntajeActivo(item);
+        if (puntaje > mejorPuntaje) {
+          itemActivo = item;
+          mejorPuntaje = puntaje;
+        }
+      });
+
+      function estaActivo(item) {
+        return item === itemActivo;
+      }
+    %>
+
+    <% nav.forEach((seccion) => {
+      const visibles = seccion.items.filter((item) => (item.subgrupo ? item.items.some((sub) => puedeItem(sub)) : puedeItem(item)));
+      if (!visibles.length) return;
+      const abierto = visibles.some((item) => (item.subgrupo ? item.items.some(estaActivo) : estaActivo(item)));
+    %>
+      <details class="sidebar__menu" <%= abierto ? 'open' : '' %>>
+        <summary class="sidebar__grupo">
+          <span><%= seccion.grupo %></span>
+          <span class="sidebar__flecha" aria-hidden="true"></span>
+        </summary>
+        <% visibles.forEach((item) => { %>
+          <% if (item.subgrupo) { const subVisibles = item.items.filter((sub) => puedeItem(sub)); if (!subVisibles.length) return; %>
+            <details class="sidebar__menu sidebar__menu--sub" <%= subVisibles.some(estaActivo) ? 'open' : '' %>>
+              <summary class="sidebar__grupo sidebar__grupo--sub">
+                <span><%= item.subgrupo %></span>
+                <span class="sidebar__flecha" aria-hidden="true"></span>
+              </summary>
+              <% subVisibles.forEach((sub) => { %>
+                <a class="sidebar__enlace sidebar__enlace--sub <%= estaActivo(sub) ? 'is-activo' : '' %>" href="<%= sub.href %>">
+                  <%- include('icon', { nombre: sub.icono }) %>
+                  <span><%= sub.texto %></span>
+                  <% if (soloLecturaItem(sub)) { %><span class="sidebar__solo" title="Solo lectura"><%- include('icon', { nombre: 'eye' }) %></span><% } %>
+                </a>
+              <% }); %>
+            </details>
+          <% } else { %>
+            <a class="sidebar__enlace <%= estaActivo(item) ? 'is-activo' : '' %>" href="<%= item.href %>">
+              <%- include('icon', { nombre: item.icono }) %>
+              <span><%= item.texto %></span>
+              <% if (soloLecturaItem(item)) { %><span class="sidebar__solo" title="Solo lectura"><%- include('icon', { nombre: 'eye' }) %></span><% } %>
+            </a>
+          <% } %>
+        <% }); %>
+      </details>
+    <% }); %>
+  </nav>
+
+  <div class="sidebar__pie">
+    <% if (puede('admin.configuracion')) { %>
+    <a class="sidebar__modo" href="/admin/configuracion?tab=firewall">
+      <span class="punto punto--verde"></span>
+      <span>
+        <strong>Firewall</strong>
+        <small><%= config.firewall.routerName || 'principal' %></small>
+      </span>
+      <%- include('icon', { nombre: 'chevronRight' }) %>
+    </a>
+    <% } %>
+    <div class="sidebar__usuario">
+      <span class="avatar avatar--sm"><%= iniciales %></span>
+      <div>
+        <strong><%= usuario ? usuario.name : 'Invitado' %></strong>
+        <small><%= usuario ? (etiquetasRol[usuario.role] || usuario.role) : 'Sin sesión' %></small>
+      </div>
+      <form action="/salir" method="post" data-accion-segura>
+        <button type="submit" class="boton-icono boton-icono--sm" title="Cerrar sesión" aria-label="Cerrar sesión">
+          <%- include('icon', { nombre: 'logout' }) %>
+        </button>
+      </form>
+    </div>
+  </div>
+</aside>
+<div class="sidebar-fondo" id="sidebarFondo" hidden></div>

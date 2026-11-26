@@ -1,0 +1,87 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Red · Respaldos</p>
+    <h2 class="pagina-cabecera__titulo">Respaldos de configuración</h2>
+    <p class="pagina-cabecera__texto">Copia de configuración de cada router, descargable y restaurable. Los respaldos están separados por equipo.</p>
+  </div>
+  <% if (selectedRouter) { %>
+    <div class="pagina-cabecera__acciones">
+      <form action="/red/respaldos" method="post" data-confirmar="¿Leer la configuración de <%= selectedRouter.name %> y guardar un respaldo?">
+        <input type="hidden" name="routerId" value="<%= selectedRouter._id %>">
+        <button type="submit" class="boton boton--primario"><%- include('../partials/icon', { nombre: 'plus' }) %> Crear respaldo ahora</button>
+      </form>
+      <% if (selectedRouter.vendor !== 'cisco' && selectedRouter.mode === 'real') { %>
+        <form action="/red/respaldos" method="post" data-confirmar="¿Crear un respaldo binario (.backup) de <%= selectedRouter.name %>? Se descarga del equipo y se guarda aquí.">
+          <input type="hidden" name="routerId" value="<%= selectedRouter._id %>">
+          <input type="hidden" name="formato" value="binario">
+          <button type="submit" class="boton boton--secundario"><%- include('../partials/icon', { nombre: 'box' }) %> Respaldo binario</button>
+        </form>
+      <% } %>
+    </div>
+  <% } %>
+</section>
+
+<%- include('../partials/red-router-nav', { routers, selectedRouter, modulo, conteos }) %>
+
+<% if (selectedRouter) { %>
+  <% if (selectedRouter.vendor === 'cisco') { %>
+    <div class="aviso aviso--advertencia" role="note">
+      <span class="aviso__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></span>
+      <div class="aviso__texto"><strong>Cisco experimental.</strong> El respaldo es el <span class="mono">show running-config</span> por SSH. La carga automática solo está disponible en MikroTik; en Cisco descarga el archivo y aplícalo por consola.</div>
+    </div>
+  <% } else { %>
+    <div class="aviso aviso--exito" role="note">
+      <span class="aviso__icono"><%- include('../partials/icon', { nombre: 'check' }) %></span>
+      <div class="aviso__texto"><strong>RouterOS por SSH o API.</strong> Se usa <span class="mono">export hide-sensitive</span> y <span class="mono">/import</span> para cargar. Un <span class="mono">.rsc</span> importa comandos sobre la configuración actual: no la borra ni reemplaza, y los objetos duplicados pueden fallar. Si SSH no está disponible, se guarda una copia lógica por API (solo consulta). Las contraseñas y claves no viajan en el archivo: tras restaurar, vuelve a definirlas y recrea los certificados.</div>
+    </div>
+  <% } %>
+
+  <% if (aplicar) { %>
+    <div class="aviso aviso--advertencia" role="note">
+      <span class="aviso__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></span>
+      <div class="aviso__texto">
+        <strong>Elige el respaldo que quieres aplicar en <%= selectedRouter.name %>.</strong>
+        Pulsa el botón de aplicar en la fila del respaldo elegido. Se guarda un respaldo previo y la configuración actual se reemplaza.
+        <% if (selectedRouter.vendor !== 'cisco') { %>
+          <form action="/routers/<%= selectedRouter._id %>/reparar" method="post" data-confirmar="¿Reconstruir la configuración de <%= selectedRouter.name %> desde la base de datos? Se guarda un respaldo previo.">
+            <input type="hidden" name="modo" value="completo">
+            <button type="submit" class="boton boton--secundario boton--sm">Reconstruir desde la base de datos</button>
+          </form>
+        <% } %>
+      </div>
+    </div>
+  <% } %>
+
+  <section class="tarjeta superficie panel panel--tabla">
+    <div class="panel__cabecera">
+      <div><p class="etiqueta">Historial · <%= selectedRouter.name %></p><h3><%= respaldos.length %> respaldo(s)</h3></div>
+    </div>
+    <% if (!respaldos.length) { %>
+      <div class="vacio vacio--compacto">
+        <p class="vacio__icono"><%- include('../partials/icon', { nombre: 'shield' }) %></p>
+        <p class="vacio__texto">Todavía no hay respaldos de este router. Crea el primero con el botón de arriba.</p>
+      </div>
+    <% } else { %>
+      <%- include('_backups-tabla', { respaldos, routerNombre: selectedRouter.name, puedeAplicar: selectedRouter.vendor !== 'cisco' }) %>
+    <% } %>
+  </section>
+<% } else { %>
+  <% if (!grupos.length) { %>
+    <section class="tarjeta superficie panel">
+      <div class="vacio vacio--compacto">
+        <p class="vacio__icono"><%- include('../partials/icon', { nombre: 'shield' }) %></p>
+        <p class="vacio__texto">Todavía no hay respaldos. Elige un router arriba y crea el primero.</p>
+      </div>
+    </section>
+  <% } else { %>
+    <% grupos.forEach((grupo) => { %>
+      <section class="tarjeta superficie panel panel--tabla">
+        <div class="panel__cabecera">
+          <div><p class="etiqueta">Router</p><h3><%= grupo.router.name %></h3></div>
+          <span class="insignia insignia--modulo"><%= grupo.respaldos.length %> respaldo(s)</span>
+        </div>
+        <%- include('_backups-tabla', { respaldos: grupo.respaldos, routerNombre: grupo.router.name, puedeAplicar: grupo.router.vendor !== 'cisco' }) %>
+      </section>
+    <% }); %>
+  <% } %>
+<% } %>

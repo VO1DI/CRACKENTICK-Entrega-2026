@@ -1,0 +1,50 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Comercial · Ventas</p>
+    <h2 class="pagina-cabecera__titulo">Ventas e instalaciones</h2>
+    <p class="pagina-cabecera__texto"><%= resumen.espera %> en espera · <%= resumen.instaladas %> instalada(s) · <%= formatearDinero(resumen.facturado) %> facturado</p>
+  </div>
+  <% if (typeof puedeEditar === 'function' && puedeEditar('ventas.ventas')) { %><div class="pagina-cabecera__acciones"><a class="boton boton--primario" href="/ventas/nueva"><%- include('../partials/icon', { nombre: 'plus' }) %> Nueva venta</a></div><% } %>
+</section>
+
+<section class="dash-kpis">
+  <article class="kpi kpi--ambar"><div class="kpi__cabecera"><span class="kpi__titulo">En espera</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'clock' }) %></span></div><p class="kpi__valor" data-contador data-valor="<%= resumen.espera %>" data-formato="entero"><%= resumen.espera %></p><p class="kpi__detalle">Sin tocar inventario</p></article>
+  <article class="kpi kpi--verde"><div class="kpi__cabecera"><span class="kpi__titulo">Instaladas</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'check' }) %></span></div><p class="kpi__valor" data-contador data-valor="<%= resumen.instaladas %>" data-formato="entero"><%= resumen.instaladas %></p><p class="kpi__detalle">Stock descontado</p></article>
+  <article class="kpi kpi--morado"><div class="kpi__cabecera"><span class="kpi__titulo">Facturado</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'receipt' }) %></span></div><p class="kpi__valor" data-contador data-valor="<%= resumen.facturado %>" data-formato="moneda"><%= formatearDinero(resumen.facturado) %></p><p class="kpi__detalle">Instalaciones emitidas</p></article>
+  <article class="kpi kpi--rojo"><div class="kpi__cabecera"><span class="kpi__titulo">Canceladas</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'ban' }) %></span></div><p class="kpi__valor" data-contador data-valor="<%= resumen.canceladas %>" data-formato="entero"><%= resumen.canceladas %></p><p class="kpi__detalle">Sin movimientos</p></article>
+</section>
+
+<section class="tarjeta superficie filtros">
+  <form method="get" action="/ventas" class="filtros__form">
+    <div class="campo campo--busqueda"><label class="sr-only" for="q">Buscar venta</label><div class="campo__control"><%- include('../partials/icon', { nombre: 'search' }) %><input id="q" type="search" name="q" value="<%= filtros.q %>" placeholder="Código o cliente"></div></div>
+    <div class="campo"><label class="sr-only" for="estado">Estado</label><select id="estado" name="estado" data-auto-enviar><option value="">Todos</option><% ['waiting', 'installed', 'cancelled'].forEach((v) => { %><option value="<%= v %>" <%= filtros.estado === v ? 'selected' : '' %>><%= etiquetas[v] %></option><% }); %></select></div>
+    <button type="submit" class="boton boton--secundario boton--sm">Filtrar</button>
+  </form>
+</section>
+
+<section class="tarjeta panel panel--tabla">
+  <% if (ventas.length === 0) { %>
+    <div class="vacio vacio--compacto"><p class="vacio__icono"><%- include('../partials/icon', { nombre: 'cart' }) %></p><p class="vacio__texto">No hay ventas registradas.</p></div>
+  <% } else { %>
+    <div class="tabla-scroll">
+      <table class="tabla">
+        <thead><tr><th>Código</th><th>Cliente</th><th>Plan</th><th>Materiales</th><th>Total</th><th>Estado</th><th>Fecha</th><th></th></tr></thead>
+        <tbody>
+          <% ventas.forEach((venta) => { %>
+            <tr>
+              <td data-etiqueta="Código"><a href="/ventas/<%= venta._id %>"><strong><%= venta.code %></strong></a></td>
+              <td data-etiqueta="Cliente"><%= venta.clientId ? `${venta.clientId.firstName} ${venta.clientId.lastName}` : venta.clienteNombre %><small><%= venta.clientId?.clientCode || 'Cliente nuevo' %></small></td>
+              <td data-etiqueta="Plan"><%= venta.service?.planId?.name || '—' %></td>
+              <td data-etiqueta="Materiales"><%= venta.items.length %> artículo(s)</td>
+              <td data-etiqueta="Total"><strong><%= formatearDinero(venta.total) %></strong></td>
+              <td data-etiqueta="Estado"><span class="insignia insignia--<%= venta.status === 'installed' ? 'active' : venta.status === 'waiting' ? 'pending' : 'cancelled' %>"><%= etiquetas[venta.status] %></span></td>
+              <td data-etiqueta="Fecha"><%= formatearFecha(venta.createdAt) %></td>
+              <td><a class="boton-icono boton-icono--sm" href="/ventas/<%= venta._id %>" aria-label="Ver venta"><%- include('../partials/icon', { nombre: 'eye' }) %></a></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+    <%- include('../partials/pagination', { paginacion, filtros }) %>
+  <% } %>
+</section>

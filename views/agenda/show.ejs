@@ -1,0 +1,66 @@
+<%
+  const claseEstado = { pending: 'pending', in_progress: 'morado', done: 'active', cancelled: 'cancelled' };
+  const fecha = new Date(tarea.scheduledAt);
+  const dos = (n) => String(n).padStart(2, '0');
+  const dia = `${fecha.getFullYear()}-${dos(fecha.getMonth() + 1)}-${dos(fecha.getDate())}`;
+%>
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Agenda · Tarea</p>
+    <h2 class="pagina-cabecera__titulo"><%= tarea.title %></h2>
+    <p class="pagina-cabecera__texto"><%= categorias[tarea.category] || 'Otro' %> · <%= formatearFechaHora(tarea.scheduledAt) %> · <%= duracionTexto(tarea.durationMinutes) %></p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <a class="boton boton--secundario" href="/agenda?fecha=<%= dia %>"><%- include('../partials/icon', { nombre: 'arrowLeft' }) %> Volver a la agenda</a>
+    <% if (puedeGestionar) { %>
+      <a class="boton boton--secundario" href="/agenda/<%= tarea._id %>/editar"><%- include('../partials/icon', { nombre: 'edit' }) %> Editar</a>
+    <% } %>
+  </div>
+</section>
+
+<section class="tarjeta superficie panel">
+  <div class="panel__cabecera">
+    <div><p class="etiqueta">Detalle</p><h3><%= estados[tarea.status] || tarea.status %></h3></div>
+    <span class="insignia insignia--<%= claseEstado[tarea.status] || 'none' %>"><%= estados[tarea.status] || tarea.status %></span>
+  </div>
+  <div class="rejilla rejilla--cuatro">
+    <div class="resumen-linea"><span>Responsable</span><strong><%= tarea.assignedTo?.name || '—' %></strong></div>
+    <div class="resumen-linea"><span>Prioridad</span><strong><%= prioridades[tarea.priority] || tarea.priority %></strong></div>
+    <div class="resumen-linea"><span>Inicio</span><strong><%= formatearFechaHora(tarea.scheduledAt) %></strong></div>
+    <div class="resumen-linea"><span>Duración</span><strong><%= duracionTexto(tarea.durationMinutes) %></strong></div>
+    <% if (tarea.clientId) { %>
+      <div class="resumen-linea"><span>Cliente</span><strong><a href="/clientes/<%= tarea.clientId._id %>"><%= tarea.clientId.clientCode %> · <%= tarea.clientId.firstName %> <%= tarea.clientId.lastName %></a></strong></div>
+    <% } %>
+    <% if (tarea.location) { %><div class="resumen-linea"><span>Ubicación</span><strong><%= tarea.location %></strong></div><% } %>
+    <% if (tarea.startedAt) { %><div class="resumen-linea"><span>Iniciada</span><strong><%= formatearFechaHora(tarea.startedAt) %></strong></div><% } %>
+    <% if (tarea.finishedAt) { %><div class="resumen-linea"><span>Terminada</span><strong><%= formatearFechaHora(tarea.finishedAt) %></strong></div><% } %>
+  </div>
+  <% if (tarea.description) { %><p class="texto-suave"><%= tarea.description %></p><% } %>
+  <% if (tarea.notes) { %><p class="texto-suave"><strong>Notas:</strong> <%= tarea.notes %></p><% } %>
+</section>
+
+<% if (puedeGestionar) { %>
+  <section class="tarjeta superficie panel">
+    <div class="panel__cabecera"><div><p class="etiqueta">Acciones</p><h3>Cambiar estado</h3></div></div>
+    <div class="tabla__acciones">
+      <% if (tarea.status === 'pending') { %>
+        <form action="/agenda/<%= tarea._id %>/estado" method="post"><input type="hidden" name="accion" value="iniciar"><button class="boton boton--primario boton--sm" type="submit"><%- include('../partials/icon', { nombre: 'play' }) %> Empezar</button></form>
+      <% } %>
+      <% if (tarea.status === 'in_progress') { %>
+        <form action="/agenda/<%= tarea._id %>/estado" method="post" data-confirmar="¿Marcar como hecha «<%= tarea.title %>»?"><input type="hidden" name="accion" value="finalizar"><button class="boton boton--exito boton--sm" type="submit"><%- include('../partials/icon', { nombre: 'check' }) %> Terminar</button></form>
+      <% } %>
+      <% if (puedeGestionar && tarea.status !== 'cancelled') { %>
+        <form action="/agenda/<%= tarea._id %>/estado" method="post" data-confirmar="¿Cancelar «<%= tarea.title %>»?"><input type="hidden" name="accion" value="cancelar"><button class="boton boton--secundario boton--sm" type="submit"><%- include('../partials/icon', { nombre: 'x' }) %> Cancelar</button></form>
+      <% } %>
+      <% if (puedeGestionar && (tarea.status === 'done' || tarea.status === 'cancelled')) { %>
+        <form action="/agenda/<%= tarea._id %>/estado" method="post"><input type="hidden" name="accion" value="reabrir"><button class="boton boton--secundario boton--sm" type="submit"><%- include('../partials/icon', { nombre: 'refresh' }) %> Reabrir</button></form>
+      <% } %>
+      <% if (puedeGestionar) { %>
+        <form action="/agenda/<%= tarea._id %>" method="post" data-confirmar="¿Eliminar «<%= tarea.title %>»?">
+          <input type="hidden" name="_method" value="DELETE">
+          <button class="boton boton--peligro boton--sm" type="submit"><%- include('../partials/icon', { nombre: 'trash' }) %> Eliminar</button>
+        </form>
+      <% } %>
+    </div>
+  </section>
+<% } %>

@@ -1,0 +1,95 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Red · <%= modo === 'crear' ? 'Alta' : 'Edición' %></p>
+    <h2 class="pagina-cabecera__titulo"><%= modo === 'crear' ? 'Nuevo pool de IP' : `Editar ${pool.name}` %></h2>
+    <p class="pagina-cabecera__texto">Define el bloque en formato CIDR; el sistema calcula direcciones usables y asigna la primera libre.</p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <a class="boton boton--secundario" href="/pools"><%- include('../partials/icon', { nombre: 'arrowLeft' }) %> Cancelar</a>
+  </div>
+</section>
+
+<% if (errores && errores.length) { %>
+  <div class="aviso aviso--error" role="alert">
+    <span class="aviso__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></span>
+    <div class="aviso__texto"><strong>Revisa los datos:</strong><ul class="lista-errores"><% errores.forEach((m) => { %><li><%= m %></li><% }); %></ul></div>
+  </div>
+<% } %>
+
+<form class="formulario" action="<%= modo === 'crear' ? '/pools' : `/pools/${pool._id}` %>" method="post" novalidate>
+  <% if (modo === 'editar') { %><input type="hidden" name="_method" value="PUT"><% } %>
+
+  <section class="tarjeta superficie formulario__seccion">
+    <div class="formulario__cabecera">
+      <span class="formulario__numero">01</span>
+      <div><h3>Bloque de red</h3><p>Ejemplo: 192.168.10.0/24. Prefijos admitidos: /16 a /32.</p></div>
+    </div>
+    <div class="formulario__rejilla">
+      <div class="campo<%= claseCampo(erroresCampo, 'name') %>">
+        <label for="name">Nombre *</label>
+        <input id="name" name="name" type="text" maxlength="60" value="<%= pool.name || '' %>" placeholder="Pool clientes norte" required>
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'name') }) %>
+      </div>
+      <div class="campo<%= claseCampo(erroresCampo, 'cidr') %>">
+        <label for="cidr">Bloque CIDR *</label>
+        <input id="cidr" name="cidr" type="text" maxlength="40" value="<%= pool.cidr || '' %>" placeholder="192.168.10.0/24" required data-cidr>
+        <span class="campo__ayuda" data-cidr-ayuda>Se normaliza al escribir.</span>
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'cidr') }) %>
+      </div>
+      <div class="campo<%= claseCampo(erroresCampo, 'routerId') %>">
+        <label for="routerId">Router *</label>
+        <select id="routerId" name="routerId" required>
+          <option value="">Selecciona un router</option>
+          <% routers.forEach((router) => { %>
+            <option value="<%= router._id %>" <%= String(pool.routerId || '') === String(router._id) ? 'selected' : '' %>><%= router.name %> · <%= router.mode %></option>
+          <% }); %>
+        </select>
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'routerId') }) %>
+      </div>
+      <div class="campo">
+        <label for="purpose">Uso</label>
+        <select id="purpose" name="purpose">
+          <% ['pppoe', 'static', 'dhcp', 'mixed'].forEach((valor) => { %>
+            <option value="<%= valor %>" <%= pool.purpose === valor ? 'selected' : '' %>><%= etiquetas[valor] || valor %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="campo campo--ancho">
+        <label for="notes">Notas</label>
+        <input id="notes" name="notes" type="text" maxlength="300" value="<%= pool.notes || '' %>">
+      </div>
+    </div>
+    <div class="formulario__rejilla">
+      <label class="switch">
+        <input type="checkbox" name="autoProvision" <%= pool.autoProvision ? 'checked' : '' %>>
+        <span class="switch__control"></span>
+        <span class="switch__texto">Aplicar automáticamente al guardar</span>
+      </label>
+      <label class="switch">
+        <input type="checkbox" name="active" <%= pool.active ? 'checked' : '' %>>
+        <span class="switch__control"></span>
+        <span class="switch__texto">Pool activo</span>
+      </label>
+    </div>
+  </section>
+
+  <% if (typeof datos !== 'undefined' && datos && datos.ok) { %>
+    <section class="tarjeta superficie formulario__seccion">
+      <div class="formulario__cabecera">
+        <span class="formulario__numero">02</span>
+        <div><h3>Cálculo del bloque</h3><p>Datos derivados del CIDR actual.</p></div>
+      </div>
+      <div class="resumen-servicio">
+        <div><small>Red</small><strong class="mono"><%= datos.network %>/<%= datos.prefix %></strong></div>
+        <div><small>Primera IP</small><strong class="mono"><%= datos.firstUsable %></strong></div>
+        <div><small>Última IP</small><strong class="mono"><%= datos.lastUsable %></strong></div>
+        <div><small>Direcciones usables</small><strong><%= datos.usable %></strong></div>
+      </div>
+    </section>
+  <% } %>
+
+  <div class="formulario__acciones">
+    <a class="boton boton--secundario" href="/pools">Cancelar</a>
+    <button type="submit" class="boton boton--primario"><%- include('../partials/icon', { nombre: 'check' }) %> <%= modo === 'crear' ? 'Crear pool' : 'Guardar cambios' %></button>
+  </div>
+</form>

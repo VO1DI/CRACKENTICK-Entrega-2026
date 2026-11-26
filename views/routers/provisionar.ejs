@@ -1,0 +1,51 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Red · Aprovisionamiento</p>
+    <h2 class="pagina-cabecera__titulo">Aprovisionar servicios</h2>
+    <p class="pagina-cabecera__texto"><%= router.name %> · <%= router.host || 'sin host' %>:<%= router.port %></p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <a class="boton boton--secundario" href="/red/routers"><%- include('../partials/icon', { nombre: 'arrowLeft' }) %> Volver</a>
+  </div>
+</section>
+
+<section class="tarjeta superficie panel">
+  <div class="panel__cabecera">
+    <div>
+      <p class="etiqueta">Pendientes</p>
+      <h3><%= pendientes %> de <%= total %> servicios</h3>
+      <small class="texto-suave">Se crean PPPoE, perfil, IP, cola simple y address list. Es idempotente: repetir no duplica nada.</small>
+    </div>
+    <span class="insignia insignia--<%= pendientes ? 'pending' : 'active' %>"><%= pendientes ? 'Por aplicar' : 'Al día' %></span>
+  </div>
+
+  <% if (!pendientes) { %>
+    <div class="vacio vacio--compacto">
+      <p class="vacio__icono vacio__icono--verde"><%- include('../partials/icon', { nombre: 'check' }) %></p>
+      <p class="vacio__texto">Todos los servicios figuran como aplicados. Puedes reaprovisionarlos con la casilla de abajo.</p>
+    </div>
+  <% } %>
+
+  <form action="/red/routers/<%= router._id %>/provisionar" method="post" class="formulario formulario--compacto">
+    <label class="check">
+      <input type="checkbox" name="todos">
+      Reaprovisionar también los servicios que ya figuran como aplicados
+    </label>
+    <p class="campo__ayuda">Se procesan hasta 25 servicios por lote. Si quedan pendientes, vuelve a ejecutarlo.</p>
+    <div class="formulario__acciones">
+      <button type="submit" class="boton boton--primario">
+        <%- include('../partials/icon', { nombre: 'refresh' }) %> Aprovisionar lote
+      </button>
+    </div>
+  </form>
+</section>
+
+<section class="tarjeta superficie panel">
+  <div class="panel__cabecera"><div><p class="etiqueta">Cómo funciona</p><h3>Qué se crea en el equipo</h3></div></div>
+  <ul class="lista-simple lista-simple--vertical">
+    <li><span class="punto punto--morado"></span><div><strong>PPPoE</strong><small>Perfil del plan y secret del cliente con su clave.</small></div></li>
+    <li><span class="punto punto--verde"></span><div><strong>Cola o address list</strong><small>Velocidad del plan según el modo configurado.</small></div></li>
+    <li><span class="punto punto--ambar"></span><div><strong>IP</strong><small>Dirección del servicio y reserva en el pool cuando aplica.</small></div></li>
+    <li><span class="punto punto--rojo"></span><div><strong>Servicios sin router</strong><small>Se asignan a este router antes de aprovisionarlos.</small></div></li>
+  </ul>
+</section>

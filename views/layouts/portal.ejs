@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es" data-tema="<%= typeof temaPortal !== 'undefined' && temaPortal ? temaPortal : 'claro-suave' %>">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= titulo %> · CRACKENTICK</title>
+  <meta name="theme-color" content="#f5f3fb">
+  <meta name="csrf-token" content="<%= csrfToken %>">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/css/portal.css">
+  <link rel="stylesheet" href="/css/portal-temas.css">
+  <script>
+    (function () {
+      try {
+        var servidor = <%- JSON.stringify(typeof temaPortal !== 'undefined' && temaPortal ? temaPortal : '') %>;
+        if (!servidor) {
+          var guardado = localStorage.getItem('crackentick-portal-tema');
+          var validos = ['oscuro', 'claro', 'claro-suave'];
+          if (validos.indexOf(guardado) !== -1) document.documentElement.dataset.tema = guardado;
+        }
+      } catch (error) { /* sin almacenamiento */ }
+    })();
+  </script>
+  <script src="/vendor/motion.min.js" defer></script>
+  <script src="/js/csrf.js" defer></script>
+  <script src="/js/portal.js" defer></script>
+</head>
+<body class="p-body<%= typeof auth !== 'undefined' && auth ? ' p-body--auth' : '' %>">
+  <a class="p-skip" href="#contenido">Saltar al contenido</a>
+
+  <% if (typeof auth !== 'undefined' && auth) { %>
+    <%- body %>
+  <% } else { %>
+    <div class="p-fondo" aria-hidden="true">
+      <span class="p-orb p-orb--uno"></span>
+      <span class="p-orb p-orb--dos"></span>
+    </div>
+
+    <header class="p-topbar">
+      <div class="p-topbar__interior">
+        <a class="p-brand" href="/portal" aria-label="CRACKENTICK, inicio del portal">
+          <span class="p-brand__logo" aria-hidden="true">
+            <svg viewBox="0 0 40 40" fill="none">
+              <path d="M20 3.5 34 11v18L20 36.5 6 29V11L20 3.5Z" stroke="currentColor" stroke-width="1.8"/>
+              <path d="M13 24c1.8-3.2 4-4.8 7-4.8s5.2 1.6 7 4.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              <path d="M15.5 18.5c1.2-1.5 2.7-2.3 4.5-2.3s3.3.8 4.5 2.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              <circle cx="20" cy="27" r="1.8" fill="currentColor"/>
+            </svg>
+          </span>
+          <span class="p-brand__texto">CRACKEN<strong>TICK</strong><small>Portal de clientes</small></span>
+        </a>
+
+        <nav class="p-nav" aria-label="Secciones del portal">
+          <a class="p-nav__link <%= seccion === 'resumen' ? 'is-activo' : '' %>" href="/portal"><%- include('../portal/_icono', { nombre: 'home' }) %> Resumen</a>
+          <a class="p-nav__link <%= seccion === 'facturas' ? 'is-activo' : '' %>" href="/portal/facturas"><%- include('../portal/_icono', { nombre: 'receipt' }) %> Facturas</a>
+          <a class="p-nav__link <%= seccion === 'tickets' ? 'is-activo' : '' %>" href="/portal/tickets"><%- include('../portal/_icono', { nombre: 'ticket' }) %> Tickets</a>
+        </nav>
+
+        <div class="p-user">
+          <%- include('../portal/_tema') %>
+          <span class="p-avatar" aria-hidden="true"><%= String(clientePortal.firstName || '?').charAt(0) %><%= String(clientePortal.lastName || '').charAt(0) %></span>
+          <span class="p-user__datos">
+            <strong><%= clientePortal.firstName %> <%= clientePortal.lastName %></strong>
+            <small><%= clientePortal.clientCode %></small>
+          </span>
+          <form action="/portal/logout" method="post">
+            <button type="submit" class="p-icon-btn" title="Cerrar sesión" aria-label="Cerrar sesión"><%- include('../portal/_icono', { nombre: 'logout' }) %></button>
+          </form>
+        </div>
+      </div>
+    </header>
+
+    <main id="contenido" class="p-main">
+      <% if ((typeof exito !== 'undefined' && exito && exito.length) || (typeof error !== 'undefined' && error && error.length)) { %>
+        <div class="p-toasts" aria-live="polite">
+          <% (exito || []).forEach((mensaje) => { %>
+            <div class="p-toast p-toast--ok" data-toast><%- include('../portal/_icono', { nombre: 'check' }) %><span><%= mensaje %></span><button type="button" class="p-toast__cerrar" data-toast-cerrar aria-label="Cerrar aviso">×</button></div>
+          <% }); %>
+          <% (error || []).forEach((mensaje) => { %>
+            <div class="p-toast p-toast--error" data-toast><%- include('../portal/_icono', { nombre: 'alert' }) %><span><%= mensaje %></span><button type="button" class="p-toast__cerrar" data-toast-cerrar aria-label="Cerrar aviso">×</button></div>
+          <% }); %>
+        </div>
+      <% } %>
+      <%- body %>
+    </main>
+
+    <footer class="p-footer">
+      <span>CRACKENTICK · Portal de clientes</span>
+      <span>¿Necesitas ayuda? Abre un ticket y soporte te contacta.</span>
+    </footer>
+  <% } %>
+</body>
+</html>

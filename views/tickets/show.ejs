@@ -1,0 +1,95 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Soporte · <%= ticket.code %></p>
+    <h2 class="pagina-cabecera__titulo"><%= ticket.subject %></h2>
+    <p class="pagina-cabecera__texto">
+      <span class="insignia insignia--<%= ticket.status %>"><%= etiquetas[ticket.status] %></span>
+      <span class="insignia insignia--<%= ticket.priority === 'urgent' || ticket.priority === 'high' ? 'overdue' : ticket.priority === 'medium' ? 'pending' : 'none' %>"><%= etiquetas[ticket.priority] %></span>
+      · <%= etiquetas[ticket.category] || ticket.category %>
+    </p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <a class="boton boton--secundario" href="/tickets"><%- include('../partials/icon', { nombre: 'arrowLeft' }) %> Volver</a>
+    <% if (ticket.clientId) { %>
+      <a class="boton boton--secundario" href="/clientes/<%= ticket.clientId._id %>?tab=general"><%- include('../partials/icon', { nombre: 'user' }) %> Ver cliente</a>
+    <% } %>
+  </div>
+</section>
+
+<div class="dash-grid">
+  <section class="tarjeta panel panel--ocho">
+    <div class="panel__cabecera">
+      <div><p class="etiqueta">Conversación</p><h3><%= ticket.totalMensajes %> mensaje(s)</h3></div>
+      <span class="texto-suave">Abierto <%= formatearFechaHora(ticket.createdAt) %></span>
+    </div>
+
+    <div class="chat">
+      <article class="chat__mensaje chat__mensaje--inicial">
+        <header><strong>Descripción inicial</strong><small><%= formatearFechaHora(ticket.createdAt) %></small></header>
+        <p><%= ticket.description %></p>
+      </article>
+      <% ticket.messages.forEach((mensaje) => { %>
+        <article class="chat__mensaje <%= mensaje.internal ? 'chat__mensaje--interno' : '' %>">
+          <header><strong><%= mensaje.author %></strong><small><%= formatearFechaHora(mensaje.createdAt) %><%= mensaje.internal ? ' · nota interna' : '' %></small></header>
+          <p><%= mensaje.body %></p>
+        </article>
+      <% }); %>
+      <% if (!ticket.messages.length) { %>
+        <p class="texto-suave">Todavía no hay respuestas. Agrega la primera abajo.</p>
+      <% } %>
+    </div>
+
+    <form action="/tickets/<%= ticket._id %>/mensajes" method="post" class="formulario formulario--compacto">
+      <div class="formulario__rejilla">
+        <div class="campo"><label for="author">Autor</label><input id="author" name="author" type="text" maxlength="80" value="Soporte"></div>
+        <div class="campo"><label for="origen">Origen</label><select id="origen" name="origen"><option value="soporte">Soporte</option><option value="cliente">Respuesta del cliente</option></select></div>
+        <div class="campo campo--ancho"><label for="body">Mensaje *</label><textarea id="body" name="body" rows="3" maxlength="2000" required placeholder="Escribe la respuesta o el diagnóstico…"></textarea></div>
+      </div>
+      <label class="check"><input type="checkbox" name="internal"> Nota interna (no visible para el cliente)</label>
+      <div class="formulario__acciones formulario__acciones--izquierda">
+        <button type="submit" class="boton boton--primario"><%- include('../partials/icon', { nombre: 'message' }) %> Agregar mensaje</button>
+      </div>
+    </form>
+  </section>
+
+  <aside class="pila">
+    <section class="tarjeta panel">
+      <div class="panel__cabecera"><div><p class="etiqueta">Estado</p><h3>Gestión</h3></div></div>
+      <form action="/tickets/<%= ticket._id %>/estado" method="post" class="pila pila--separada">
+        <div class="campo"><label for="status">Estado del ticket</label><select id="status" name="status"><% ['open', 'in_progress', 'resolved', 'closed'].forEach((v) => { %><option value="<%= v %>" <%= ticket.status === v ? 'selected' : '' %>><%= etiquetas[v] %></option><% }); %></select></div>
+        <button type="submit" class="boton boton--secundario boton--bloque"><%- include('../partials/icon', { nombre: 'check' }) %> Actualizar estado</button>
+      </form>
+      <form action="/tickets/<%= ticket._id %>/prioridad" method="post" class="pila pila--separada">
+        <div class="campo"><label for="priority">Prioridad</label><select id="priority" name="priority"><% ['low', 'medium', 'high', 'urgent'].forEach((v) => { %><option value="<%= v %>" <%= ticket.priority === v ? 'selected' : '' %>><%= etiquetas[v] %></option><% }); %></select></div>
+        <button type="submit" class="boton boton--secundario boton--bloque">Guardar prioridad</button>
+      </form>
+    </section>
+
+    <section class="tarjeta panel">
+      <div class="panel__cabecera"><div><p class="etiqueta">Detalle</p><h3>Información</h3></div></div>
+      <div class="resumen-linea"><span>Cliente</span><strong><%= ticket.clientId ? `${ticket.clientId.firstName} ${ticket.clientId.lastName}` : '—' %></strong></div>
+      <div class="resumen-linea"><span>Código</span><strong class="mono"><%= ticket.clientId?.clientCode || '—' %></strong></div>
+      <div class="resumen-linea"><span>Servicio</span><strong><%= ticket.subscriptionId?.planSnapshot?.name || '—' %></strong></div>
+      <div class="resumen-linea"><span>Asignado</span><strong><%= ticket.assignedTo %></strong></div>
+      <div class="resumen-linea"><span>Creado</span><strong><%= formatearFecha(ticket.createdAt) %></strong></div>
+      <% if (ticket.resolvedAt) { %><div class="resumen-linea"><span>Resuelto</span><strong><%= formatearFecha(ticket.resolvedAt) %></strong></div><% } %>
+      <% if (ticket.clientId?.phone) { %><div class="resumen-linea"><span>Teléfono</span><strong><%= ticket.clientId.phone %></strong></div><% } %>
+    </section>
+
+    <section class="tarjeta panel">
+      <div class="panel__cabecera"><div><p class="etiqueta">Auditoría</p><h3>Historial</h3></div></div>
+      <% if (logs.length === 0) { %>
+        <p class="texto-suave">Sin eventos registrados.</p>
+      <% } else { %>
+        <ul class="timeline timeline--compacta">
+          <% logs.forEach((log) => { %>
+            <li>
+              <span class="timeline__punto <%= log.status === 'failed' ? 'timeline__punto--rojo' : 'timeline__punto--verde' %>"></span>
+              <div class="timeline__contenido"><p><%= log.description %></p><small><%= formatearFechaHora(log.timestamp) %></small></div>
+            </li>
+          <% }); %>
+        </ul>
+      <% } %>
+    </section>
+  </aside>
+</div>

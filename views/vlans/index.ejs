@@ -1,0 +1,68 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Red · Segmentación</p>
+    <h2 class="pagina-cabecera__titulo">VLANs por router</h2>
+    <p class="pagina-cabecera__texto"><%= total %> VLAN(s) registradas. Selecciona un router para ver y administrar las suyas.</p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <% if (selectedRouter) { %>
+      <a class="boton boton--primario" href="/red/vlans/nuevo?routerId=<%= selectedRouter._id %>"><%- include('../partials/icon', { nombre: 'plus' }) %> Nueva VLAN</a>
+    <% } %>
+  </div>
+</section>
+
+<%- include('../partials/red-router-nav', { routers, selectedRouter, modulo, conteos }) %>
+
+<% if (selectedRouter) { %>
+  <% if (selectedRouter.vendor === 'cisco') { %>
+    <div class="aviso aviso--advertencia" role="note">
+      <span class="aviso__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></span>
+      <div class="aviso__texto"><strong>Cisco experimental.</strong> Las VLANs se aplican por SSH; el resto de la configuración Cisco aún no se aprovisiona automáticamente.</div>
+    </div>
+  <% } %>
+
+  <section class="tarjeta panel panel--tabla">
+    <div class="panel__cabecera">
+      <div><p class="etiqueta">Router seleccionado</p><h3><%= selectedRouter.name %> · <%= vlans.length %> VLAN(s)</h3></div>
+    </div>
+    <% if (!vlans.length) { %>
+      <div class="vacio vacio--compacto">
+        <p class="vacio__icono"><%- include('../partials/icon', { nombre: 'network' }) %></p>
+        <p class="vacio__texto">Este router no tiene VLANs registradas. Crea la primera con el botón superior.</p>
+      </div>
+    <% } else { %>
+      <div class="tabla-scroll">
+        <table class="tabla">
+          <thead><tr><th>VLAN</th><th>Interfaz / dirección</th><th>Notas</th><th>Estado</th><th>Router</th><th></th></tr></thead>
+          <tbody>
+            <% vlans.forEach((vlan) => { %>
+              <tr>
+                <td data-etiqueta="VLAN"><strong>#<%= vlan.vlanId %> · <%= vlan.name %></strong><small><%= vlan.updatedAt ? `Actualizada ${formatearFecha(vlan.updatedAt)}` : '' %></small></td>
+                <td data-etiqueta="Interfaz"><span class="mono"><%= vlan.interface || '—' %></span><small><%= vlan.address || 'Sin dirección' %></small></td>
+                <td data-etiqueta="Notas"><%= vlan.notes || '—' %></td>
+                <td data-etiqueta="Estado">
+                  <span class="insignia insignia--<%= vlan.status === 'applied' ? 'active' : vlan.status === 'error' ? 'error' : vlan.status === 'simulated' ? 'pending' : 'none' %>"><%= vlan.status %></span>
+                  <small><%= vlan.enabled ? 'Habilitada' : 'Inhabilitada' %></small>
+                </td>
+                <td data-etiqueta="Router"><strong><%= selectedRouter ? selectedRouter.name : '—' %></strong><small><%= vlan.lastResult || 'Sin aplicar' %></small></td>
+                <td>
+                  <div class="tabla__acciones">
+                    <a class="boton-icono boton-icono--sm" href="/red/vlans/<%= vlan._id %>/editar" title="Editar" aria-label="Editar VLAN"><%- include('../partials/icon', { nombre: 'edit' }) %></a>
+                    <form action="/red/vlans/<%= vlan._id %>/estado" method="post">
+                      <input type="hidden" name="accion" value="<%= vlan.enabled ? 'inhabilitar' : 'habilitar' %>">
+                      <button type="submit" class="boton-icono boton-icono--sm" title="<%= vlan.enabled ? 'Inhabilitar' : 'Habilitar' %>" aria-label="<%= vlan.enabled ? 'Inhabilitar' : 'Habilitar' %>"><%- include('../partials/icon', { nombre: vlan.enabled ? 'ban' : 'check' }) %></button>
+                    </form>
+                    <form action="/red/vlans/<%= vlan._id %>" method="post" data-confirmar="¿Eliminar la VLAN <%= vlan.vlanId %> de <%= selectedRouter.name %>?">
+                      <input type="hidden" name="_method" value="DELETE">
+                      <button type="submit" class="boton-icono boton-icono--sm boton-icono--peligro" title="Eliminar" aria-label="Eliminar VLAN"><%- include('../partials/icon', { nombre: 'trash' }) %></button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </section>
+<% } %>

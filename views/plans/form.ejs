@@ -1,0 +1,158 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Comercial · <%= modo === 'crear' ? 'Alta' : 'Edición' %></p>
+    <h2 class="pagina-cabecera__titulo"><%= modo === 'crear' ? 'Nuevo plan' : `Editar ${plan.name}` %></h2>
+    <p class="pagina-cabecera__texto">El precio se congela en las facturas emitidas; los cambios aplican a futuras contrataciones.</p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <a class="boton boton--secundario" href="/planes"><%- include('../partials/icon', { nombre: 'arrowLeft' }) %> Cancelar</a>
+  </div>
+</section>
+
+<% if (errores && errores.length) { %>
+  <div class="aviso aviso--error" role="alert">
+    <span class="aviso__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></span>
+    <div class="aviso__texto"><strong>Revisa los datos:</strong><ul class="lista-errores"><% errores.forEach((m) => { %><li><%= m %></li><% }); %></ul></div>
+  </div>
+<% } %>
+
+<form class="formulario" action="<%= modo === 'crear' ? '/planes' : `/planes/${plan._id}` %>" method="post" novalidate>
+  <% if (modo === 'editar') { %><input type="hidden" name="_method" value="PUT"><% } %>
+
+  <section class="tarjeta superficie formulario__seccion">
+    <div class="formulario__cabecera">
+      <span class="formulario__numero">01</span>
+      <div><h3>Datos del plan</h3><p>Nombre, descripción e intervalo de cobro.</p></div>
+    </div>
+    <div class="formulario__rejilla">
+      <div class="campo campo--ancho">
+        <label for="name">Nombre *</label>
+        <input id="name" name="name" type="text" value="<%= plan.name || '' %>" minlength="3" maxlength="60" placeholder="Hogar 150" required>
+      </div>
+      <div class="campo campo--ancho">
+        <label for="description">Descripción</label>
+        <textarea id="description" name="description" rows="2" maxlength="300" data-contador-de="description"><%= plan.description || '' %></textarea>
+        <span class="campo__ayuda" data-contador-para="description">0 / 300</span>
+      </div>
+      <div class="campo">
+        <label for="billingInterval">Intervalo *</label>
+        <select id="billingInterval" name="billingInterval">
+          <option value="monthly" <%= plan.billingInterval === 'monthly' ? 'selected' : '' %>>Mensual</option>
+          <option value="quarterly" <%= plan.billingInterval === 'quarterly' ? 'selected' : '' %>>Trimestral</option>
+          <option value="annual" <%= plan.billingInterval === 'annual' ? 'selected' : '' %>>Anual</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="price">Precio (<%= moneda %>) *</label>
+        <input id="price" name="price" type="number" min="0" step="0.01" value="<%= plan.price ?? '' %>" required>
+      </div>
+      <% if (config.billing.taxEnabled !== false) { %>
+        <div class="campo">
+          <label for="taxRatePercent">IVA del plan (%)</label>
+          <input id="taxRatePercent" name="taxRatePercent" type="number" min="0" max="100" step="0.01"
+            value="<%= plan.taxRate === null || plan.taxRate === undefined ? '' : Math.round(plan.taxRate * 10000) / 100 %>"
+            placeholder="Usar IVA global">
+          <span class="campo__ayuda">Vacío usa el IVA global. Puedes cambiarlo libremente por plan.</span>
+        </div>
+      <% } else { %>
+        <div class="campo">
+          <label>IVA</label>
+          <p class="campo__ayuda">Desactivado en todo el sistema. El plan se factura sin IVA.</p>
+        </div>
+      <% } %>
+    </div>
+  </section>
+
+  <section class="tarjeta superficie formulario__seccion">
+    <div class="formulario__cabecera">
+      <span class="formulario__numero">02</span>
+      <div><h3>Velocidad del cliente</h3><p>Define la velocidad de bajada y subida en Mbps, con números enteros mayores que cero.</p></div>
+    </div>
+    <div class="formulario__rejilla">
+      <div class="campo">
+        <label for="downloadSpeed">Descarga (Mbps) *</label>
+        <input id="downloadSpeed" name="downloadSpeed" type="number" min="1" step="1" value="<%= plan.downloadSpeed ?? '' %>" required>
+      </div>
+      <div class="campo">
+        <label for="uploadSpeed">Subida (Mbps) *</label>
+        <input id="uploadSpeed" name="uploadSpeed" type="number" min="1" step="1" value="<%= plan.uploadSpeed ?? '' %>" required>
+      </div>
+    </div>
+  </section>
+
+  <section class="tarjeta superficie formulario__seccion">
+    <div class="formulario__cabecera">
+      <span class="formulario__numero">03</span>
+      <div><h3>Aprovisionamiento</h3><p>Cómo se aplica la velocidad y en qué routers.</p></div>
+    </div>
+    <div class="formulario__rejilla">
+      <div class="campo<%= claseCampo(erroresCampo, 'trafficMode') %>">
+        <label for="trafficMode">Tipo de aprovisionamiento *</label>
+        <select id="trafficMode" name="trafficMode" data-plan-traffic>
+          <option value="simple_queue" <%= plan.trafficMode !== 'address_list' ? 'selected' : '' %>>Cola simple</option>
+          <option value="address_list" <%= plan.trafficMode === 'address_list' ? 'selected' : '' %>>Address list + queue tree</option>
+        </select>
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'trafficMode') }) %>
+      </div>
+      <div class="campo<%= claseCampo(erroresCampo, 'routerIds') %>" data-plan-routers>
+        <label>Routers del plan *</label>
+        <div class="lista-checks">
+          <% (typeof routers !== 'undefined' ? routers : []).forEach((router) => { %>
+            <% const marcado = (plan.routerIds || []).some((id) => String(id?._id || id) === String(router._id)); %>
+            <label class="check-linea">
+              <input type="checkbox" name="routerIds" value="<%= router._id %>" <%= marcado ? 'checked' : '' %>>
+              <span><%= router.name %> · <%= etiquetas[router.mode] %></span>
+            </label>
+          <% }); %>
+          <% if (typeof routers === 'undefined' || !routers.length) { %>
+            <p class="texto-suave">No hay routers configurados para address list. Cambia el modo de un router primero.</p>
+          <% } %>
+        </div>
+        <span class="campo__ayuda">Solo aplica a planes por address list.</span>
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'routerIds') }) %>
+      </div>
+      <div class="campo campo--ancho">
+        <p class="texto-suave">La velocidad del cliente se define arriba. Los límites del plan son opcionales y solo se usan en address list.</p>
+        <details class="avanzado">
+          <summary>Límites avanzados del plan</summary>
+          <div class="formulario__rejilla">
+            <div class="campo">
+              <label for="parentMaxDownloadMbps">Máximo del plan · bajada (Mbps)</label>
+              <input id="parentMaxDownloadMbps" name="parentMaxDownloadMbps" type="number" min="0" step="1" value="<%= plan.parentMaxDownloadMbps ?? 0 %>">
+              <span class="campo__ayuda">0 = automático según lo vendido.</span>
+            </div>
+            <div class="campo">
+              <label for="parentMaxUploadMbps">Máximo del plan · subida (Mbps)</label>
+              <input id="parentMaxUploadMbps" name="parentMaxUploadMbps" type="number" min="0" step="1" value="<%= plan.parentMaxUploadMbps ?? 0 %>">
+            </div>
+            <div class="campo">
+              <label for="parentLimitAtDownloadMbps">Garantía del plan · bajada (Mbps)</label>
+              <input id="parentLimitAtDownloadMbps" name="parentLimitAtDownloadMbps" type="number" min="0" step="1" value="<%= plan.parentLimitAtDownloadMbps ?? 0 %>">
+            </div>
+            <div class="campo">
+              <label for="parentLimitAtUploadMbps">Garantía del plan · subida (Mbps)</label>
+              <input id="parentLimitAtUploadMbps" name="parentLimitAtUploadMbps" type="number" min="0" step="1" value="<%= plan.parentLimitAtUploadMbps ?? 0 %>">
+            </div>
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <section class="tarjeta superficie formulario__seccion">
+    <div class="formulario__cabecera">
+      <span class="formulario__numero">04</span>
+      <div><h3>Disponibilidad</h3><p>Los planes inactivos no se pueden contratar.</p></div>
+    </div>
+    <label class="switch">
+      <input type="checkbox" name="active" <%= plan.active ? 'checked' : '' %>>
+      <span class="switch__control"></span>
+      <span class="switch__texto">Plan activo para nuevas contrataciones</span>
+    </label>
+  </section>
+
+  <div class="formulario__acciones">
+    <a class="boton boton--secundario" href="/planes">Cancelar</a>
+    <button type="submit" class="boton boton--primario"><%- include('../partials/icon', { nombre: 'check' }) %> <%= modo === 'crear' ? 'Crear plan' : 'Guardar cambios' %></button>
+  </div>
+</form>

@@ -1,0 +1,86 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Monitorización · Cliente</p>
+    <h2 class="pagina-cabecera__titulo"><%= subscription.clientId ? `${subscription.clientId.firstName} ${subscription.clientId.lastName}` : 'Servicio' %></h2>
+    <p class="pagina-cabecera__texto">
+      <span class="codigo"><%= subscription.clientId?.clientCode || '—' %></span>
+      · <%= subscription.planSnapshot?.name || subscription.planId?.name || 'Plan' %>
+      · <span class="insignia insignia--<%= subscription.status %>"><%= etiquetas[subscription.status] %></span>
+    </p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <a class="boton boton--secundario" href="/red/monitoreo"><%- include('../partials/icon', { nombre: 'arrowLeft' }) %> Volver</a>
+    <button type="button" class="boton boton--primario" data-monitor-iniciar><%- include('../partials/icon', { nombre: 'play' }) %> Iniciar lectura</button>
+    <button type="button" class="boton boton--peligro" data-monitor-detener disabled><%- include('../partials/icon', { nombre: 'ban' }) %> Detener monitor</button>
+  </div>
+</section>
+
+<section
+  class="tarjeta panel monitor-cliente"
+  data-monitor-cliente
+  data-subscription="<%= subscription._id %>"
+  data-base="/red/monitoreo/api/cliente/<%= subscription._id %>"
+  data-ttl="<%= ttl %>"
+  data-intervalo="<%= intervalo %>"
+  data-tope="<%= Math.max(1, (Number(subscription.planSnapshot?.downloadSpeed) || 100) * 1e6, (Number(subscription.planSnapshot?.uploadSpeed) || 50) * 1e6) %>"
+>
+  <div class="panel__cabecera">
+    <div><p class="etiqueta">Tráfico en tiempo real</p><h3>Lectura del servicio</h3></div>
+    <div class="panel__acciones">
+      <span class="insignia insignia--none" data-monitor-modo>Sin iniciar</span>
+      <span class="insignia insignia--none" data-monitor-estado>Sin iniciar</span>
+    </div>
+  </div>
+
+  <div class="monitor-cliente__metricas">
+    <div><small>Bajada actual</small><strong data-monitor-rx>—</strong></div>
+    <div><small>Subida actual</small><strong data-monitor-tx>—</strong></div>
+    <div><small>Límite del plan</small><strong><%= subscription.planSnapshot?.downloadSpeed || 0 %> / <%= subscription.planSnapshot?.uploadSpeed || 0 %> Mbps</strong></div>
+    <div><small>Expira en</small><strong data-monitor-ttl>—</strong></div>
+  </div>
+
+  <p class="nota nota--morado monitor-cliente__enlace">
+    <%- include('../partials/icon', { nombre: 'wifi' }) %>
+    Leyendo por <strong data-monitor-enlace><%= subscription.serviceConfig?.connectionType === 'pppoe' ? (subscription.serviceConfig?.pppoeUsername || 'PPPoE') : (subscription.serviceConfig?.ipAddress || 'IP') %></strong>
+    · cola <span class="mono"><%= subscription.serviceConfig?.queueName || 'sin cola' %></span>
+  </p>
+
+  <svg class="wan-chart wan-chart--grande" viewBox="0 0 640 140" preserveAspectRatio="none" role="img" aria-label="Tráfico del cliente">
+    <polyline class="wan-chart__linea wan-chart__linea--rx" data-monitor-linea-rx points=""></polyline>
+    <polyline class="wan-chart__linea wan-chart__linea--tx" data-monitor-linea-tx points=""></polyline>
+  </svg>
+
+  <div class="leyenda">
+    <span><i class="leyenda__punto leyenda__punto--verde"></i> Bajada</span>
+    <span><i class="leyenda__punto leyenda__punto--ambar"></i> Subida</span>
+  </div>
+
+  <p class="nota nota--ambar" data-monitor-aviso hidden></p>
+</section>
+
+<div class="dash-grid">
+  <section class="tarjeta panel panel--ocho">
+    <div class="panel__cabecera"><div><p class="etiqueta">Servicio</p><h3>Configuración técnica</h3></div></div>
+    <div class="resumen-servicio">
+      <div><small>Conexión</small><strong><%= etiquetas[subscription.serviceConfig?.connectionType] || '—' %></strong></div>
+      <div><small>Router</small><strong><%= subscription.serviceConfig?.routerId?.name || 'Automático' %></strong></div>
+      <div><small>IP</small><strong class="mono"><%= subscription.serviceConfig?.ipAddress || '—' %></strong></div>
+      <div><small>PPPoE</small><strong class="mono"><%= subscription.serviceConfig?.pppoeUsername || '—' %></strong></div>
+      <div><small>Cola</small><strong class="mono"><%= subscription.serviceConfig?.queueName || '—' %></strong></div>
+      <div><small>Aprovisionado</small><strong><%= etiquetas[subscription.serviceConfig?.provisioningState] || subscription.serviceConfig?.provisioningState || 'Pendiente' %></strong></div>
+    </div>
+  </section>
+
+  <aside class="pila">
+    <section class="tarjeta panel">
+      <div class="panel__cabecera"><div><p class="etiqueta">Acciones</p><h3>Operación</h3></div></div>
+      <a class="boton boton--secundario boton--bloque" href="/clientes/<%= subscription.clientId?._id %>?tab=servicio"><%- include('../partials/icon', { nombre: 'wifi' }) %> Gestionar servicio</a>
+      <a class="boton boton--secundario boton--bloque" href="/admin/configuracion/firewall/simulador?suscripcion=<%= subscription._id %>&accion=block"><%- include('../partials/icon', { nombre: 'shield' }) %> Ver comando de corte</a>
+    </section>
+    <section class="tarjeta panel">
+      <div class="panel__cabecera"><div><p class="etiqueta">Sesión</p><h3>Duración</h3></div></div>
+      <p class="texto-suave">La lectura no se inicia automáticamente: pulsa «Iniciar lectura» para consultar el tráfico. La sesión se renueva con cada lectura y, si dejas de consultar durante <%= Math.round(ttl / 1000) %> segundos, el servidor la elimina.</p>
+      <div class="resumen-linea"><span>Muestras</span><strong data-monitor-muestras>0</strong></div>
+    </section>
+  </aside>
+</div>

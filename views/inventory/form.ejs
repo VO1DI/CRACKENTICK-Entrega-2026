@@ -1,0 +1,58 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Almacén · <%= modo === 'crear' ? 'Alta' : 'Edición' %></p>
+    <h2 class="pagina-cabecera__titulo"><%= modo === 'crear' ? 'Nuevo artículo' : `Editar ${item.name}` %></h2>
+    <p class="pagina-cabecera__texto">Los artículos por cantidad usan stock; los serializados se controlan por serial y MAC.</p>
+  </div>
+  <div class="pagina-cabecera__acciones"><a class="boton boton--secundario" href="/inventario"><%- include('../partials/icon', { nombre: 'arrowLeft' }) %> Cancelar</a></div>
+</section>
+
+<% if (errores && errores.length) { %>
+  <div class="aviso aviso--error" role="alert"><span class="aviso__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></span><div class="aviso__texto"><strong>Revisa los datos:</strong><ul class="lista-errores"><% errores.forEach((m) => { %><li><%= m %></li><% }); %></ul></div></div>
+<% } %>
+
+<form class="formulario" action="<%= modo === 'crear' ? '/inventario' : `/inventario/${item._id}` %>" method="post" novalidate>
+  <% if (modo === 'editar') { %><input type="hidden" name="_method" value="PUT"><% } %>
+
+  <section class="tarjeta superficie formulario__seccion">
+    <div class="formulario__cabecera"><span class="formulario__numero">01</span><div><h3>Datos del artículo</h3><p>Nombre, categoría y tipo de control.</p></div></div>
+    <div class="formulario__rejilla">
+      <div class="campo campo--ancho<%= claseCampo(erroresCampo, 'name') %>"><label for="name">Nombre *</label><input id="name" name="name" type="text" maxlength="120" value="<%= item.name || '' %>" placeholder="Router hEX S" required><%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'name') }) %></div>
+      <div class="campo"><label for="category">Categoría</label><select id="category" name="category"><% ['router', 'onu', 'antenna', 'switch', 'cable', 'connector', 'other'].forEach((v) => { %><option value="<%= v %>" <%= item.category === v ? 'selected' : '' %>><%= etiquetas[v] %></option><% }); %></select></div>
+      <div class="campo<%= claseCampo(erroresCampo, 'tracking') %>"><label for="tracking">Seguimiento</label><select id="tracking" name="tracking" data-tipo-inventario <%= modo === 'editar' ? 'disabled' : '' %>><option value="bulk" <%= item.tracking !== 'serial' ? 'selected' : '' %>>Por cantidad</option><option value="serial" <%= item.tracking === 'serial' ? 'selected' : '' %>>Serializado</option></select>
+        <% if (modo === 'editar') { %><input type="hidden" name="tracking" value="<%= item.tracking %>"><span class="campo__ayuda">El tipo no se puede cambiar si hay seriales.</span><% } %>
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'tracking') }) %>
+      </div>
+      <div class="campo"><label for="unit">Unidad</label><input id="unit" name="unit" type="text" maxlength="20" value="<%= item.unit || 'unidad' %>"></div>
+      <div class="campo"><label for="minStock">Stock mínimo</label><input id="minStock" name="minStock" type="number" min="0" value="<%= item.minStock ?? 0 %>"></div>
+      <div class="campo<%= claseCampo(erroresCampo, 'quantity') %>" data-campo-cantidad><label for="quantity">Cantidad en stock</label><input id="quantity" name="quantity" type="number" min="0" value="<%= item.quantity ?? 0 %>" <%= item.tracking === 'serial' ? 'disabled' : '' %>><%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'quantity') }) %></div>
+      <div class="campo<%= claseCampo(erroresCampo, 'cost') %>"><label for="cost">Costo</label><input id="cost" name="cost" type="number" min="0" step="0.01" value="<%= item.cost ?? 0 %>"><%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'cost') }) %></div>
+      <div class="campo<%= claseCampo(erroresCampo, 'price') %>"><label for="price">Precio de venta</label><input id="price" name="price" type="number" min="0" step="0.01" value="<%= item.price ?? 0 %>"><%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'price') }) %></div>
+      <div class="campo"><label for="location">Ubicación</label><input id="location" name="location" type="text" maxlength="80" value="<%= item.location || '' %>" placeholder="Almacén central"></div>
+      <div class="campo"><label for="supplier">Proveedor</label><input id="supplier" name="supplier" type="text" maxlength="120" value="<%= item.supplier || '' %>"></div>
+      <div class="campo campo--ancho"><label for="notes">Notas</label><textarea id="notes" name="notes" rows="2" maxlength="300"><%= item.notes || '' %></textarea></div>
+    </div>
+  </section>
+
+  <section class="tarjeta superficie formulario__seccion" data-seccion-seriales <%= item.tracking === 'serial' ? '' : 'hidden' %>>
+    <div class="formulario__cabecera"><span class="formulario__numero">02</span><div><h3>Seriales</h3><p>Un serial por línea, con MAC opcional separada por coma.</p></div></div>
+    <div class="campo campo--ancho">
+      <label for="seriales">Seriales (serial, MAC)</label>
+      <textarea id="seriales" name="seriales" rows="5" placeholder="RBD12345678, AA:BB:CC:DD:EE:01"></textarea>
+      <span class="campo__ayuda">En edición solo se agregan los seriales nuevos; los existentes no se borran.</span>
+    </div>
+    <% if (item.tracking === 'serial' && item.serials.length) { %>
+      <p class="texto-suave"><%= item.serials.length %> serial(es) registrados actualmente.</p>
+    <% } %>
+  </section>
+
+  <section class="tarjeta superficie formulario__seccion">
+    <div class="formulario__cabecera"><span class="formulario__numero">03</span><div><h3>Disponibilidad</h3><p>Los artículos inactivos no se pueden vender.</p></div></div>
+    <label class="switch"><input type="checkbox" name="active" <%= item.active ? 'checked' : '' %>><span class="switch__control"></span><span class="switch__texto">Artículo activo</span></label>
+  </section>
+
+  <div class="formulario__acciones">
+    <a class="boton boton--secundario" href="/inventario">Cancelar</a>
+    <button type="submit" class="boton boton--primario"><%- include('../partials/icon', { nombre: 'check' }) %> <%= modo === 'crear' ? 'Crear artículo' : 'Guardar cambios' %></button>
+  </div>
+</form>

@@ -1,0 +1,17 @@
+<%
+  const qs = new URLSearchParams(
+    Object.entries(filtros || {}).filter(([clave, valor]) => valor && clave !== 'page')
+  ).toString();
+  const enlace = (pagina) => `?${qs ? `${qs}&` : ''}page=${pagina}`;
+%>
+<% if (paginacion.paginas > 1) { %>
+  <nav class="paginacion" aria-label="Paginación">
+    <a class="paginacion__boton <%= paginacion.actual <= 1 ? 'is-deshabilitado' : '' %>" href="<%= enlace(Math.max(1, paginacion.actual - 1)) %>" aria-label="Página anterior">
+      <%- include('icon', { nombre: 'arrowLeft' }) %> Anterior
+    </a>
+    <span class="paginacion__estado">Página <strong><%= paginacion.actual %></strong> de <%= paginacion.paginas %></span>
+    <a class="paginacion__boton <%= paginacion.actual >= paginacion.paginas ? 'is-deshabilitado' : '' %>" href="<%= enlace(Math.min(paginacion.paginas, paginacion.actual + 1)) %>" aria-label="Página siguiente">
+      Siguiente <%- include('icon', { nombre: 'chevronRight' }) %>
+    </a>
+  </nav>
+<% } %>

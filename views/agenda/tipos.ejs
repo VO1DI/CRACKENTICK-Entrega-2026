@@ -1,0 +1,60 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Operación · Agenda</p>
+    <h2 class="pagina-cabecera__titulo">Tipos de tarea</h2>
+    <p class="pagina-cabecera__texto">Nombre y color con los que se dibujan las tareas en la agenda. Un tipo en uso no se puede eliminar: desactívalo para dejar de asignarlo.</p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <a class="boton boton--secundario boton--sm" href="/agenda"><%- include('../partials/icon', { nombre: 'calendar' }) %> Cuadrícula</a>
+    <a class="boton boton--primario boton--sm" href="/agenda/tipos/nuevo"><%- include('../partials/icon', { nombre: 'plus' }) %> Nuevo tipo</a>
+  </div>
+</section>
+
+<nav class="tabs" aria-label="Agenda">
+  <a class="tabs__enlace" href="/agenda">Cuadrícula</a>
+  <a class="tabs__enlace is-activo" href="/agenda/tipos" aria-current="page">Tipos de tarea</a>
+</nav>
+
+<section class="tarjeta superficie panel panel--tabla">
+  <div class="panel__cabecera">
+    <div><p class="etiqueta">Configuración</p><h3><%= tipos.length %> tipo(s) registrados</h3></div>
+  </div>
+  <% if (!tipos.length) { %>
+    <div class="vacio vacio--compacto">
+      <p class="vacio__icono"><%- include('../partials/icon', { nombre: 'calendar' }) %></p>
+      <p class="vacio__texto">No hay tipos de tarea. Crea el primero para poder asignar tareas.</p>
+    </div>
+  <% } else { %>
+    <div class="tabla-scroll">
+      <table class="tabla">
+        <thead><tr><th>Color</th><th>Nombre</th><th>Clave</th><th>Orden</th><th>Estado</th><th>Tareas</th><th>Acciones</th></tr></thead>
+        <tbody>
+          <% tipos.forEach((tipo) => { %>
+            <tr>
+              <td data-etiqueta="Color"><span class="agenda-leyenda__punto" style="background: <%= tipo.color %>; display: inline-block; width: 14px; height: 14px; border-radius: 50%;"></span></td>
+              <td data-etiqueta="Nombre">
+                <strong><%= tipo.name %></strong>
+                <% if (tipo.description) { %><br><small class="texto-suave"><%= tipo.description %></small><% } %>
+              </td>
+              <td data-etiqueta="Clave"><span class="mono"><%= tipo.key %></span></td>
+              <td data-etiqueta="Orden"><%= tipo.order %></td>
+              <td data-etiqueta="Estado"><span class="insignia insignia--<%= tipo.active ? 'active' : 'overdue' %>"><%= tipo.active ? 'Activo' : 'Inactivo' %></span></td>
+              <td data-etiqueta="Tareas"><%= tipo.usos %></td>
+              <td data-etiqueta="Acciones" class="tabla__acciones">
+                <a class="boton-icono boton-icono--sm" href="/agenda/tipos/<%= tipo._id %>/editar" title="Editar" aria-label="Editar <%= tipo.name %>"><%- include('../partials/icon', { nombre: 'edit' }) %></a>
+                <% if (!tipo.usos && tipos.length > 1) { %>
+                  <form action="/agenda/tipos/<%= tipo._id %>" method="post" data-confirmar="¿Eliminar el tipo <%= tipo.name %>? Esta acción no se puede deshacer.">
+                    <input type="hidden" name="_method" value="DELETE">
+                    <button type="submit" class="boton-icono boton-icono--sm" title="Eliminar" aria-label="Eliminar <%= tipo.name %>"><%- include('../partials/icon', { nombre: 'trash' }) %></button>
+                  </form>
+                <% } else if (tipo.usos) { %>
+                  <span class="texto-suave" title="Tiene tareas asignadas">En uso</span>
+                <% } %>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</section>

@@ -1,0 +1,111 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Operación · Avisos</p>
+    <h2 class="pagina-cabecera__titulo">Notificaciones</h2>
+    <p class="pagina-cabecera__texto">Alertas de red, servicios y almacén filtradas por tus permisos.</p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <% if (resumen.pendientes && puedeGestionar) { %>
+      <form action="/notificaciones/resolver-todas" method="post" data-confirmar="¿Resolver todas las alertas pendientes de tus áreas?">
+        <button type="submit" class="boton boton--secundario boton--sm"><%- include('../partials/icon', { nombre: 'check' }) %> Resolver todas</button>
+      </form>
+    <% } %>
+    <% if (puede('red.monitoreo')) { %>
+      <a class="boton boton--secundario boton--sm" href="/red/monitoreo#alertas"><%- include('../partials/icon', { nombre: 'gauge' }) %> Monitorización</a>
+    <% } %>
+    <% if (puede('ventas.inventario')) { %>
+      <a class="boton boton--secundario boton--sm" href="/ventas/inventario#alertas-stock"><%- include('../partials/icon', { nombre: 'box' }) %> Inventario</a>
+    <% } %>
+  </div>
+</section>
+
+<section class="dash-kpis notif-kpis">
+  <article class="kpi kpi--ambar">
+    <div class="kpi__cabecera"><span class="kpi__titulo">Pendientes</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'bell' }) %></span></div>
+    <p class="kpi__valor"><%= resumen.pendientes %></p>
+    <p class="kpi__detalle">Activas o reconocidas</p>
+  </article>
+  <article class="kpi kpi--rojo">
+    <div class="kpi__cabecera"><span class="kpi__titulo">Críticas</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></span></div>
+    <p class="kpi__valor"><%= resumen.criticas %></p>
+    <p class="kpi__detalle">Requieren atención</p>
+  </article>
+  <article class="kpi kpi--morado">
+    <div class="kpi__cabecera"><span class="kpi__titulo">Reconocidas</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'eye' }) %></span></div>
+    <p class="kpi__valor"><%= resumen.reconocidas %></p>
+    <p class="kpi__detalle">En seguimiento</p>
+  </article>
+  <article class="kpi kpi--verde">
+    <div class="kpi__cabecera"><span class="kpi__titulo">Resueltas</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'check' }) %></span></div>
+    <p class="kpi__valor"><%= resumen.resueltas %></p>
+    <p class="kpi__detalle">Historial</p>
+  </article>
+</section>
+
+<nav class="tabs notif-tabs" aria-label="Filtrar notificaciones">
+  <a class="tabs__enlace <%= estado === 'pendientes' ? 'is-activo' : '' %>" href="/notificaciones?estado=pendientes">Pendientes <span class="chip"><%= resumen.pendientes %></span></a>
+  <a class="tabs__enlace <%= estado === 'resueltas' ? 'is-activo' : '' %>" href="/notificaciones?estado=resueltas">Resueltas <span class="chip"><%= resumen.resueltas %></span></a>
+  <a class="tabs__enlace <%= estado === 'todas' ? 'is-activo' : '' %>" href="/notificaciones?estado=todas">Todas</a>
+</nav>
+
+<% if (!grupos.length) { %>
+  <section class="tarjeta superficie vacio">
+    <p class="vacio__icono vacio__icono--verde"><%- include('../partials/icon', { nombre: 'check' }) %></p>
+    <h3 class="vacio__titulo"><%= estado === 'resueltas' ? 'Sin alertas resueltas' : 'Sin notificaciones pendientes' %></h3>
+    <p class="vacio__texto"><%= estado === 'resueltas' ? 'Cuando resuelvas una alerta aparecerá aquí.' : 'No hay alertas activas en las áreas a las que tienes acceso.' %></p>
+  </section>
+<% } %>
+
+<% grupos.forEach((grupo) => { %>
+  <section class="tarjeta notif-grupo">
+    <div class="notif-grupo__cabecera">
+      <span class="notif-grupo__icono"><%- include('../partials/icon', { nombre: grupo.icono }) %></span>
+      <div class="notif-grupo__titulo">
+        <p class="etiqueta"><%= grupo.descripcion %></p>
+        <h3><%= grupo.titulo %> <span class="chip"><%= grupo.alertas.length %></span></h3>
+      </div>
+      <% if (grupo.key === 'red' && puede('red.monitoreo')) { %>
+        <a class="enlace-flecha" href="/red/monitoreo#alertas">Abrir monitorización <span aria-hidden="true">→</span></a>
+      <% } else if (grupo.key === 'stock' && puede('ventas.inventario')) { %>
+        <a class="enlace-flecha" href="/ventas/inventario#alertas-stock">Abrir inventario <span aria-hidden="true">→</span></a>
+      <% } else if (grupo.key === 'servicio' && puede('general.clientes')) { %>
+        <a class="enlace-flecha" href="/clientes">Abrir clientes <span aria-hidden="true">→</span></a>
+      <% } %>
+    </div>
+
+    <ul class="notif-lista">
+      <% grupo.alertas.forEach((alerta) => { %>
+        <li class="notif-item notif-item--<%= alerta.severity %>">
+          <span class="notif-item__punto" aria-hidden="true"></span>
+          <div class="notif-item__cuerpo">
+            <div class="notif-item__linea">
+              <strong><%= alerta.message %></strong>
+              <span class="insignia insignia--<%= alerta.status === 'active' ? 'overdue' : alerta.status === 'acknowledged' ? 'pending' : 'active' %>">
+                <%= alerta.status === 'active' ? 'Activa' : alerta.status === 'acknowledged' ? 'Reconocida' : 'Resuelta' %>
+              </span>
+            </div>
+            <div class="notif-item__meta">
+              <% if (alerta.routerName) { %><span><%- include('../partials/icon', { nombre: 'server' }) %> <%= alerta.routerName %></span><% } %>
+              <% if (alerta.wan) { %><span><%= alerta.wan %></span><% } %>
+              <% if (alerta.value) { %><span><%= alerta.value %></span><% } %>
+              <span><%- include('../partials/icon', { nombre: 'clock' }) %> <%= formatearFechaHora(alerta.startedAt) %></span>
+              <% if (alerta.resolvedAt) { %><span>Resuelta <%= formatearFechaHora(alerta.resolvedAt) %></span><% } %>
+            </div>
+          </div>
+          <% if (alerta.status !== 'resolved' && alerta.editable) { %>
+            <div class="notif-item__acciones">
+              <% if (alerta.status === 'active') { %>
+                <form action="/notificaciones/alertas/<%= alerta._id %>/reconocer" method="post">
+                  <button type="submit" class="boton boton--secundario boton--xs" title="Reconocer"><%- include('../partials/icon', { nombre: 'eye' }) %> Reconocer</button>
+                </form>
+              <% } %>
+              <form action="/notificaciones/alertas/<%= alerta._id %>/resolver" method="post">
+                <button type="submit" class="boton boton--secundario boton--xs" title="Resolver"><%- include('../partials/icon', { nombre: 'check' }) %> Resolver</button>
+              </form>
+            </div>
+          <% } %>
+        </li>
+      <% }); %>
+    </ul>
+  </section>
+<% }); %>

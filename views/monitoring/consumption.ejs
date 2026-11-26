@@ -1,0 +1,150 @@
+<%
+  const bytes = (n) => {
+    const v = Number(n) || 0;
+    if (v >= 1e9) return `${(v / 1e9).toFixed(2)} GB`;
+    if (v >= 1e6) return `${(v / 1e6).toFixed(1)} MB`;
+    if (v >= 1e3) return `${(v / 1e3).toFixed(0)} KB`;
+    return `${Math.round(v)} B`;
+  };
+%>
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Red · Consumo</p>
+    <h2 class="pagina-cabecera__titulo">Consumo diario</h2>
+    <p class="pagina-cabecera__texto">Datos guardados de los últimos 90 días. Se toman de las colas de cada servicio.</p>
+  </div>
+</section>
+
+<section class="tarjeta superficie filtros">
+  <form method="get" action="/red/consumo" class="filtros__form">
+    <div class="campo">
+      <label for="desde">Desde</label>
+      <input id="desde" type="date" name="desde" value="<%= filtros.desde %>">
+    </div>
+    <div class="campo">
+      <label for="hasta">Hasta</label>
+      <input id="hasta" type="date" name="hasta" value="<%= filtros.hasta %>">
+    </div>
+    <div class="campo">
+      <label for="routerId">Router</label>
+      <select id="routerId" name="routerId">
+        <option value="">Todos</option>
+        <% routers.forEach((router) => { %>
+          <option value="<%= router._id %>" <%= String(filtros.routerId) === String(router._id) ? 'selected' : '' %>><%= router.name %></option>
+        <% }); %>
+      </select>
+    </div>
+    <button type="submit" class="boton boton--secundario boton--sm">Aplicar</button>
+    <a class="boton boton--secundario boton--sm" href="/red/consumo">Limpiar</a>
+  </form>
+</section>
+
+<section class="dash-kpis" aria-label="Resumen de consumo">
+  <article class="kpi kpi--morado">
+    <div class="kpi__cabecera"><span class="kpi__titulo">Descargado</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'activity' }) %></span></div>
+    <p class="kpi__valor"><%= bytes(totalRx) %></p>
+    <p class="kpi__detalle">Suma del rango</p>
+  </article>
+  <article class="kpi kpi--verde">
+    <div class="kpi__cabecera"><span class="kpi__titulo">Subido</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'trendUp' }) %></span></div>
+    <p class="kpi__valor"><%= bytes(totalTx) %></p>
+    <p class="kpi__detalle">Suma del rango</p>
+  </article>
+  <article class="kpi kpi--ambar">
+    <div class="kpi__cabecera"><span class="kpi__titulo">Clientes</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'users' }) %></span></div>
+    <p class="kpi__valor"><%= clientes.length %></p>
+    <p class="kpi__detalle"><%= dias.length %> día(s) con datos</p>
+  </article>
+</section>
+
+<section class="tarjeta superficie panel dash-chart">
+  <div class="panel__cabecera">
+    <div><p class="etiqueta">Evolución</p><h3>Consumo total por día</h3></div>
+  </div>
+  <% if (!dias.length) { %>
+    <div class="vacio vacio--compacto">
+      <p class="vacio__icono"><%- include('../partials/icon', { nombre: 'activity' }) %></p>
+      <p class="vacio__texto">Sin datos en este rango. El recolector guarda la primera base y luego cada 15 minutos.</p>
+    </div>
+  <% } else { %>
+    <div class="evolucion__lienzo">
+      <canvas data-consumo-lienzo role="img" aria-label="Consumo total por día"></canvas>
+    </div>
+  <% } %>
+</section>
+
+<section class="tarjeta superficie panel panel--tabla">
+  <div class="panel__cabecera">
+    <div><p class="etiqueta">Detalle</p><h3><%= clientes.length %> cliente(s)</h3></div>
+  </div>
+  <% if (!clientes.length) { %>
+    <div class="vacio vacio--compacto">
+      <p class="vacio__icono"><%- include('../partials/icon', { nombre: 'users' }) %></p>
+      <p class="vacio__texto">Sin consumo registrado para el rango.</p>
+    </div>
+  <% } else { %>
+    <div class="tabla-scroll">
+      <table class="tabla">
+        <thead><tr><th>Cliente</th><th>Código</th><th>Descargado</th><th>Subido</th><th>Total</th><th>Días</th></tr></thead>
+        <tbody>
+          <% clientes.forEach((item) => { %>
+            <tr>
+              <td data-etiqueta="Cliente"><strong><%= item.cliente %></strong></td>
+              <td data-etiqueta="Código"><span class="mono"><%= item.codigo %></span></td>
+              <td data-etiqueta="Descargado"><%= bytes(item.rx) %></td>
+              <td data-etiqueta="Subido"><%= bytes(item.tx) %></td>
+              <td data-etiqueta="Total"><strong><%= bytes(item.total) %></strong></td>
+              <td data-etiqueta="Días"><%= item.dias %></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</section>
+
+<% if (dias.length) { %>
+  <script>
+    (function () {
+      var lienzo = document.querySelector('[data-consumo-lienzo]');
+      if (!lienzo || !window.Chart) return;
+      var etiquetas = <%- JSON.stringify(dias.map(([dia]) => dia)) %>;
+      var valores = <%- JSON.stringify(dias.map(([, total]) => total)) %>;
+      var formateador = new Intl.NumberFormat('es-VE', { notation: 'compact', maximumFractionDigits: 1 });
+      function coloresTema() {
+        var estilos = getComputedStyle(document.documentElement);
+        return {
+          texto: (estilos.getPropertyValue('--muted') || '#8c8c9e').trim(),
+          borde: (estilos.getPropertyValue('--border') || '#272733').trim(),
+        };
+      }
+      var theme = coloresTema();
+      var chart = new Chart(lienzo, {
+        type: 'bar',
+        data: {
+          labels: etiquetas,
+          datasets: [{ label: 'Consumo', data: valores, backgroundColor: 'rgba(124, 92, 255, 0.7)', borderRadius: 6 }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: function (ctx) { return ' ' + formateador.format(ctx.parsed.y) + ' bytes'; } } },
+          },
+          scales: {
+            y: { ticks: { color: theme.texto, callback: function (valor) { return formateador.format(valor); } }, grid: { color: theme.borde } },
+            x: { ticks: { color: theme.texto }, grid: { display: false } },
+          },
+        },
+      });
+      new MutationObserver(function () {
+        var nuevo = coloresTema();
+        chart.options.scales.y.grid.color = nuevo.borde;
+        chart.options.scales.y.ticks.color = nuevo.texto;
+        chart.options.scales.x.ticks.color = nuevo.texto;
+        chart.update('none');
+      }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-tema'] });
+    })();
+  </script>
+<% } %>

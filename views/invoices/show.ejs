@@ -1,0 +1,197 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Financiero · Factura <span class="codigo"><%= factura.invoiceNumber %></span></p>
+    <h2 class="pagina-cabecera__titulo"><%= formatearDinero(factura.total, factura.currency) %></h2>
+    <p class="pagina-cabecera__texto">
+      <span class="insignia insignia--<%= factura.status %>"><%= etiquetas[factura.status] %></span>
+      <span class="insignia insignia--<%= factura.type === 'service' ? 'morado' : 'none' %>"><%= etiquetas[factura.type] || factura.type %></span>
+      <% if (factura.periodStart) { %>· Periodo <%= formatearFecha(factura.periodStart) %> → <%= formatearFecha(factura.periodEnd) %><% } %>
+      <% if (factura.affectsService === false) { %>· <strong>No participa en el corte</strong><% } %>
+    </p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <a class="boton boton--secundario" href="/facturas"><%- include('../partials/icon', { nombre: 'arrowLeft' }) %> Volver</a>
+    <% if (['open', 'overdue'].includes(factura.status)) { %>
+      <a class="boton boton--secundario" href="/facturas/<%= factura._id %>/editar"><%- include('../partials/icon', { nombre: 'edit' }) %> Editar IVA y cobro</a>
+      <a class="boton boton--primario" href="#pago"><%- include('../partials/icon', { nombre: 'creditCard' }) %> Registrar pago</a>
+    <% } %>
+  </div>
+</section>
+
+<div class="rejilla rejilla--factura">
+  <section class="tarjeta superficie factura">
+    <div class="factura__cabecera">
+      <div class="factura__empresa">
+        <span class="marca__icono" aria-hidden="true">
+          <svg viewBox="0 0 40 40" fill="none">
+            <path d="M20 3.5 34 11v18L20 36.5 6 29V11L20 3.5Z" stroke="#7C5CFF" stroke-width="1.8"/>
+            <path d="M13 24c1.8-3.2 4-4.8 7-4.8s5.2 1.6 7 4.8" stroke="#7C5CFF" stroke-width="1.8" stroke-linecap="round"/>
+            <circle cx="20" cy="27" r="1.8" fill="#7C5CFF"/>
+          </svg>
+        </span>
+        <div>
+          <strong><%= config.company.name %></strong>
+          <small><%= config.company.taxId || 'RIF no configurado' %></small>
+          <small><%= config.company.address || '' %></small>
+          <small><%= config.company.phone || '' %> · <%= config.company.email || '' %></small>
+        </div>
+      </div>
+      <div class="factura__numero">
+        <small>Factura</small>
+        <strong><%= factura.invoiceNumber %></strong>
+        <span class="insignia insignia--<%= factura.status %>"><%= etiquetas[factura.status] %></span>
+      </div>
+    </div>
+
+    <div class="factura__partes">
+      <div>
+        <p class="etiqueta">Facturar a</p>
+        <strong><%= factura.clientId ? `${factura.clientId.firstName} ${factura.clientId.lastName}` : 'Cliente eliminado' %></strong>
+        <p><%= factura.clientId?.billingData?.legalName || '' %></p>
+        <p><%= factura.clientId?.billingData?.taxId || factura.clientId?.taxId || '' %></p>
+        <p><%= factura.clientId?.billingData?.address || factura.clientId?.address?.street || '' %></p>
+        <p><%= factura.clientId?.billingData?.email || factura.clientId?.email || '' %></p>
+      </div>
+      <div class="factura__fechas">
+        <div><span>Emisión</span><strong><%= formatearFecha(factura.issueDate) %></strong></div>
+        <div><span>Vencimiento</span><strong><%= formatearFecha(factura.dueDate) %></strong></div>
+        <div><span>Moneda</span><strong><%= factura.currency %></strong></div>
+        <div><span>IVA aplicado</span><strong><%= Math.round((factura.taxRate || 0) * 10000) / 100 %>%</strong></div>
+      </div>
+    </div>
+
+    <div class="tabla-scroll">
+      <table class="tabla factura__tabla">
+        <thead><tr><th>Descripción</th><th>Cant.</th><th>Precio unitario</th><th>Importe</th></tr></thead>
+        <tbody>
+          <% factura.lines.forEach((linea) => { %>
+            <tr>
+              <td><%= linea.description %><% if (linea.serials && linea.serials.length) { %><small class="mono texto-suave"><%= linea.serials.join(', ') %></small><% } %></td>
+              <td><%= linea.quantity %></td>
+              <td><%= formatearDinero(linea.unitPrice, factura.currency) %></td>
+              <td><%= formatearDinero(linea.amount, factura.currency) %></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="factura__totales">
+      <div><span>Subtotal</span><strong><%= formatearDinero(factura.subtotal, factura.currency) %></strong></div>
+      <% if ((factura.discountAmount || 0) > 0) { %>
+        <div>
+          <span>Descuento<%= factura.discountType === 'percent' ? ` (${Math.round((factura.discount || 0) * 100) / 100} %)` : '' %></span>
+          <strong>- <%= formatearDinero(factura.discountAmount, factura.currency) %></strong>
+        </div>
+      <% } %>
+      <div><span>Base imponible</span><strong><%= formatearDinero(factura.taxBase ?? factura.subtotal, factura.currency) %></strong></div>
+      <div><span>IVA (<%= Math.round((factura.taxRate || 0) * 10000) / 100 %>%)</span><strong><%= formatearDinero(factura.tax, factura.currency) %></strong></div>
+      <div class="factura__total"><span>Total</span><strong><%= formatearDinero(factura.total, factura.currency) %></strong></div>
+    </div>
+
+    <% if (factura.notes) { %>
+      <div class="nota">
+        <%- include('../partials/icon', { nombre: 'receipt' }) %>
+        <span><%= factura.notes %></span>
+      </div>
+    <% } %>
+
+    <% if (factura.status === 'paid') { %>
+      <% const monedaPago = factura.paymentCurrency || 'USD'; const montoPago = factura.paymentAmount == null ? factura.total : factura.paymentAmount; const tasaPago = factura.exchangeRate; %>
+      <div class="factura__pago">
+        <span class="insignia insignia--active">Pagada</span>
+        <p>Pagada el <strong><%= formatearFecha(factura.paidAt) %></strong> con <strong><%= etiquetas[factura.paymentMethod] || factura.paymentMethod %></strong> en <strong><%= monedaPago === 'VES' ? 'bolívares' : 'dólares' %></strong>.</p>
+        <p>Monto pagado: <strong><%= formatearDinero(montoPago, monedaPago === 'VES' ? 'VES' : 'USD') %></strong><% if (tasaPago) { %> · Tasa BCV: <strong><%= formatearDinero(tasaPago, 'VES') %>/USD</strong><% } %></p>
+        <% if (tasaPago) { %><p>Equivalente: <strong><%= monedaPago === 'VES' ? formatearDinero(factura.total, 'USD') : formatearDinero(montoPago * tasaPago, 'VES') %></strong></p><% } %>
+        <% if (factura.paymentReference) { %><p>Referencia: <code><%= factura.paymentReference %></code></p><% } %>
+      </div>
+    <% } %>
+
+    <% if (factura.status === 'void') { %>
+      <div class="factura__anulada">
+        <span class="insignia insignia--void">Anulada</span>
+        <p><%= factura.voidReason %></p>
+        <small><%= formatearFechaHora(factura.voidedAt) %></small>
+      </div>
+    <% } %>
+
+    <p class="factura__nota">Documento generado por CRACKENTICK. Mientras la factura está pendiente o vencida se pueden ajustar IVA, descuento, vencimiento y notas. Una vez pagada o anulada queda inmutable.</p>
+  </section>
+
+  <div class="pila">
+    <% if (['open', 'overdue'].includes(factura.status)) { %>
+      <section class="tarjeta superficie panel" id="pago">
+        <div class="panel__cabecera"><div><p class="etiqueta">Cobro</p><h3>Registrar pago total</h3></div></div>
+        <p class="texto-suave">El pago cierra la factura. <% if (factura.affectsService !== false) { %>Si no quedan pendientes del servicio, se restaura automáticamente.<% } else { %>Esta factura no altera el estado del servicio.<% } %></p>
+        <form action="/facturas/<%= factura._id %>/pagar" method="post" class="formulario formulario--compacto" data-pago-form data-total-usd="<%= factura.total %>" data-tasa="<%= tasa.rate || 0 %>">
+          <div class="campo">
+            <label for="paymentCurrency">Moneda del pago *</label>
+            <select id="paymentCurrency" name="paymentCurrency" data-pago-moneda required>
+              <% monedasPago.forEach((moneda) => { %>
+                <option value="<%= moneda %>"><%= etiquetasMoneda[moneda] || moneda %></option>
+              <% }); %>
+            </select>
+          </div>
+          <div class="campo">
+            <label for="paymentMethod">Método de pago *</label>
+            <select id="paymentMethod" name="paymentMethod" data-pago-metodo required>
+              <option value="">Selecciona un método</option>
+              <% metodosPagoUsd.forEach((metodo) => { %>
+                <option value="<%= metodo %>" data-moneda="USD"><%= etiquetas[metodo] %> (USD)</option>
+              <% }); %>
+              <% metodosPagoBs.forEach((metodo) => { %>
+                <option value="<%= metodo %>" data-moneda="VES"><%= etiquetas[metodo] %> (Bs)</option>
+              <% }); %>
+            </select>
+          </div>
+          <div class="campo">
+            <label for="exchangeRate">Tasa aplicada (Bs por USD)</label>
+            <div class="campo__control">
+              <span class="campo__prefijo" aria-hidden="true">Bs</span>
+              <input id="exchangeRate" name="exchangeRate" type="number" inputmode="decimal" min="0.01" step="any" value="<%= tasa.rate || '' %>" readonly>
+              <button type="button" class="campo__ojo campo__ojo--texto" data-tasa-editar aria-label="Cambiar la tasa de este cobro" title="Cambiar la tasa">Cambiar</button>
+            </div>
+            <small class="campo__ayuda" data-tasa-ayuda>Se toma la tasa BCV guardada. Pulsa Cambiar solo si necesitas otra tasa para este cobro.</small>
+          </div>
+          <div class="campo">
+            <label for="paymentReference">Referencia o comprobante</label>
+            <input id="paymentReference" name="paymentReference" type="text" maxlength="120" placeholder="TRF-000123">
+          </div>
+          <p class="texto-suave">Total factura: <strong><%= formatearDinero(factura.total, 'USD') %></strong> · Equivalente: <strong data-pago-total-bs><%= totalBs == null ? '—' : formatearDinero(totalBs, 'VES') %></strong></p>
+          <button type="submit" class="boton boton--exito boton--bloque"><%- include('../partials/icon', { nombre: 'check' }) %> Confirmar pago de <%= formatearDinero(factura.total, 'USD') %></button>
+        </form>
+      </section>
+
+      <section class="tarjeta superficie panel">
+        <div class="panel__cabecera"><div><p class="etiqueta">Anulación</p><h3>Anular factura</h3></div></div>
+        <p class="texto-suave">La factura no se borra: conserva su número y queda en estado anulada.</p>
+        <form action="/facturas/<%= factura._id %>/anular" method="post" class="formulario formulario--compacto" data-confirmar="¿Anular la factura <%= factura.invoiceNumber %>?">
+          <div class="campo">
+            <label for="voidReason">Motivo *</label>
+            <textarea id="voidReason" name="voidReason" rows="3" maxlength="300" required placeholder="Explica por qué se anula"></textarea>
+          </div>
+          <button type="submit" class="boton boton--peligro boton--bloque"><%- include('../partials/icon', { nombre: 'ban' }) %> Anular factura</button>
+        </form>
+      </section>
+    <% } %>
+
+    <section class="tarjeta superficie panel">
+      <div class="panel__cabecera"><div><p class="etiqueta">Trazabilidad</p><h3>Historial de la factura</h3></div></div>
+      <% if (logs.length === 0) { %>
+        <p class="texto-suave">Sin eventos de auditoría para esta factura.</p>
+      <% } else { %>
+        <ul class="timeline">
+          <% logs.forEach((log) => { %>
+            <li>
+              <span class="timeline__punto <%= log.status === 'failed' ? 'timeline__punto--rojo' : 'timeline__punto--verde' %>"></span>
+              <div class="timeline__contenido">
+                <p><%= log.description %></p>
+                <small><%= formatearFechaHora(log.timestamp) %> · <%= log.action %></small>
+              </div>
+            </li>
+          <% }); %>
+        </ul>
+      <% } %>
+    </section>
+  </div>
+</div>

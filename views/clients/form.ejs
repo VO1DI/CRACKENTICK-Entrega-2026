@@ -1,0 +1,150 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Comercial · <%= modo === 'crear' ? 'Alta' : 'Edición' %></p>
+    <h2 class="pagina-cabecera__titulo"><%= modo === 'crear' ? 'Nuevo cliente' : `Editar ${cliente.fullName || 'cliente'}` %></h2>
+    <p class="pagina-cabecera__texto">Datos personales, dirección y facturación. Los campos marcados con * son obligatorios.</p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <a class="boton boton--secundario" href="<%= modo === 'editar' ? `/clientes/${cliente._id}` : '/clientes' %>">
+      <%- include('../partials/icon', { nombre: 'arrowLeft' }) %> Cancelar
+    </a>
+  </div>
+</section>
+
+<% if (errores && errores.length) { %>
+  <div class="aviso aviso--error" role="alert">
+    <span class="aviso__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></span>
+    <div class="aviso__texto">
+      <strong>Revisa los datos:</strong>
+      <ul class="lista-errores">
+        <% errores.forEach((mensaje) => { %><li><%= mensaje %></li><% }); %>
+      </ul>
+    </div>
+  </div>
+<% } %>
+
+<form class="formulario" action="<%= modo === 'crear' ? '/clientes' : `/clientes/${cliente._id}` %>" method="post" novalidate>
+  <% if (modo === 'editar') { %><input type="hidden" name="_method" value="PUT"><% } %>
+
+  <section class="tarjeta superficie formulario__seccion">
+    <div class="formulario__cabecera">
+      <span class="formulario__numero">01</span>
+      <div><h3>Datos personales</h3><p>Información de contacto del titular.</p></div>
+    </div>
+    <div class="formulario__rejilla">
+      <div class="campo<%= claseCampo(erroresCampo, 'firstName') %>">
+        <label for="firstName">Nombre *</label>
+        <input id="firstName" name="firstName" type="text" value="<%= cliente.firstName || '' %>" minlength="2" maxlength="60" required>
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'firstName') }) %>
+      </div>
+      <div class="campo<%= claseCampo(erroresCampo, 'lastName') %>">
+        <label for="lastName">Apellido *</label>
+        <input id="lastName" name="lastName" type="text" value="<%= cliente.lastName || '' %>" minlength="2" maxlength="60" required>
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'lastName') }) %>
+      </div>
+      <div class="campo<%= claseCampo(erroresCampo, 'taxId') %>">
+        <label for="taxId">Identificación</label>
+        <input id="taxId" name="taxId" type="text" value="<%= cliente.taxId || '' %>" maxlength="40" placeholder="Cédula o NIT">
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'taxId') }) %>
+      </div>
+      <div class="campo<%= claseCampo(erroresCampo, 'email') %>">
+        <label for="email">Correo</label>
+        <input id="email" name="email" type="email" value="<%= cliente.email || '' %>" maxlength="120" placeholder="cliente@correo.com">
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'email') }) %>
+      </div>
+      <div class="campo<%= claseCampo(erroresCampo, 'phone') %>">
+        <label for="phone">Teléfono</label>
+        <input id="phone" name="phone" type="tel" value="<%= cliente.phone || '' %>" maxlength="30" placeholder="300 000 0000">
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'phone') }) %>
+      </div>
+      <div class="campo<%= claseCampo(erroresCampo, 'status') %>">
+        <label for="status">Estado comercial</label>
+        <select id="status" name="status">
+          <option value="active" <%= cliente.status === 'active' ? 'selected' : '' %>>Activo · al día</option>
+          <option value="suspended" <%= cliente.status === 'suspended' ? 'selected' : '' %>>Suspendido · debe mensualidad</option>
+          <option value="retired" <%= cliente.status === 'retired' ? 'selected' : '' %>>Retirado</option>
+        </select>
+        <span class="campo__ayuda">La verificación de facturación ajusta activo y suspendido; retirado solo se cambia a mano.</span>
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'status') }) %>
+      </div>
+    </div>
+  </section>
+
+  <section class="tarjeta superficie formulario__seccion">
+    <div class="formulario__cabecera">
+      <span class="formulario__numero">02</span>
+      <div><h3>Dirección</h3><p>Ubicación del servicio o del cliente.</p></div>
+    </div>
+    <div class="formulario__rejilla">
+      <div class="campo campo--ancho<%= claseCampo(erroresCampo, 'address.street') %>">
+        <label for="street">Dirección</label>
+        <input id="street" name="address.street" type="text" value="<%= cliente.address?.street || '' %>" maxlength="160" placeholder="Calle 00 #00-00">
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'address.street') }) %>
+      </div>
+      <div class="campo<%= claseCampo(erroresCampo, 'address.city') %>">
+        <label for="city">Ciudad</label>
+        <input id="city" name="address.city" type="text" value="<%= cliente.address?.city || '' %>" maxlength="80">
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'address.city') }) %>
+      </div>
+      <div class="campo<%= claseCampo(erroresCampo, 'address.state') %>">
+        <label for="state">Departamento / estado</label>
+        <input id="state" name="address.state" type="text" value="<%= cliente.address?.state || '' %>" maxlength="80">
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'address.state') }) %>
+      </div>
+      <div class="campo<%= claseCampo(erroresCampo, 'address.postalCode') %>">
+        <label for="postalCode">Código postal</label>
+        <input id="postalCode" name="address.postalCode" type="text" value="<%= cliente.address?.postalCode || '' %>" maxlength="20">
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'address.postalCode') }) %>
+      </div>
+    </div>
+  </section>
+
+  <section class="tarjeta superficie formulario__seccion">
+    <div class="formulario__cabecera">
+      <span class="formulario__numero">03</span>
+      <div><h3>Datos de facturación</h3><p>Se usan en la factura si difieren de los datos personales.</p></div>
+    </div>
+    <div class="formulario__rejilla">
+      <div class="campo<%= claseCampo(erroresCampo, 'billingData.legalName') %>">
+        <label for="legalName">Razón social</label>
+        <input id="legalName" name="billingData.legalName" type="text" value="<%= cliente.billingData?.legalName || '' %>" maxlength="160">
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'billingData.legalName') }) %>
+      </div>
+      <div class="campo<%= claseCampo(erroresCampo, 'billingData.taxId') %>">
+        <label for="billingTaxId">Identificación fiscal</label>
+        <input id="billingTaxId" name="billingData.taxId" type="text" value="<%= cliente.billingData?.taxId || '' %>" maxlength="40">
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'billingData.taxId') }) %>
+      </div>
+      <div class="campo<%= claseCampo(erroresCampo, 'billingData.email') %>">
+        <label for="billingEmail">Correo de facturación</label>
+        <input id="billingEmail" name="billingData.email" type="email" value="<%= cliente.billingData?.email || '' %>" maxlength="120">
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'billingData.email') }) %>
+      </div>
+      <div class="campo<%= claseCampo(erroresCampo, 'billingData.address') %>">
+        <label for="billingAddress">Dirección de facturación</label>
+        <input id="billingAddress" name="billingData.address" type="text" value="<%= cliente.billingData?.address || '' %>" maxlength="200">
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'billingData.address') }) %>
+      </div>
+    </div>
+  </section>
+
+  <section class="tarjeta superficie formulario__seccion">
+    <div class="formulario__cabecera">
+      <span class="formulario__numero">04</span>
+      <div><h3>Notas</h3><p>Observaciones internas del cliente.</p></div>
+    </div>
+    <div class="campo">
+      <label for="notes">Notas</label>
+      <textarea id="notes" name="notes" rows="4" maxlength="500" data-contador-de="notes"><%= cliente.notes || '' %></textarea>
+      <span class="campo__ayuda" data-contador-para="notes">0 / 500</span>
+    </div>
+  </section>
+
+  <div class="formulario__acciones">
+    <a class="boton boton--secundario" href="<%= modo === 'editar' ? `/clientes/${cliente._id}` : '/clientes' %>">Cancelar</a>
+    <button type="submit" class="boton boton--primario">
+      <%- include('../partials/icon', { nombre: 'check' }) %>
+      <%= modo === 'crear' ? 'Crear cliente' : 'Guardar cambios' %>
+    </button>
+  </div>
+</form>

@@ -1,0 +1,150 @@
+<%
+  const servidores = datos.servidores || [];
+  const pools = datos.pools || [];
+  const redes = datos.redes || [];
+  const interfaces = datos.interfaces || [];
+  const activos = servidores.filter((fila) => !fila.disabled).length;
+%>
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Experimental · DHCP</p>
+    <h2 class="pagina-cabecera__titulo">Servidores DHCP</h2>
+    <p class="pagina-cabecera__texto">Crea pool, red y servidor DHCP en el MikroTik. El router debe tener la interfaz con dirección IP.</p>
+  </div>
+</section>
+
+<%- include('../partials/experimental-aviso') %>
+
+<section class="tarjeta superficie filtros">
+  <form method="get" action="/red/dhcp" class="filtros__form">
+    <div class="campo">
+      <label for="routerId">Router</label>
+      <select id="routerId" name="routerId" data-auto-enviar>
+        <% if (!routers.length) { %><option value="">Sin routers</option><% } %>
+        <% routers.forEach((router) => { %>
+          <option value="<%= router._id %>" <%= String(selectedRouter?._id || '') === String(router._id) ? 'selected' : '' %>><%= router.name %></option>
+        <% }); %>
+      </select>
+    </div>
+    <button type="submit" class="boton boton--secundario boton--sm">Ver</button>
+  </form>
+</section>
+
+<% if (!selectedRouter) { %>
+  <section class="tarjeta superficie panel">
+    <div class="vacio vacio--compacto">
+      <p class="vacio__icono"><%- include('../partials/icon', { nombre: 'server' }) %></p>
+      <p class="vacio__texto">No hay routers activos. Registra uno en Red → Routers.</p>
+    </div>
+  </section>
+<% } else { %>
+  <% if (errorConexion) { %>
+    <div class="aviso aviso--advertencia" role="note">
+      <span class="aviso__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></span>
+      <div class="aviso__texto"><strong>No se pudo leer la configuración del router:</strong> <%= errorConexion %>. Puedes escribir la interfaz manualmente y crear el servidor igual.</div>
+    </div>
+  <% } %>
+
+  <section class="dash-kpis" aria-label="Resumen de DHCP">
+    <article class="kpi kpi--morado">
+      <div class="kpi__cabecera"><span class="kpi__titulo">Servidores</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'server' }) %></span></div>
+      <p class="kpi__valor"><%= servidores.length %></p>
+      <p class="kpi__detalle"><%= activos %> activo(s)</p>
+    </article>
+    <article class="kpi kpi--verde">
+      <div class="kpi__cabecera"><span class="kpi__titulo">Pools</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'layers' }) %></span></div>
+      <p class="kpi__valor"><%= pools.length %></p>
+      <p class="kpi__detalle">En el router</p>
+    </article>
+    <article class="kpi kpi--ambar">
+      <div class="kpi__cabecera"><span class="kpi__titulo">Interfaces</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'network' }) %></span></div>
+      <p class="kpi__valor"><%= interfaces.length %></p>
+      <p class="kpi__detalle"><%= interfaces.filter((fila) => fila.running).length %> en ejecución</p>
+    </article>
+  </section>
+
+  <section class="tarjeta superficie panel">
+    <div class="panel__cabecera"><div><p class="etiqueta">Nuevo</p><h3>Crear servidor DHCP</h3></div></div>
+    <form action="/red/dhcp" method="post" class="formulario formulario--compacto">
+      <input type="hidden" name="routerId" value="<%= selectedRouter._id %>">
+      <div class="formulario__rejilla">
+        <div class="campo"><label for="name">Nombre</label><input id="name" name="name" type="text" maxlength="60" placeholder="dhcp-lan" value="<%= valores.name || '' %>"></div>
+        <div class="campo">
+          <label for="interface">Interfaz</label>
+          <input id="interface" name="interface" type="text" list="interfaces-dhcp" maxlength="60" placeholder="bridge-lan" required value="<%= valores.interface || '' %>">
+          <datalist id="interfaces-dhcp">
+            <% interfaces.forEach((fila) => { %><option value="<%= fila.name %>"><%= fila.type %><%= fila.running ? ' · activa' : '' %></option><% }); %>
+          </datalist>
+        </div>
+        <div class="campo"><label for="cidr">Red (CIDR)</label><input id="cidr" name="cidr" type="text" maxlength="20" placeholder="192.168.50.0/24" required value="<%= valores.cidr || '' %>"></div>
+        <div class="campo"><label for="gateway">Gateway</label><input id="gateway" name="gateway" type="text" maxlength="45" placeholder="192.168.50.1" required value="<%= valores.gateway || '' %>"></div>
+        <div class="campo"><label for="rangeStart">Rango desde</label><input id="rangeStart" name="rangeStart" type="text" maxlength="45" placeholder="192.168.50.100" required value="<%= valores.rangeStart || '' %>"></div>
+        <div class="campo"><label for="rangeEnd">Rango hasta</label><input id="rangeEnd" name="rangeEnd" type="text" maxlength="45" placeholder="192.168.50.200" required value="<%= valores.rangeEnd || '' %>"></div>
+        <div class="campo"><label for="dns">DNS</label><input id="dns" name="dns" type="text" maxlength="120" value="<%= valores.dns || dnsPorDefecto %>"></div>
+        <div class="campo">
+          <label for="leaseTime">Tiempo de concesión</label>
+          <select id="leaseTime" name="leaseTime">
+            <% leases.forEach((lease) => { %><option value="<%= lease %>" <%= (valores.leaseTime || '1d') === lease ? 'selected' : '' %>><%= lease %></option><% }); %>
+          </select>
+        </div>
+      </div>
+      <label class="check"><input type="checkbox" name="addAddress" <%= valores.addAddress ? 'checked' : '' %>> Asignar la IP del gateway a la interfaz</label>
+      <p class="campo__ayuda">Márcalo solo si la interfaz no tiene IP. El gateway no puede estar dentro del rango. La red y el pool se crean o actualizan por nombre.</p>
+      <div class="formulario__acciones">
+        <button type="submit" class="boton boton--primario"><%- include('../partials/icon', { nombre: 'plus' }) %> Crear servidor DHCP</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="tarjeta superficie panel panel--tabla">
+    <div class="panel__cabecera"><div><p class="etiqueta">Router</p><h3>Servidores configurados</h3></div></div>
+    <% if (!servidores.length) { %>
+      <div class="vacio vacio--compacto">
+        <p class="vacio__icono"><%- include('../partials/icon', { nombre: 'server' }) %></p>
+        <p class="vacio__texto">Este router no tiene servidores DHCP visibles.</p>
+      </div>
+    <% } else { %>
+      <div class="tabla-scroll">
+        <table class="tabla">
+          <thead><tr><th>Nombre</th><th>Interfaz</th><th>Pool</th><th>Concesión</th><th>Estado</th></tr></thead>
+          <tbody>
+            <% servidores.forEach((fila) => { %>
+              <tr>
+                <td data-etiqueta="Nombre"><strong class="mono"><%= fila.name %></strong></td>
+                <td data-etiqueta="Interfaz"><%= fila.interface || '—' %></td>
+                <td data-etiqueta="Pool"><span class="mono"><%= fila.pool || '—' %></span></td>
+                <td data-etiqueta="Concesión"><%= fila.leaseTime || '—' %></td>
+                <td data-etiqueta="Estado"><span class="insignia insignia--<%= fila.disabled ? 'cancelled' : 'active' %>"><%= fila.disabled ? 'Deshabilitado' : 'Activo' %></span></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </section>
+
+  <section class="dash-grid">
+    <section class="tarjeta panel panel--seis">
+      <div class="panel__cabecera"><div><p class="etiqueta">Pools</p><h3>Direcciones</h3></div></div>
+      <% if (!pools.length) { %><p class="texto-suave">Sin pools.</p><% } else { %>
+        <div class="tabla-scroll">
+          <table class="tabla tabla--compacta">
+            <thead><tr><th>Pool</th><th>Rango</th></tr></thead>
+            <tbody><% pools.forEach((fila) => { %><tr><td class="mono"><%= fila.name %></td><td class="mono"><%= fila.ranges %></td></tr><% }); %></tbody>
+          </table>
+        </div>
+      <% } %>
+    </section>
+    <section class="tarjeta panel panel--seis">
+      <div class="panel__cabecera"><div><p class="etiqueta">Redes</p><h3>Gateway y DNS</h3></div></div>
+      <% if (!redes.length) { %><p class="texto-suave">Sin redes DHCP.</p><% } else { %>
+        <div class="tabla-scroll">
+          <table class="tabla tabla--compacta">
+            <thead><tr><th>Red</th><th>Gateway</th><th>DNS</th></tr></thead>
+            <tbody><% redes.forEach((fila) => { %><tr><td class="mono"><%= fila.address %></td><td class="mono"><%= fila.gateway %></td><td class="mono"><%= fila.dns %></td></tr><% }); %></tbody>
+          </table>
+        </div>
+      <% } %>
+    </section>
+  </section>
+<% } %>

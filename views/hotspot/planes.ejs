@@ -1,0 +1,80 @@
+<%
+  const minutos = (valor) => {
+    const total = Math.max(0, Math.round(Number(valor) || 0));
+    if (!total) return 'sin límite';
+    const horas = Math.floor(total / 60);
+    const resto = total % 60;
+    return `${horas ? `${horas} h` : ''}${resto ? ` ${resto} min` : ''}`.trim();
+  };
+%>
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Operación · Hotspot</p>
+    <h2 class="pagina-cabecera__titulo">Planes de hotspot</h2>
+    <p class="pagina-cabecera__texto">Precio, tiempo y ancho de banda. Al crear un lote solo eliges el plan.</p>
+  </div>
+</section>
+
+<nav class="tabs" aria-label="Secciones de hotspot">
+  <a class="tabs__enlace" href="/hotspot">Vouchers</a>
+  <a class="tabs__enlace is-activo" href="/hotspot/planes" aria-current="page">Planes</a>
+</nav>
+
+<section class="tarjeta superficie panel">
+  <div class="panel__cabecera"><div><p class="etiqueta">Nuevo</p><h3>Crear plan</h3></div></div>
+  <form action="/hotspot/planes" method="post" class="formulario formulario--compacto">
+    <div class="formulario__rejilla">
+      <div class="campo"><label for="name">Nombre</label><input id="name" name="name" type="text" maxlength="60" placeholder="1 hora" required></div>
+      <div class="campo"><label for="price">Precio USD</label><input id="price" name="price" type="number" min="0" step="0.01" value="1" required></div>
+      <div class="campo"><label for="durationMinutes">Duración (minutos)</label><input id="durationMinutes" name="durationMinutes" type="number" min="0" max="43200" value="60" required></div>
+      <div class="campo"><label for="downloadMbps">Bajada (Mbps)</label><input id="downloadMbps" name="downloadMbps" type="number" min="0" max="10000" value="0"></div>
+      <div class="campo"><label for="uploadMbps">Subida (Mbps)</label><input id="uploadMbps" name="uploadMbps" type="number" min="0" max="10000" value="0"></div>
+      <div class="campo"><label for="dataLimitMB">Datos (MB)</label><input id="dataLimitMB" name="dataLimitMB" type="number" min="0" value="0"></div>
+    </div>
+    <p class="campo__ayuda">Duración 0 = sin límite de tiempo; datos 0 = sin límite. La velocidad 0 = sin límite.</p>
+    <div class="formulario__acciones">
+      <button type="submit" class="boton boton--primario"><%- include('../partials/icon', { nombre: 'plus' }) %> Crear plan</button>
+    </div>
+  </form>
+</section>
+
+<section class="tarjeta superficie panel panel--tabla">
+  <div class="panel__cabecera"><div><p class="etiqueta">Catálogo</p><h3><%= planes.length %> plan(es)</h3></div></div>
+  <% if (!planes.length) { %>
+    <div class="vacio vacio--compacto">
+      <p class="vacio__icono"><%- include('../partials/icon', { nombre: 'layers' }) %></p>
+      <p class="vacio__texto">Todavía no hay planes. Crea el primero arriba.</p>
+    </div>
+  <% } else { %>
+    <div class="tabla-scroll">
+      <table class="tabla">
+        <thead><tr><th>Plan</th><th>Precio</th><th>Duración</th><th>Bajada</th><th>Subida</th><th>Datos</th><th>Lotes</th><th>Estado</th><th class="tabla__acciones">Acciones</th></tr></thead>
+        <tbody>
+          <% planes.forEach((plan) => { %>
+            <% const uso = conteo.get(String(plan._id)) || { lotes: 0, vouchers: 0 }; %>
+            <tr>
+              <td data-etiqueta="Plan"><strong><%= plan.name %></strong></td>
+              <td data-etiqueta="Precio"><%= formatearDinero(plan.price) %></td>
+              <td data-etiqueta="Duración"><%= minutos(plan.durationMinutes) %></td>
+              <td data-etiqueta="Bajada"><%= plan.downloadMbps ? `${plan.downloadMbps} Mbps` : 'libre' %></td>
+              <td data-etiqueta="Subida"><%= plan.uploadMbps ? `${plan.uploadMbps} Mbps` : 'libre' %></td>
+              <td data-etiqueta="Datos"><%= plan.dataLimitMB ? `${plan.dataLimitMB} MB` : 'libre' %></td>
+              <td data-etiqueta="Lotes"><%= uso.lotes %> lote(s) · <%= uso.vouchers %> voucher(s)</td>
+              <td data-etiqueta="Estado"><span class="insignia insignia--<%= plan.active ? 'active' : 'none' %>"><%= plan.active ? 'Activo' : 'Inactivo' %></span></td>
+              <td>
+                <div class="tabla__acciones">
+                  <form action="/hotspot/planes/<%= plan._id %>/estado" method="post">
+                    <button type="submit" class="boton-icono boton-icono--sm" title="<%= plan.active ? 'Desactivar' : 'Activar' %>"><%- include('../partials/icon', { nombre: 'power' }) %></button>
+                  </form>
+                  <form action="/hotspot/planes/<%= plan._id %>/eliminar" method="post" data-confirmar="¿Eliminar el plan <%= plan.name %>? Los vouchers ya creados se mantienen.">
+                    <button type="submit" class="boton-icono boton-icono--sm boton-icono--peligro" title="Eliminar"><%- include('../partials/icon', { nombre: 'trash' }) %></button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</section>

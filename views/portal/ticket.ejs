@@ -1,0 +1,78 @@
+<%
+  const categorias = {
+    technical: 'Problema técnico',
+    billing: 'Facturación o pago',
+    installation: 'Instalación o visita',
+    other: 'Otro',
+  };
+  const prioridades = { low: 'Baja', medium: 'Media', high: 'Alta', urgent: 'Crítica' };
+%>
+<section class="p-page-head" data-motion="fade">
+  <div>
+    <span class="p-eyebrow">Soporte</span>
+    <h1>Nuevo ticket</h1>
+    <p>Cuéntanos qué pasa. Soporte te responderá en este mismo portal.</p>
+  </div>
+  <div class="p-page-head__acciones">
+    <a class="p-btn p-btn--secundario" href="/portal/tickets"><%- include('_icono', { nombre: 'arrowLeft' }) %> Volver</a>
+  </div>
+</section>
+
+<div class="p-grid p-grid--formulario">
+  <section class="p-card p-form-card" data-motion="fade">
+    <% if (errores && errores.length) { %>
+      <div class="p-alerta p-alerta--error" role="alert">
+        <%- include('_icono', { nombre: 'alert' }) %>
+        <div><strong>Revisa el ticket:</strong><ul><% errores.forEach((mensaje) => { %><li><%= mensaje %></li><% }); %></ul></div>
+      </div>
+    <% } %>
+
+    <form action="/portal/tickets" method="post" class="p-form">
+      <div class="p-form__fila">
+        <div class="p-field">
+          <label for="category">Tipo de solicitud</label>
+          <select id="category" name="category">
+            <% Object.entries(categorias).forEach(([clave, etiqueta]) => { %>
+              <option value="<%= clave %>" <%= valores.category === clave ? 'selected' : '' %>><%= etiqueta %></option>
+            <% }); %>
+          </select>
+        </div>
+        <div class="p-field">
+          <label for="priority">Prioridad</label>
+          <select id="priority" name="priority">
+            <% Object.entries(prioridades).forEach(([clave, etiqueta]) => { %>
+              <option value="<%= clave %>" <%= valores.priority === clave ? 'selected' : '' %>><%= etiqueta %></option>
+            <% }); %>
+          </select>
+        </div>
+      </div>
+      <div class="p-field">
+        <label for="subject">Asunto *</label>
+        <input id="subject" name="subject" type="text" maxlength="120" required value="<%= valores.subject || '' %>" placeholder="Ej. Sin internet desde ayer">
+        <small class="p-help">Un resumen corto. Podrás dar más detalle abajo.</small>
+      </div>
+      <div class="p-field">
+        <label for="description">Descripción *</label>
+        <textarea id="description" name="description" rows="7" maxlength="2000" required placeholder="¿Qué pasa, desde cuándo y qué luces ves en el equipo?"><%= valores.description || '' %></textarea>
+        <small class="p-help">Mínimo 10 caracteres. Cuanto más claro, más rápido lo resolvemos.</small>
+      </div>
+      <div class="p-form__acciones">
+        <a class="p-btn p-btn--secundario" href="/portal/tickets">Cancelar</a>
+        <button type="submit" class="p-btn p-btn--primario">Enviar ticket <%- include('_icono', { nombre: 'arrowRight' }) %></button>
+      </div>
+    </form>
+  </section>
+
+  <aside class="p-lateral">
+    <section class="p-card p-card--ayuda p-card--ayuda-clara" data-motion="fade">
+      <span class="p-card__icono-grande"><%- include('_icono', { nombre: 'message' }) %></span>
+      <h2>Antes de enviar</h2>
+      <ul class="p-lista-check">
+        <li><%- include('_icono', { nombre: 'check' }) %> Revisa que el equipo esté encendido.</li>
+        <li><%- include('_icono', { nombre: 'check' }) %> Indica desde cuándo ocurre.</li>
+        <li><%- include('_icono', { nombre: 'check' }) %> Si hay luces rojas, menciónalo.</li>
+        <li><%- include('_icono', { nombre: 'check' }) %> No compartas contraseñas en el ticket.</li>
+      </ul>
+    </section>
+  </aside>
+</div>

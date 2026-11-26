@@ -1,0 +1,163 @@
+<%
+  const queryDia = (fecha) => {
+    const query = new URLSearchParams();
+    query.set('fecha', fecha);
+    if (filtros.grupo && filtros.grupo !== 'todos') query.set('grupo', filtros.grupo);
+    return `/agenda?${query.toString()}`;
+  };
+  const queryGrupo = (grupo) => {
+    const query = new URLSearchParams();
+    query.set('fecha', filtros.fecha);
+    if (grupo !== 'todos') query.set('grupo', grupo);
+    return `/agenda?${query.toString()}`;
+  };
+  const nuevoEnlace = (personaId, hora) => `/agenda/nuevo?asignado=${personaId}&fecha=${filtros.fecha}T${String(hora).padStart(2, '0')}:00`;
+%>
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Operación · Agenda</p>
+    <h2 class="pagina-cabecera__titulo">Agenda del equipo</h2>
+    <p class="pagina-cabecera__texto">Haz clic en una celda vacía para agregar una tarea en ese horario. Cada persona ve su propia línea.</p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <% if (puedeGestionar) { %>
+      <a class="boton boton--primario" href="/agenda/nuevo?fecha=<%= filtros.fecha %>T08:00"><%- include('../partials/icon', { nombre: 'plus' }) %> Nueva tarea</a>
+    <% } %>
+  </div>
+</section>
+
+<nav class="tabs" aria-label="Agenda">
+  <a class="tabs__enlace is-activo" href="/agenda?fecha=<%= filtros.fecha %>" aria-current="page">Cuadrícula</a>
+  <% if (puedeGestionar) { %>
+    <a class="tabs__enlace" href="/agenda/tipos">Tipos de tarea</a>
+  <% } %>
+</nav>
+
+<% if (admin) { %>
+<section class="tarjeta superficie agenda-agregar">
+  <details>
+    <summary><%- include('../partials/icon', { nombre: 'users' }) %> Añadir persona a la agenda</summary>
+    <form action="/admin/usuarios" method="post" class="formulario formulario--compacto">
+      <input type="hidden" name="role" value="staff">
+      <input type="hidden" name="active" value="on">
+      <input type="hidden" name="perm__agenda__gestion" value="editar">
+      <input type="hidden" name="returnTo" value="/agenda?fecha=<%= filtros.fecha %>">
+      <div class="formulario__rejilla">
+        <div class="campo"><label for="agenda-name">Nombre completo</label><input id="agenda-name" name="name" type="text" maxlength="80" required></div>
+        <div class="campo"><label for="agenda-username">Usuario</label><input id="agenda-username" name="username" type="text" maxlength="40" pattern="[a-z0-9._-]+" required></div>
+        <div class="campo"><label for="agenda-password">Clave</label><input id="agenda-password" name="password" type="password" minlength="6" autocomplete="new-password" required></div>
+        <div class="campo"><label for="agenda-email">Correo</label><input id="agenda-email" name="email" type="email" maxlength="120"></div>
+      </div>
+      <p class="campo__ayuda">Crea un usuario de acceso y aparece como una línea más. Los permisos se ajustan en Usuarios.</p>
+      <div class="formulario__acciones">
+        <button type="submit" class="boton boton--secundario boton--sm"><%- include('../partials/icon', { nombre: 'plus' }) %> Crear persona</button>
+      </div>
+    </form>
+  </details>
+</section>
+<% } %>
+
+<section class="tarjeta superficie agenda-barra">
+  <div class="agenda-barra__fecha">
+    <a class="boton-icono boton-icono--sm" href="<%= queryDia(navegacion.anterior) %>" aria-label="Día anterior" title="Día anterior"><%- include('../partials/icon', { nombre: 'chevronLeft' }) %></a>
+    <form method="get" action="/agenda" class="agenda-barra__form">
+      <% if (filtros.grupo !== 'todos') { %><input type="hidden" name="grupo" value="<%= filtros.grupo %>"><% } %>
+      <input type="date" name="fecha" value="<%= filtros.fecha %>" data-auto-enviar aria-label="Día">
+    </form>
+    <a class="boton-icono boton-icono--sm" href="<%= queryDia(navegacion.siguiente) %>" aria-label="Día siguiente" title="Día siguiente"><%- include('../partials/icon', { nombre: 'chevronRight' }) %></a>
+    <a class="boton boton--secundario boton--sm" href="<%= queryDia(navegacion.hoy) %>">Hoy</a>
+  </div>
+  <div class="tabs" role="group" aria-label="Personas">
+    <a class="tabs__enlace <%= filtros.grupo === 'todos' ? 'is-activo' : '' %>" href="<%= queryGrupo('todos') %>" <%= filtros.grupo === 'todos' ? 'aria-current="page"' : '' %>>Todos</a>
+    <a class="tabs__enlace <%= filtros.grupo === 'tecnicos' ? 'is-activo' : '' %>" href="<%= queryGrupo('tecnicos') %>" <%= filtros.grupo === 'tecnicos' ? 'aria-current="page"' : '' %>>Técnicos</a>
+  </div>
+  <div class="agenda-leyenda" aria-label="Colores por tipo de tarea">
+    <% tipos.forEach((tipo) => { %>
+      <span class="agenda-leyenda__item"><span class="agenda-leyenda__punto" style="background: <%= tipo.color %>;"></span><%= tipo.name %></span>
+    <% }); %>
+  </div>
+</section>
+
+<section class="dash-kpis" aria-label="Resumen de agenda">
+  <article class="kpi kpi--ambar">
+    <div class="kpi__cabecera"><span class="kpi__titulo">Pendientes hoy</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'clock' }) %></span></div>
+    <p class="kpi__valor"><%= resumen.pendientesHoy %></p>
+    <p class="kpi__detalle">Sin empezar</p>
+  </article>
+  <article class="kpi kpi--morado">
+    <div class="kpi__cabecera"><span class="kpi__titulo">En curso</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'activity' }) %></span></div>
+    <p class="kpi__valor"><%= resumen.enCurso %></p>
+    <p class="kpi__detalle">Trabajos abiertos</p>
+  </article>
+  <article class="kpi kpi--verde">
+    <div class="kpi__cabecera"><span class="kpi__titulo">Hechas este mes</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'check' }) %></span></div>
+    <p class="kpi__valor"><%= resumen.hechasMes %></p>
+    <p class="kpi__detalle">Con cierre registrado</p>
+  </article>
+</section>
+
+<section class="tarjeta agenda-panel">
+  <div class="agenda-grid" style="--agenda-horas: <%= horas.length %>;">
+    <div class="agenda-cabecera">
+      <div class="agenda-cabecera__persona">Técnico</div>
+      <% etiquetasHora.forEach((etiqueta) => { %><div class="agenda-cabecera__hora"><%= etiqueta %></div><% }); %>
+    </div>
+
+    <% if (!filas.length) { %>
+      <div class="agenda-vacia">
+        <p class="vacio__icono"><%- include('../partials/icon', { nombre: 'calendar' }) %></p>
+        <p class="vacio__texto"><%= filtros.grupo === 'tecnicos' ? 'No hay técnicos con tareas para este día.' : 'No hay personas para mostrar.' %></p>
+      </div>
+    <% } %>
+
+    <% filas.forEach((persona, indice) => { %>
+      <div class="agenda-fila">
+        <div class="agenda-persona">
+          <span class="agenda-punto agenda-punto--<%= indice % 6 %>"></span>
+          <div class="agenda-persona__datos">
+            <strong><%= persona.name %></strong>
+            <small><%= persona.position %></small>
+          </div>
+          <% if (puedeGestionar) { %>
+            <a class="agenda-persona__add" href="<%= nuevoEnlace(persona._id, 8) %>" title="Agregar tarea a <%= persona.name %>" aria-label="Agregar tarea a <%= persona.name %>"><%- include('../partials/icon', { nombre: 'plus' }) %></a>
+          <% } %>
+        </div>
+        <% horas.forEach((hora, columna) => { %>
+          <% if (puedeGestionar) { %>
+            <a class="agenda-celda" style="grid-column: <%= columna + 2 %>;" href="<%= nuevoEnlace(persona._id, hora) %>" aria-label="Agregar tarea a <%= persona.name %> a las <%= hora %>:00"></a>
+          <% } else { %>
+            <span class="agenda-celda" style="grid-column: <%= columna + 2 %>;"></span>
+          <% } %>
+        <% }); %>
+        <% persona.tareas.forEach((tarea) => { %>
+          <a class="agenda-bloque agenda-bloque--<%= tarea.status %>" style="grid-column: <%= 2 + tarea.columna %> / span <%= tarea.tramo %>; grid-row: <%= 1 + (tarea.carril || 0) %>; --tarea-color: <%= tarea.color || '#94a3b8' %>;" href="/agenda/<%= tarea._id %>">
+            <strong><%= tarea.title %></strong>
+            <small><%= tarea.hora %> · <%= duracionTexto(tarea.durationMinutes) %><% if (tarea.clientId) { %> · <%= tarea.clientId.clientCode %><% } %></small>
+          </a>
+        <% }); %>
+      </div>
+    <% }); %>
+  </div>
+</section>
+
+<% if (fuera.length) { %>
+  <section class="tarjeta superficie panel panel--tabla">
+    <div class="panel__cabecera"><div><p class="etiqueta">Fuera de la cuadrícula</p><h3><%= fuera.length %> tarea(s) antes de las 8:00 o después de las 12:00 de la noche</h3></div></div>
+    <div class="tabla-scroll">
+      <table class="tabla">
+        <thead><tr><th>Hora</th><th>Tarea</th><th>Responsable</th><th>Estado</th><th></th></tr></thead>
+        <tbody>
+          <% fuera.forEach((tarea) => { %>
+            <tr>
+              <td data-etiqueta="Hora"><span class="mono"><%= tarea.hora %></span></td>
+              <td data-etiqueta="Tarea"><strong><%= tarea.title %></strong></td>
+              <td data-etiqueta="Responsable"><%= tarea.assignedTo?.name || '—' %></td>
+              <td data-etiqueta="Estado"><%= estados[tarea.status] || tarea.status %></td>
+              <td><a class="boton-icono boton-icono--sm" href="/agenda/<%= tarea._id %>" title="Ver tarea"><%- include('../partials/icon', { nombre: 'eye' }) %></a></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+<% } %>

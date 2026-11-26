@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="es" data-tema="<%= typeof temaUsuario !== 'undefined' && temaUsuario ? temaUsuario : 'oscuro' %>">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= titulo ? `${titulo} · ${nombreApp}` : nombreApp %></title>
+  <meta name="description" content="CRACKENTICK: gestión de ISP con dashboard, clientes, planes, facturación y firewall RouterOS.">
+  <meta name="theme-color" content="#0a0a0e">
+  <meta name="csrf-token" content="<%= csrfToken %>">
+  <meta name="moneda" content="<%= moneda %>">
+  <meta name="locale" content="<%= locale %>">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="alternate icon" href="/favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/css/rework.css">
+  <link rel="stylesheet" href="/css/fases.css">
+  <link rel="stylesheet" href="/css/panel-portal.css">
+  <script>
+    (function () {
+      try {
+        var servidor = <%- JSON.stringify(typeof temaUsuario !== 'undefined' && temaUsuario ? temaUsuario : '') %>;
+        if (servidor) {
+          document.documentElement.dataset.tema = servidor;
+        } else {
+          var guardado = localStorage.getItem('crackentick-tema');
+          var validos = ['oscuro', 'claro', 'claro-suave'];
+          document.documentElement.dataset.tema = validos.indexOf(guardado) !== -1 ? guardado : 'oscuro';
+        }
+      } catch (e) { document.documentElement.dataset.tema = 'oscuro'; /* sin almacenamiento */ }
+    })();
+  </script>
+  <%- style %>
+</head>
+<body class="<%= typeof soloLectura !== 'undefined' && soloLectura ? 'solo-lectura' : '' %>">
+  <a class="saltar" href="#contenido">Saltar al contenido</a>
+  <div class="fondo" aria-hidden="true"></div>
+
+  <div class="app-shell">
+    <%- include('partials/sidebar') %>
+    <div class="app-main">
+      <%- include('partials/topbar') %>
+      <main id="contenido" class="contenido">
+        <% if (typeof soloLectura !== 'undefined' && soloLectura && nodoActual) { %>
+          <div class="aviso aviso--advertencia lectura-aviso" role="status">
+            <span class="aviso__icono"><%- include('partials/icon', { nombre: 'eye' }) %></span>
+            <div class="aviso__texto"><strong>Solo lectura en <%= nodoActual.label %>.</strong> Puedes consultar, pero no crear ni modificar. Un administrador puede darte permiso de edición.</div>
+          </div>
+        <% } %>
+        <%- include('partials/flash') %>
+        <%- body %>
+      </main>
+      <%- include('partials/footer') %>
+    </div>
+  </div>
+
+  <% if (typeof puede === 'function' && puede('soporte.asistente')) { %>
+    <%- include('partials/asistente') %>
+  <% } %>
+
+  <script src="/vendor/motion.min.js" defer></script>
+  <script src="/vendor/chart.umd.min.js"></script>
+  <script src="/js/csrf.js" defer></script>
+  <script src="/js/app.js" defer></script>
+  <%- script %>
+</body>
+</html>

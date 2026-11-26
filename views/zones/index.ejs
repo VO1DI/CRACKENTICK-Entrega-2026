@@ -1,0 +1,79 @@
+<% const v = typeof valores !== 'undefined' && valores ? valores : {}; %>
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Red · Reportes</p>
+    <h2 class="pagina-cabecera__titulo">Zonas</h2>
+    <p class="pagina-cabecera__texto">Agrupan las averías y las instalaciones del reporte diario.</p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <a class="boton boton--secundario" href="/red/reportes/averias"><%- include('../partials/icon', { nombre: 'alert' }) %> Averías</a>
+    <a class="boton boton--secundario" href="/red/reportes/instalaciones"><%- include('../partials/icon', { nombre: 'box' }) %> Instalaciones</a>
+  </div>
+</section>
+
+<% if (errores && errores.length) { %>
+  <div class="aviso aviso--error" role="alert">
+    <span class="aviso__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></span>
+    <div class="aviso__texto"><strong>Revisa los datos:</strong><ul class="lista-errores"><% errores.forEach((m) => { %><li><%= m %></li><% }); %></ul></div>
+  </div>
+<% } %>
+
+<div class="rejilla rejilla--facturacion">
+  <section class="tarjeta panel panel--tabla">
+    <div class="panel__cabecera">
+      <div><p class="etiqueta">Listado</p><h3><%= zonas.length %> zona(s)</h3></div>
+    </div>
+    <% if (!zonas.length) { %>
+      <div class="vacio vacio--compacto"><p class="vacio__icono"><%- include('../partials/icon', { nombre: 'mapPin' }) %></p><p class="vacio__texto">Todavía no hay zonas. Crea la primera a la derecha.</p></div>
+    <% } else { %>
+      <div class="tabla-scroll">
+        <table class="tabla">
+          <thead><tr><th>Zona</th><th>Averías</th><th>Instalaciones</th><th>Estado</th><th></th></tr></thead>
+          <tbody>
+            <% zonas.forEach((zona) => { %>
+              <tr>
+                <td data-etiqueta="Zona"><strong><%= zona.name %></strong><small><%= zona.description || 'Sin descripción' %></small></td>
+                <td data-etiqueta="Averías"><%= zona.averias %></td>
+                <td data-etiqueta="Instalaciones"><%= zona.instalaciones %></td>
+                <td data-etiqueta="Estado"><span class="insignia insignia--<%= zona.active ? 'active' : 'cancelled' %>"><%= zona.active ? 'Activa' : 'Inactiva' %></span></td>
+                <td>
+                  <div class="plan-card__acciones">
+                    <a class="boton-icono boton-icono--sm" href="/red/zonas/<%= zona._id %>/editar" aria-label="Editar <%= zona.name %>" title="Editar"><%- include('../partials/icon', { nombre: 'edit' }) %></a>
+                    <% if (zona.averias === 0 && zona.instalaciones === 0) { %>
+                      <form action="/red/zonas/<%= zona._id %>" method="post" data-confirmar="¿Eliminar la zona <%= zona.name %>?">
+                        <input type="hidden" name="_method" value="DELETE">
+                        <button type="submit" class="boton-icono boton-icono--sm" aria-label="Eliminar <%= zona.name %>" title="Eliminar"><%- include('../partials/icon', { nombre: 'trash' }) %></button>
+                      </form>
+                    <% } %>
+                  </div>
+                </td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </section>
+
+  <section class="tarjeta superficie panel">
+    <div class="panel__cabecera"><div><p class="etiqueta">Nueva</p><h3>Crear zona</h3></div></div>
+    <form action="/red/zonas" method="post" class="formulario formulario--compacto">
+      <div class="campo<%= claseCampo(erroresCampo, 'name') %>">
+        <label for="name">Nombre *</label>
+        <input id="name" name="name" type="text" maxlength="60" value="<%= v.name || '' %>" placeholder="Zona Norte" required>
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'name') }) %>
+      </div>
+      <div class="campo">
+        <label for="description">Descripción</label>
+        <input id="description" name="description" type="text" maxlength="200" value="<%= v.description || '' %>" placeholder="Sectores que cubre">
+      </div>
+      <div class="campo">
+        <label for="order">Orden</label>
+        <input id="order" name="order" type="number" step="1" value="<%= v.order ?? 0 %>">
+        <span class="campo__ayuda">Menor número aparece primero.</span>
+      </div>
+      <label class="check-linea"><input type="checkbox" name="active" checked> Activa</label>
+      <button type="submit" class="boton boton--primario boton--bloque"><%- include('../partials/icon', { nombre: 'plus' }) %> Crear zona</button>
+    </form>
+  </section>
+</div>

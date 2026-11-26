@@ -1,0 +1,270 @@
+<nav class="tabs" aria-label="Monitorización">
+  <a class="tabs__enlace is-activo" href="/red/monitoreo" aria-current="page">En vivo</a>
+  <a class="tabs__enlace" href="/red/monitoreo/configuracion">Configuración</a>
+</nav>
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Red · Monitorización</p>
+    <h2 class="pagina-cabecera__titulo">WAN y clientes en vivo</h2>
+    <p class="pagina-cabecera__texto">Muestreo cada <%= Math.round(intervalo / 1000) %> s · las caídas generan alertas automáticas</p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <span class="insignia insignia--<%= wan.some((w) => w.status === 'down') ? 'overdue' : 'active' %>">
+      <span class="punto punto--<%= wan.some((w) => w.status === 'down') ? 'rojo' : 'verde' %>"></span>
+      <%= wan.filter((w) => w.status === 'up').length %> / <%= wan.length %> WAN en línea
+    </span>
+    <div class="segmentado" role="group" aria-label="Vista de monitorización" data-wan-vista>
+      <button type="button" class="segmentado__boton is-activo" data-vista="tarjetas" aria-pressed="true">
+        <%- include('../partials/icon', { nombre: 'dashboard' }) %> Tarjetas
+      </button>
+      <button type="button" class="segmentado__boton" data-vista="bloques" aria-pressed="false">
+        <%- include('../partials/icon', { nombre: 'layers' }) %> Bloques
+      </button>
+    </div>
+    <a class="boton boton--secundario boton--sm" href="/red/routers"><%- include('../partials/icon', { nombre: 'server' }) %> Routers</a>
+  </div>
+</section>
+
+<% if (monitoreoConfig.icmpEnabled) { %>
+  <section class="tarjeta superficie panel panel--tabla">
+    <div class="panel__cabecera">
+      <div><p class="etiqueta">ICMP</p><h3>Routers</h3></div>
+      <span class="insignia insignia--<%= routersMonitoreo.some((r) => r.status === 'down') ? 'overdue' : 'active' %>">
+        <%= routersMonitoreo.filter((r) => r.status === 'up').length %> / <%= routersMonitoreo.length %> responden
+      </span>
+    </div>
+    <% if (!routersMonitoreo.length) { %>
+      <p class="texto-suave">No hay routers activos.</p>
+    <% } else { %>
+      <div class="tabla-scroll">
+        <table class="tabla tabla--compacta">
+          <thead><tr><th>Router</th><th>Host</th><th>Estado</th><th>Latencia</th></tr></thead>
+          <tbody>
+            <% routersMonitoreo.forEach((router) => { %>
+              <tr>
+                <td data-etiqueta="Router"><strong><%= router.name %></strong></td>
+                <td data-etiqueta="Host"><span class="mono"><%= router.host || '—' %></span></td>
+                <td data-etiqueta="Estado">
+                  <span class="insignia insignia--<%= router.status === 'up' ? 'active' : router.status === 'down' ? 'overdue' : 'none' %>">
+                    <%= router.status === 'up' ? 'Responde' : router.status === 'down' ? 'Sin respuesta' : 'Sin datos' %>
+                  </span>
+                </td>
+                <td data-etiqueta="Latencia"><%= router.ms ? `${router.ms} ms` : '—' %></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </section>
+<% } %>
+
+<% if (!wan.length) { %>
+  <section class="tarjeta superficie vacio">
+    <p class="vacio__icono"><%- include('../partials/icon', { nombre: 'gauge' }) %></p>
+    <h3 class="vacio__titulo">Sin interfaces WAN</h3>
+    <p class="vacio__texto">Registra un router con sus interfaces WAN o agrega una interfaz aquí abajo para comenzar a monitorear proveedores.</p>
+    <a class="boton boton--primario" href="/red/routers/nuevo">Crear router</a>
+  </section>
+<% } else { %>
+  <div class="wan-proveedores" aria-label="Filtrar alertas por proveedor">
+    <a class="chip chip--filtro <%= !filtroRouter && !filtroWan ? 'is-activo' : '' %>" href="/red/monitoreo#alertas">Todos</a>
+    <% proveedores.forEach((p) => { %>
+      <a
+        class="chip chip--filtro <%= filtroRouter === p.routerId && filtroWan === p.wan ? 'is-activo' : '' %> <%= p.status === 'down' ? 'chip--caido' : '' %>"
+        href="/red/monitoreo?router=<%= p.routerId %>&wan=<%= encodeURIComponent(p.wan) %>#alertas"
+        title="Ver solo las alertas de <%= p.router %> · <%= p.wan %>"
+      >
+        <span class="punto punto--<%= p.status === 'down' ? 'rojo' : 'verde' %>"></span>
+        <%= p.proveedor || p.router %> <span class="mono">· <%= p.wan %></span>
+      </a>
+    <% }); %>
+  </div>
+
+  <section
+    class="wan-grid wan-grid--tarjetas"
+    data-monitor-wan
+    data-intervalo="<%= intervalo %>"
+    data-api="/red/monitoreo/api/wan"
+    aria-label="Interfaces WAN monitoreadas"
+  >
+    <% wan.forEach((item) => { const tope = Math.max(1, (Number(item.downloadMbps) || 100) * 1e6, (Number(item.uploadMbps) || 50) * 1e6); %>
+      <article
+        class="tarjeta wan-card wan-card--<%= item.status %>"
+        data-wan-card
+        data-router="<%= item.routerId %>"
+        data-wan="<%= item.wan %>"
+        data-tope="<%= tope %>"
+        tabindex="0"
+      >
+        <header class="wan-card__cabecera">
+          <div>
+            <p class="etiqueta">API</p>
+            <h3><%= item.router %> <span class="mono">· <%= item.wan %></span></h3>
+            <small class="texto-suave"><%= item.proveedor || 'Proveedor sin definir' %></small>
+          </div>
+          <span class="insignia insignia--<%= item.status === 'up' ? 'active' : 'overdue' %>" data-wan-estado><%= item.status === 'up' ? 'En línea' : 'Caída' %></span>
+        </header>
+
+        <div class="wan-card__metricas">
+          <div><small>Bajada</small><strong data-wan-rx><%= formatearBps(item.rx) %></strong></div>
+          <div><small>Subida</small><strong data-wan-tx><%= formatearBps(item.tx) %></strong></div>
+          <div class="wan-card__contratado"><small>Contratado</small><strong><%= item.downloadMbps || '—' %> / <%= item.uploadMbps || '—' %> Mbps</strong></div>
+        </div>
+
+        <svg class="wan-chart" viewBox="0 0 240 60" preserveAspectRatio="none" role="img" aria-label="Tráfico reciente de <%= item.wan %>">
+          <polyline class="wan-chart__linea wan-chart__linea--rx" data-wan-linea-rx="<%= item.routerId %>:<%= item.wan %>" points=""></polyline>
+          <polyline class="wan-chart__linea wan-chart__linea--tx" data-wan-linea-tx="<%= item.routerId %>:<%= item.wan %>" points=""></polyline>
+        </svg>
+
+        <footer class="wan-card__pie">
+          <span class="mono wan-card__ip"><%= item.wan %></span>
+          <a class="enlace-flecha" href="/red/monitoreo?router=<%= item.routerId %>&wan=<%= encodeURIComponent(item.wan) %>#alertas">Alertas <span aria-hidden="true">→</span></a>
+        </footer>
+
+        <p class="wan-card__alerta" data-wan-alerta>
+          <% if (item.alerta) { %>Alerta activa desde <%= formatearFechaHora(item.alerta.startedAt) %>.<% } %>
+        </p>
+
+        <div class="wan-tooltip" role="tooltip">
+          <div class="wan-tooltip__cabecera">
+            <strong>Consumo instantáneo</strong>
+            <span class="mono"><%= item.wan %></span>
+          </div>
+          <dl class="wan-tooltip__datos">
+            <div><dt>/interface/monitor-traffic</dt><dd class="mono">rx-bits-per-second</dd></div>
+            <div><dt>Bajada exacta</dt><dd class="mono" data-wan-rx-exact><%= Number(item.rx || 0).toLocaleString('es-VE') %> bps</dd></div>
+            <div><dt>Subida exacta</dt><dd class="mono" data-wan-tx-exact><%= Number(item.tx || 0).toLocaleString('es-VE') %> bps</dd></div>
+            <div><dt>Total</dt><dd class="mono" data-wan-total-exact><%= Number((item.rx || 0) + (item.tx || 0)).toLocaleString('es-VE') %> bps</dd></div>
+            <div><dt>Router</dt><dd><%= item.router %></dd></div>
+            <div><dt>Contratado</dt><dd><%= item.downloadMbps || '—' %>↓ / <%= item.uploadMbps || '—' %>↑ Mbps</dd></div>
+          </dl>
+          <p class="wan-tooltip__nota">Equivalente a <span class="mono" data-wan-rx-legible><%= formatearBps(item.rx) %></span> de bajada y <span class="mono" data-wan-tx-legible><%= formatearBps(item.tx) %></span> de subida.</p>
+        </div>
+      </article>
+    <% }); %>
+  </section>
+<% } %>
+
+<div class="dash-grid">
+  <section class="tarjeta panel panel--ocho">
+    <div class="panel__cabecera">
+      <div><p class="etiqueta">Soporte en vivo</p><h3>Monitorizar un cliente</h3></div>
+      <span class="texto-suave">Se detiene solo a los 60 s sin actividad</span>
+    </div>
+    <form class="formulario formulario--compacto" action="/red/monitoreo/cliente" method="get" data-form-monitor-cliente>
+      <div class="campo campo--ancho">
+        <label for="clienteMonitor">Servicio activo</label>
+        <select id="clienteMonitor" name="id" data-monitor-selector required>
+          <option value="">Selecciona un cliente</option>
+          <% subscriptions.forEach((sub) => { %>
+            <option value="/red/monitoreo/cliente/<%= sub._id %>">
+              <%= sub.clientId ? `${sub.clientId.clientCode} · ${sub.clientId.firstName} ${sub.clientId.lastName}` : 'Cliente' %> — <%= sub.planSnapshot?.name || sub.planId?.name || 'Plan' %>
+            </option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="formulario__acciones formulario__acciones--izquierda">
+        <button type="submit" class="boton boton--primario boton--sm"><%- include('../partials/icon', { nombre: 'activity' }) %> Abrir monitor</button>
+      </div>
+    </form>
+    <p class="nota nota--morado"><%- include('../partials/icon', { nombre: 'gauge' }) %> Se leen las estadísticas de la cola simple del cliente y, si no existe, el tráfico de su interfaz PPPoE o IP. La lectura se detiene automáticamente tras 60 segundos sin actividad.</p>
+  </section>
+
+  <section class="tarjeta panel panel--cuatro">
+    <div class="panel__cabecera">
+      <div><p class="etiqueta">Resumen</p><h3>Estado</h3></div>
+    </div>
+    <div class="resumen-linea"><span>WAN monitoreadas</span><strong><%= wan.length %></strong></div>
+    <div class="resumen-linea"><span>WAN caídas</span><strong><%= wan.filter((w) => w.status === 'down').length %></strong></div>
+    <div class="resumen-linea"><span>Alertas activas</span><strong><%= alertasTotal %></strong></div>
+    <div class="resumen-linea"><span>Intervalo</span><strong><%= Math.round(intervalo / 1000) %> s</strong></div>
+  </section>
+</div>
+
+<section class="tarjeta panel" id="agregar-interfaz">
+  <div class="panel__cabecera">
+    <div><p class="etiqueta">Monitoreo</p><h3>Agregar interfaz WAN</h3></div>
+    <span class="texto-suave">Se guarda en el router seleccionado</span>
+  </div>
+  <form class="formulario formulario--compacto" action="/red/monitoreo/interfaces" method="post">
+    <div class="formulario__rejilla">
+      <div class="campo">
+        <label for="monitorRouter">Router *</label>
+        <select id="monitorRouter" name="routerId" required>
+          <option value="">Selecciona un router</option>
+          <% routers.forEach((r) => { %>
+            <option value="<%= r._id %>"><%= r.name %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="monitorWan">Interfaz *</label>
+        <input id="monitorWan" name="wan" type="text" maxlength="60" placeholder="ether1, sfp1, pppoe-out1" required>
+      </div>
+      <div class="campo">
+        <label for="monitorProveedor">Proveedor</label>
+        <input id="monitorProveedor" name="provider" type="text" maxlength="80" placeholder="NetUno, Inter, Movistar">
+      </div>
+      <div class="campo">
+        <label for="monitorBajada">Bajada (Mbps)</label>
+        <input id="monitorBajada" name="downloadMbps" type="number" min="0" step="1" placeholder="200">
+      </div>
+      <div class="campo">
+        <label for="monitorSubida">Subida (Mbps)</label>
+        <input id="monitorSubida" name="uploadMbps" type="number" min="0" step="1" placeholder="100">
+      </div>
+    </div>
+    <div class="formulario__acciones formulario__acciones--izquierda">
+      <button type="submit" class="boton boton--primario boton--sm"><%- include('../partials/icon', { nombre: 'plus' }) %> Agregar interfaz</button>
+    </div>
+  </form>
+</section>
+
+<section class="tarjeta panel panel--tabla" id="alertas">
+  <div class="panel__cabecera">
+    <div>
+      <p class="etiqueta">Incidentes</p>
+      <h3>Alertas de red<% if (filtroRouter) { %> · filtradas<% } %></h3>
+    </div>
+    <div class="panel__acciones">
+      <% if (filtroRouter || filtroWan) { %>
+        <a class="boton boton--secundario boton--sm" href="/red/monitoreo#alertas"><%- include('../partials/icon', { nombre: 'x' }) %> Quitar filtro</a>
+      <% } %>
+      <span class="texto-suave"><%= alertas.length %> pendiente(s)</span>
+    </div>
+  </div>
+  <% if (alertas.length === 0) { %>
+    <div class="vacio vacio--compacto">
+      <p class="vacio__icono vacio__icono--verde"><%- include('../partials/icon', { nombre: 'check' }) %></p>
+      <p class="vacio__texto"><%= filtroRouter || filtroWan ? 'Ese proveedor no tiene alertas activas.' : 'Sin alertas activas. Todas las WAN responden.' %></p>
+    </div>
+  <% } else { %>
+    <div class="tabla-scroll">
+      <table class="tabla">
+        <thead><tr><th>Severidad</th><th>Mensaje</th><th>Router / WAN</th><th>Inicio</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <tbody>
+          <% alertas.forEach((alerta) => { %>
+            <tr>
+              <td data-etiqueta="Severidad"><span class="insignia insignia--<%= alerta.severity === 'critical' ? 'overdue' : alerta.severity === 'warning' ? 'pending' : 'none' %>"><%= alerta.severity %></span></td>
+              <td data-etiqueta="Mensaje"><%= alerta.message %><small><%= etiquetas[alerta.type] || alerta.type %></small></td>
+              <td data-etiqueta="Router / WAN"><%= alerta.routerName || '—' %><small class="mono"><%= alerta.wan || '' %></small></td>
+              <td data-etiqueta="Inicio"><%= formatearFechaHora(alerta.startedAt) %></td>
+              <td data-etiqueta="Estado"><span class="insignia insignia--<%= alerta.status === 'active' ? 'overdue' : 'pending' %>"><%= etiquetas[alerta.status] || alerta.status %></span></td>
+              <td data-etiqueta="Acciones" class="tabla__acciones">
+                <% if (alerta.status === 'active') { %>
+                  <form action="/red/monitoreo/alertas/<%= alerta._id %>/reconocer" method="post">
+                    <button type="submit" class="boton-icono boton-icono--sm" title="Reconocer"><%- include('../partials/icon', { nombre: 'eye' }) %></button>
+                  </form>
+                <% } %>
+                <form action="/red/monitoreo/alertas/<%= alerta._id %>/resolver" method="post">
+                  <button type="submit" class="boton-icono boton-icono--sm" title="Resolver"><%- include('../partials/icon', { nombre: 'check' }) %></button>
+                </form>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</section>

@@ -1,0 +1,74 @@
+CRACKENTICK - GUIA RAPIDA PARA LA LAPTOP
+========================================
+
+REQUISITOS (los instaladores van en la carpeta "instaladores")
+--------------------------------------------------------------
+1. Node.js 26 LTS (x64):
+   instaladores\node-v22.14.0-x64.msi
+   Instala con las opciones por defecto.
+
+2. MongoDB:
+   NO hace falta instalarlo. El ZIP incluye mongodb\mongod.exe y
+   CRACKENTICK.bat lo arranca solo si no detecta el servicio MongoDB.
+   Si la laptop ya tiene MongoDB como servicio, se usa ese.
+
+3. QEMU (solo si vas a probar el CHR):
+   no hace falta instalarlo a mano. CHR.bat lo instala la primera vez
+   desde chr\qemu-setup.exe.
+
+PASOS
+-----
+1. Descomprime TODO el ZIP en una carpeta sin espacios, por ejemplo:
+   C:\CRACKENTICK
+   (No ejecutes nada dentro del ZIP comprimido).
+
+2. Instala Node.js de la carpeta "instaladores".
+   Reinicia la laptop si el comando "node -v" no funciona en una terminal.
+   MongoDB no se instala: CRACKENTICK.bat usa mongodb\mongod.exe.
+
+3. Abre CRACKENTICK.bat (doble clic).
+   - Primera vez con datos demo: opcion 2 (borra y siembra).
+   - Primera vez vacio:        opcion 3 (deja solo admin/admin123).
+   - Siguientes veces:         opcion 1.
+
+4. Abre el navegador en:
+   http://localhost:3000
+   Usuario: admin
+   Password: admin123
+
+5. Para probar el MikroTik real:
+   a) Abre CHR.bat y espera 2-3 minutos (la primera vez instala QEMU).
+   b) En CRACKENTICK: Red > Routers > "CHR QEMU (prueba)" > Probar conexion.
+   c) Crea o edita un servicio y elige ese router para aprovisionar de verdad.
+   Credenciales completas en CREDENCIALES.txt.
+
+6. Para detener:
+   - La app: Ctrl+C en la ventana de la terminal.
+   - El CHR: cierra la ventana de CHR.bat.
+
+SI ALGO FALLA
+-------------
+- "node no se reconoce": instala Node.js y reinicia la laptop.
+- "MongoDB portable no arranco": revisa mongodb\mongod.log; normalmente es
+  que el puerto 27017 esta ocupado por otro MongoDB.
+- La app no conecta con el CHR: revisa que CHR.bat siga abierto y que
+  el puerto 8728 este en escucha (Test-NetConnection 127.0.0.1 -Port 8728).
+- CHR.bat se cierra sin mensaje: abre PowerShell en la carpeta del proyecto
+  y ejecuta:  .\CHR.bat
+  Revisa el archivo CHR-log.txt que se crea junto a CHR.bat. Si no aparece,
+  Windows bloqueo el archivo: clic derecho al ZIP > Propiedades > Desbloquear,
+  y vuelve a descomprimirlo.
+- "El proceso no tiene acceso al archivo ... chr-7.20.2.vhd":
+  hay otro QEMU abierto o el VHD esta montado en Windows. Abre el Administrador
+  de tareas y termina qemu-system-x86_64.exe, o reinicia la laptop.
+  No abras el archivo .vhd con doble clic.
+- El ZIP incluye node_modules y .env: no ejecutes "npm install" si no hay
+  internet, no hace falta.
+
+ARCHIVOS IMPORTANTES
+--------------------
+CREDENCIALES.txt   todas las claves del sistema y del CHR
+CRACKENTICK.bat    menu de 3 opciones para correr la app
+CHR.bat            arranca el CHR virtual
+vaciar.js          deja la base vacia con solo admin/admin123
+seed.js            carga los datos de demostracion

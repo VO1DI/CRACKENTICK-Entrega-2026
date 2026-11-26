@@ -1,0 +1,5 @@
+<nav class="tabs" aria-label="Empleados">
+  <a class="tabs__enlace <%= activa === 'trabajadores' ? 'is-activo' : '' %>" href="/admin/empleados" <%= activa === 'trabajadores' ? 'aria-current="page"' : '' %>>Trabajadores</a>
+  <a class="tabs__enlace <%= activa === 'pagos' ? 'is-activo' : '' %>" href="/admin/empleados?tab=pagos" <%= activa === 'pagos' ? 'aria-current="page"' : '' %>>Pagos</a>
+  <a class="tabs__enlace <%= activa === 'rendimiento' ? 'is-activo' : '' %>" href="/admin/empleados/rendimiento" <%= activa === 'rendimiento' ? 'aria-current="page"' : '' %>>Rendimiento</a>
+</nav>

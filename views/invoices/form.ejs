@@ -1,0 +1,122 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Financiero · Nueva factura</p>
+    <h2 class="pagina-cabecera__titulo">Factura de venta</h2>
+    <p class="pagina-cabecera__texto">Las facturas de venta se cobran y descuentan inventario, pero no participan en el corte del servicio.</p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <a class="boton boton--secundario" href="/facturas"><%- include('../partials/icon', { nombre: 'arrowLeft' }) %> Cancelar</a>
+  </div>
+</section>
+
+<% if (errores && errores.length) { %>
+  <div class="aviso aviso--error" role="alert">
+    <span class="aviso__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></span>
+    <div class="aviso__texto"><strong>Revisa los datos:</strong><ul class="lista-errores"><% errores.forEach((m) => { %><li><%= m %></li><% }); %></ul></div>
+  </div>
+<% } %>
+
+<form class="formulario" action="/facturas" method="post" novalidate data-form-factura-venta>
+  <section class="tarjeta superficie formulario__seccion">
+    <div class="formulario__cabecera">
+      <span class="formulario__numero">01</span>
+      <div><h3>Cliente</h3><p>La factura puede emitirse con o sin servicio contratado.</p></div>
+    </div>
+    <div class="formulario__rejilla">
+      <div class="campo">
+        <label for="clientId">Cliente *</label>
+        <select id="clientId" name="clientId" required>
+          <option value="">Selecciona un cliente</option>
+          <% clientes.forEach((cliente) => { %>
+            <option value="<%= cliente._id %>" <%= clienteSeleccionado === String(cliente._id) ? 'selected' : '' %>><%= cliente.clientCode %> · <%= cliente.firstName %> <%= cliente.lastName %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="subscriptionId">Servicio (opcional)</label>
+        <select id="subscriptionId" name="subscriptionId">
+          <option value="">Sin servicio</option>
+          <% subscriptions.forEach((sub) => { %>
+            <option value="<%= sub._id %>"><%= sub.clientId ? `${sub.clientId.firstName} ${sub.clientId.lastName}` : 'Cliente' %> · <%= sub.planSnapshot?.name || sub.planId?.name || 'Plan' %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="dueDate">Vencimiento</label>
+        <input id="dueDate" name="dueDate" type="date" value="<%= fechaParaInput(new Date(Date.now() + 7 * 86400000)) %>">
+      </div>
+    </div>
+  </section>
+
+  <section class="tarjeta superficie formulario__seccion">
+    <div class="formulario__cabecera">
+      <span class="formulario__numero">02</span>
+      <div><h3>Líneas</h3><p>Si vinculas un artículo del inventario se descuenta stock al crear la factura.</p></div>
+    </div>
+
+    <div class="tabla-scroll">
+      <table class="tabla tabla--venta">
+        <thead><tr><th>Artículo de inventario</th><th>Descripción</th><th>Cantidad</th><th>Precio</th><th>Serial(es)</th><th>Importe</th></tr></thead>
+        <tbody>
+          <% for (let i = 0; i < 5; i += 1) { %>
+            <tr data-linea-factura>
+              <td data-etiqueta="Artículo">
+                <select name="inventoryItemId" class="campo-mini" data-item-factura>
+                  <option value="">Sin inventario</option>
+                  <% items.forEach((item) => { %>
+                    <option value="<%= item._id %>" data-precio="<%= item.price %>" data-nombre="<%= item.name %>" data-tipo="<%= item.tracking %>" data-stock="<%= item.stock %>"><%= item.name %> (<%= item.stock %> <%= item.unit %>)</option>
+                  <% }); %>
+                </select>
+              </td>
+              <td data-etiqueta="Descripción"><input name="description" type="text" class="campo-mini" maxlength="200" placeholder="Descripción de la línea"></td>
+              <td data-etiqueta="Cantidad"><input name="quantity" type="number" class="campo-mini" min="0" value="0" data-cantidad-factura></td>
+              <td data-etiqueta="Precio"><input name="unitPrice" type="number" class="campo-mini" min="0" step="0.01" value="0" data-precio-factura></td>
+              <td data-etiqueta="Serial(es)"><input name="serials" type="text" class="campo-mini" placeholder="SERIAL1, SERIAL2"></td>
+              <td data-etiqueta="Importe"><strong data-importe-factura><%= formatearDinero(0) %></strong></td>
+            </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="tarjeta superficie formulario__seccion">
+    <div class="formulario__cabecera">
+      <span class="formulario__numero">03</span>
+      <div><h3>Ajustes</h3><p>IVA y descuento se aplican sobre el subtotal.</p></div>
+    </div>
+    <div class="formulario__rejilla">
+      <% if (config.billing.taxEnabled !== false) { %>
+        <div class="campo"><label for="taxRatePercent">IVA (%)</label><input id="taxRatePercent" name="taxRatePercent" type="number" min="0" max="100" step="0.01" value="0" data-iva-factura></div>
+      <% } else { %>
+        <input type="hidden" name="taxRatePercent" value="0">
+        <div class="campo campo--ancho"><label>IVA</label><p class="campo__ayuda">Desactivado en todo el sistema. Esta factura se emitirá sin IVA.</p></div>
+      <% } %>
+      <div class="campo">
+        <label for="discountType">Tipo de descuento</label>
+        <select id="discountType" name="discountType">
+          <option value="none">Sin descuento</option>
+          <option value="percent">Porcentaje</option>
+          <option value="amount">Monto fijo</option>
+        </select>
+      </div>
+      <div class="campo"><label for="discount">Descuento</label><input id="discount" name="discount" type="number" min="0" step="0.01" value="0"></div>
+      <div class="campo campo--ancho"><label for="notes">Notas</label><textarea id="notes" name="notes" rows="2" maxlength="500" placeholder="Detalle de la venta, garantía, observaciones…"></textarea></div>
+    </div>
+
+    <div class="resumen-servicio resumen-servicio--venta">
+      <div><small>Subtotal</small><strong data-factura-subtotal><%= formatearDinero(0) %></strong></div>
+      <% if (config.billing.taxEnabled !== false) { %>
+        <div><small>IVA</small><strong data-factura-iva><%= formatearDinero(0) %></strong></div>
+      <% } %>
+      <div><small>Total</small><strong data-factura-total><%= formatearDinero(0) %></strong></div>
+    </div>
+
+    <p class="nota nota--morado"><%- include('../partials/icon', { nombre: 'shield' }) %> Esta factura se crea con <strong>affectsService = false</strong>. Aunque quede vencida, no genera mora ni corte automático.</p>
+  </section>
+
+  <div class="formulario__acciones">
+    <a class="boton boton--secundario" href="/facturas">Cancelar</a>
+    <button type="submit" class="boton boton--primario"><%- include('../partials/icon', { nombre: 'check' }) %> Emitir factura de venta</button>
+  </div>
+</form>

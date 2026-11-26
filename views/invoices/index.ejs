@@ -1,0 +1,131 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Financiero</p>
+    <h2 class="pagina-cabecera__titulo">Facturas</h2>
+    <p class="pagina-cabecera__texto"><%= paginacion.total %> factura(s) · deuda pendiente y vencida a la vista</p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <% if (puede('finanzas.facturacion')) { %>
+      <a class="boton boton--secundario" href="/facturacion"><%- include('../partials/icon', { nombre: 'zap' }) %> Facturación</a>
+    <% } %>
+    <a class="boton boton--primario" href="/facturas/nueva"><%- include('../partials/icon', { nombre: 'plus' }) %> Factura de venta</a>
+  </div>
+</section>
+
+<section class="rejilla rejilla--cuatro">
+  <article class="tarjeta superficie kpi kpi--ambar">
+    <p class="kpi__etiqueta">Pendientes</p>
+    <p class="kpi__valor"><%= resumen.open ? resumen.open.cantidad : 0 %></p>
+    <p class="kpi__detalle"><%= formatearDinero(resumen.open ? resumen.open.total : 0) %></p>
+  </article>
+  <article class="tarjeta superficie kpi kpi--rojo">
+    <p class="kpi__etiqueta">Vencidas</p>
+    <p class="kpi__valor"><%= resumen.overdue ? resumen.overdue.cantidad : 0 %></p>
+    <p class="kpi__detalle"><%= formatearDinero(resumen.overdue ? resumen.overdue.total : 0) %></p>
+  </article>
+  <article class="tarjeta superficie kpi kpi--verde">
+    <p class="kpi__etiqueta">Pagadas</p>
+    <p class="kpi__valor"><%= resumen.paid ? resumen.paid.cantidad : 0 %></p>
+    <p class="kpi__detalle"><%= formatearDinero(resumen.paid ? resumen.paid.total : 0) %></p>
+  </article>
+  <article class="tarjeta superficie kpi">
+    <p class="kpi__etiqueta">Anuladas</p>
+    <p class="kpi__valor"><%= resumen.void ? resumen.void.cantidad : 0 %></p>
+    <p class="kpi__detalle">Conservan número y motivo</p>
+  </article>
+</section>
+
+<section class="tarjeta superficie filtros">
+  <form method="get" action="/facturas" class="filtros__form">
+    <div class="campo campo--busqueda">
+      <label class="sr-only" for="q">Buscar factura</label>
+      <div class="campo__control">
+        <%- include('../partials/icon', { nombre: 'search' }) %>
+        <input id="q" type="search" name="q" value="<%= filtros.q %>" placeholder="Número, cliente o código">
+      </div>
+    </div>
+    <div class="campo">
+      <label for="estado">Estado</label>
+      <select id="estado" name="estado" data-auto-enviar>
+        <option value="">Todos</option>
+        <option value="open" <%= filtros.estado === 'open' ? 'selected' : '' %>>Pendiente</option>
+        <option value="overdue" <%= filtros.estado === 'overdue' ? 'selected' : '' %>>Vencida</option>
+        <option value="paid" <%= filtros.estado === 'paid' ? 'selected' : '' %>>Pagada</option>
+        <option value="void" <%= filtros.estado === 'void' ? 'selected' : '' %>>Anulada</option>
+      </select>
+    </div>
+    <div class="campo">
+      <label for="cliente">Cliente</label>
+      <select id="cliente" name="cliente" data-auto-enviar>
+        <option value="">Todos</option>
+        <% clientes.forEach((cliente) => { %>
+          <option value="<%= cliente._id %>" <%= String(filtros.cliente) === String(cliente._id) ? 'selected' : '' %>><%= cliente.clientCode %> · <%= cliente.firstName %> <%= cliente.lastName %></option>
+        <% }); %>
+      </select>
+    </div>
+    <div class="campo">
+      <label for="tipo">Tipo</label>
+      <select id="tipo" name="tipo" data-auto-enviar>
+        <option value="">Todos</option>
+        <% ['service', 'installation', 'sale', 'other'].forEach((v) => { %>
+          <option value="<%= v %>" <%= filtros.tipo === v ? 'selected' : '' %>><%= etiquetas[v] || v %></option>
+        <% }); %>
+      </select>
+    </div>
+    <div class="campo">
+      <label for="desde">Desde</label>
+      <input id="desde" type="date" name="desde" value="<%= filtros.desde %>">
+    </div>
+    <div class="campo">
+      <label for="hasta">Hasta</label>
+      <input id="hasta" type="date" name="hasta" value="<%= filtros.hasta %>">
+    </div>
+    <button type="submit" class="boton boton--secundario boton--sm">Filtrar</button>
+  </form>
+</section>
+
+<section class="tarjeta superficie tabla-panel">
+  <% if (facturas.length === 0) { %>
+    <div class="vacio">
+      <p class="vacio__icono"><%- include('../partials/icon', { nombre: 'receipt' }) %></p>
+      <h3 class="vacio__titulo">No hay facturas con esos filtros</h3>
+      <p class="vacio__texto">Genera una corrida desde facturación o ajusta la búsqueda.</p>
+      <a class="boton boton--primario" href="/facturacion/previsualizar">Previsualizar facturación</a>
+    </div>
+  <% } else { %>
+    <div class="tabla-scroll">
+      <table class="tabla">
+        <thead><tr><th>Número</th><th>Cliente</th><th>Tipo</th><th>Periodo</th><th>Vencimiento</th><th>Total</th><th>Estado</th><th class="tabla__acciones">Acciones</th></tr></thead>
+        <tbody>
+          <% facturas.forEach((factura) => { %>
+            <tr>
+              <td data-etiqueta="Número"><a class="codigo" href="/facturas/<%= factura._id %>"><%= factura.invoiceNumber %></a></td>
+              <td data-etiqueta="Cliente">
+                <% if (factura.clientId) { %>
+                  <strong><%= factura.clientId.firstName %> <%= factura.clientId.lastName %></strong>
+                  <small class="texto-suave"><%= factura.clientId.clientCode %></small>
+                <% } else { %>—<% } %>
+              </td>
+              <td data-etiqueta="Tipo">
+                <span class="insignia insignia--<%= factura.type === 'service' ? 'morado' : factura.type === 'installation' ? 'pending' : 'none' %>"><%= etiquetas[factura.type] || factura.type %></span>
+                <% if (factura.affectsService === false) { %><small class="texto-suave">No corta</small><% } %>
+              </td>
+              <td data-etiqueta="Periodo"><% if (factura.periodStart) { %><%= formatearFecha(factura.periodStart) %> → <%= formatearFecha(factura.periodEnd) %><% } else { %>—<% } %></td>
+              <td data-etiqueta="Vencimiento"><%= formatearFecha(factura.dueDate) %></td>
+              <td data-etiqueta="Total"><strong><%= formatearDinero(factura.total, factura.currency) %></strong></td>
+              <td data-etiqueta="Estado"><span class="insignia insignia--<%= factura.status %>"><%= etiquetas[factura.status] %></span></td>
+              <td data-etiqueta="Acciones" class="tabla__acciones">
+                <a class="boton-icono boton-icono--sm" href="/facturas/<%= factura._id %>" aria-label="Ver factura <%= factura.invoiceNumber %>" title="Ver"><%- include('../partials/icon', { nombre: 'eye' }) %></a>
+                <% if (['open', 'overdue'].includes(factura.status)) { %>
+                  <a class="boton-icono boton-icono--sm" href="/facturas/<%= factura._id %>/editar" aria-label="Editar factura <%= factura.invoiceNumber %>" title="Editar IVA y cobro"><%- include('../partials/icon', { nombre: 'edit' }) %></a>
+                  <a class="boton boton--exito boton--xs" href="/facturas/<%= factura._id %>#pago">Pagar</a>
+                <% } %>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+    <%- include('../partials/pagination', { paginacion, filtros }) %>
+  <% } %>
+</section>

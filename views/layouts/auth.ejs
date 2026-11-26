@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es" data-tema="oscuro">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= titulo %> · CRACKENTICK</title>
+  <meta name="theme-color" content="#0a0a0e">
+  <meta name="csrf-token" content="<%= csrfToken %>">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="alternate icon" href="/favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/css/rework.css">
+  <link rel="stylesheet" href="/css/fases.css">
+  <link rel="stylesheet" href="/css/login.css">
+  <script>
+    (function () {
+      try {
+        var guardado = localStorage.getItem('crackentick-tema');
+        var validos = ['oscuro', 'claro', 'claro-suave'];
+        document.documentElement.dataset.tema = validos.indexOf(guardado) !== -1 ? guardado : 'oscuro';
+      } catch (e) { document.documentElement.dataset.tema = 'oscuro'; /* sin almacenamiento */ }
+    })();
+  </script>
+</head>
+<body class="auth-body">
+  <a class="saltar" href="#contenido">Saltar al contenido</a>
+  <div class="auth__tema">
+    <div class="tema-selector" data-tema-selector>
+      <button type="button" class="boton-icono" id="btnTema" aria-haspopup="true" aria-expanded="false" aria-controls="temaMenu" aria-label="Cambiar tema" title="Cambiar tema">
+        <span class="boton-tema__icono"><%- include('../partials/icon', { nombre: 'moon' }) %></span>
+      </button>
+      <div class="tema-menu" id="temaMenu" role="menu" aria-label="Elegir tema" hidden>
+        <p class="tema-menu__titulo">Tema de la interfaz</p>
+        <button type="button" class="tema-menu__opcion" role="menuitemradio" data-tema-opcion="oscuro" aria-checked="true">
+          <span class="tema-muestra tema-muestra--oscuro" aria-hidden="true"></span>
+          <span class="tema-menu__texto"><strong>Oscuro</strong><small>Predeterminado</small></span>
+          <%- include('../partials/icon', { nombre: 'check' }) %>
+        </button>
+        <button type="button" class="tema-menu__opcion" role="menuitemradio" data-tema-opcion="claro" aria-checked="false">
+          <span class="tema-muestra tema-muestra--arena" aria-hidden="true"></span>
+          <span class="tema-menu__texto"><strong>Claro arena</strong><small>Cálido y suave</small></span>
+          <%- include('../partials/icon', { nombre: 'check' }) %>
+        </button>
+        <button type="button" class="tema-menu__opcion" role="menuitemradio" data-tema-opcion="claro-suave" aria-checked="false">
+          <span class="tema-muestra tema-muestra--lavanda" aria-hidden="true"></span>
+          <span class="tema-menu__texto"><strong>Claro lavanda</strong><small>El estilo del portal</small></span>
+          <%- include('../partials/icon', { nombre: 'check' }) %>
+        </button>
+      </div>
+    </div>
+  </div>
+  <div class="fondo" aria-hidden="true"></div>
+  <main id="contenido" class="auth-shell">
+    <%- body %>
+  </main>
+  <script src="/vendor/motion.min.js" defer></script>
+  <script src="/js/csrf.js" defer></script>
+  <script src="/js/app.js" defer></script>
+  <script src="/js/login.js" defer></script>
+</body>
+</html>

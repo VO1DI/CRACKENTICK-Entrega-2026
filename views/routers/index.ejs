@@ -1,0 +1,96 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Red · Aprovisionamiento</p>
+    <h2 class="pagina-cabecera__titulo">Routers MikroTik</h2>
+    <p class="pagina-cabecera__texto"><%= resumen.total %> router(s) · <%= resumen.wans %> WAN monitoreada(s)</p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <a class="boton boton--secundario" href="/pools">Pools de IP</a>
+    <a class="boton boton--primario" href="/routers/nuevo"><%- include('../partials/icon', { nombre: 'plus' }) %> Nuevo router</a>
+  </div>
+</section>
+
+<section class="tarjeta superficie filtros">
+  <form method="get" action="/routers" class="filtros__form">
+    <div class="campo campo--busqueda">
+      <label class="sr-only" for="q">Buscar router</label>
+      <div class="campo__control">
+        <%- include('../partials/icon', { nombre: 'search' }) %>
+        <input id="q" type="search" name="q" value="<%= filtros.q %>" placeholder="Nombre del router">
+      </div>
+    </div>
+    <div class="campo">
+      <label for="incluir">Mbps vendidos</label>
+      <select id="incluir" name="incluir" data-auto-enviar>
+        <option value="activos" <%= filtros.incluir === 'activos' ? 'selected' : '' %>>Solo activos</option>
+        <option value="recientes" <%= filtros.incluir === 'recientes' ? 'selected' : '' %>>Suspendidos ≤ 30 días</option>
+        <option value="todos" <%= filtros.incluir === 'todos' ? 'selected' : '' %>>Todos los suspendidos</option>
+      </select>
+    </div>
+    <button type="submit" class="boton boton--secundario boton--sm">Filtrar</button>
+  </form>
+</section>
+
+<% if (routers.length === 0) { %>
+  <section class="tarjeta superficie vacio">
+    <p class="vacio__icono"><%- include('../partials/icon', { nombre: 'server' }) %></p>
+    <h3 class="vacio__titulo">Sin routers</h3>
+    <p class="vacio__texto">Registra el primer MikroTik para aprovisionar servicios y monitorear sus WAN.</p>
+    <a class="boton boton--primario" href="/routers/nuevo">Crear router</a>
+  </section>
+<% } else { %>
+  <div class="rejilla rejilla--tres">
+    <% routers.forEach((router) => { %>
+      <article class="tarjeta superficie plan-card">
+        <div class="plan-card__cabecera">
+          <div>
+            <p class="etiqueta"><%= router.vendor === 'cisco' ? 'Cisco experimental' : 'MikroTik' %> · <%= router.vendor === 'cisco' ? 'SSH real' : router.transport === 'ssh' ? 'SSH real' : 'API real' %></p>
+            <h3><%= router.name %></h3>
+          </div>
+          <span class="insignia insignia--<%= router.active ? 'active' : 'cancelled' %>"><%= router.active ? 'Activo' : 'Inactivo' %></span>
+        </div>
+        <p class="texto-suave mono"><%= router.host || 'Sin host' %>:<%= router.port %><%= router.model ? ` · ${router.model}` : '' %></p>
+        <div class="plan-card__velocidades">
+          <div><strong><%= router.wanCount %></strong><span>WAN</span></div>
+          <div><strong><%= router.servicios %></strong><span>servicios</span></div>
+          <div><strong><%= router.pools %></strong><span>pools</span></div>
+          <div><strong><%= router.vlans %></strong><span>VLANs</span></div>
+        </div>
+        <% const cap = router.capacidad; %>
+        <div class="capacidad-resumen">
+          <div class="resumen-linea"><span>Vendido bajada</span><strong><%= cap.download %> / <%= cap.contractedDownload %> Mbps</strong></div>
+          <div class="resumen-linea"><span>Vendido subida</span><strong><%= cap.upload %> / <%= cap.contractedUpload %> Mbps</strong></div>
+          <div class="resumen-linea"><span>Ocupación</span><strong><%= cap.usageDownload === null ? '—' : `${Math.round(cap.usageDownload * 100)} %` %></strong></div>
+          <div class="resumen-linea"><span>Reuso</span><strong><%= cap.reuseDownload === null ? '—' : `${cap.reuseDownload.toFixed(2)}×` %></strong></div>
+          <div class="resumen-linea"><span>Disponible</span><strong class="<%= cap.availableDownload < 0 ? 'monto--deuda' : '' %>"><%= cap.availableDownload %> Mbps</strong></div>
+        </div>
+        <% if (router.lastTestAt) { %>
+          <p class="texto-suave">Última prueba: <span class="insignia insignia--<%= router.lastTestOk ? 'active' : 'error' %>"><%= router.lastTestOk ? 'OK' : 'Error' %></span></p>
+        <% } %>
+        <p class="plan-card__descripcion"><%= router.description || 'Sin descripción.' %></p>
+        <div class="plan-card__pie">
+          <div class="tabla__acciones">
+            <form action="/routers/<%= router._id %>/probar" method="post">
+              <button type="submit" class="boton-icono boton-icono--sm" title="Probar conexión" aria-label="Probar conexión"><%- include('../partials/icon', { nombre: 'refresh' }) %></button>
+            </form>
+            <form action="/red/respaldos" method="post" data-confirmar="¿Crear un respaldo de <%= router.name %> ahora? Se lee la configuración completa del equipo.">
+              <input type="hidden" name="routerId" value="<%= router._id %>">
+              <button type="submit" class="boton-icono boton-icono--sm" title="Crear respaldo ahora" aria-label="Crear respaldo ahora"><%- include('../partials/icon', { nombre: 'box' }) %></button>
+            </form>
+            <% if (router.vendor !== 'cisco') { %>
+              <a class="boton-icono boton-icono--sm" href="/red/respaldos?routerId=<%= router._id %>&aplicar=1" title="Aplicar respaldo guardado" aria-label="Aplicar respaldo guardado"><%- include('../partials/icon', { nombre: 'layers' }) %></a>
+              <a class="boton-icono boton-icono--sm" href="/red/routers/<%= router._id %>/provisionar" title="Aprovisionar servicios" aria-label="Aprovisionar servicios"><%- include('../partials/icon', { nombre: 'users' }) %></a>
+            <% } %>
+            <a class="boton-icono boton-icono--sm" href="/routers/<%= router._id %>/editar" title="Editar"><%- include('../partials/icon', { nombre: 'edit' }) %></a>
+            <% if (!router.servicios && !router.pools && !router.vlans) { %>
+              <form action="/routers/<%= router._id %>" method="post" data-confirmar="¿Eliminar el router <%= router.name %>?">
+                <input type="hidden" name="_method" value="DELETE">
+                <button type="submit" class="boton-icono boton-icono--sm boton-icono--peligro" title="Eliminar"><%- include('../partials/icon', { nombre: 'trash' }) %></button>
+              </form>
+            <% } %>
+          </div>
+        </div>
+      </article>
+    <% }); %>
+  </div>
+<% } %>

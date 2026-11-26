@@ -1,0 +1,91 @@
+<% const v = typeof valores !== 'undefined' && valores ? valores : {}; %>
+<% const itemIds = [].concat(v.itemId || []); %>
+<% const cantidades = [].concat(v.quantity || []); %>
+<% const precios = [].concat(v.unitPrice || []); %>
+<% const seriales = [].concat(v.serials || []); %>
+<% const texto = (campo, respaldo) => (v[campo] !== undefined && v[campo] !== null && v[campo] !== '' ? v[campo] : (respaldo ?? '')); %>
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Venta · <%= venta.code %></p>
+    <h2 class="pagina-cabecera__titulo">Costo de instalación y materiales</h2>
+    <p class="pagina-cabecera__texto">Los cambios se aplican antes de instalar; la factura y el inventario usarán estos valores.</p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <a class="boton boton--secundario" href="/ventas/<%= venta._id %>"><%- include('../partials/icon', { nombre: 'arrowLeft' }) %> Volver</a>
+  </div>
+</section>
+
+<% if (errores && errores.length) { %>
+  <div class="aviso aviso--error" role="alert">
+    <span class="aviso__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></span>
+    <div class="aviso__texto"><strong>Revisa los datos:</strong><ul class="lista-errores"><% errores.forEach((m) => { %><li><%= m %></li><% }); %></ul></div>
+  </div>
+<% } %>
+
+<form class="formulario" action="/ventas/<%= venta._id %>/materiales/editar" method="post" data-form-venta>
+  <section class="tarjeta superficie formulario__seccion">
+    <div class="formulario__cabecera">
+      <span class="formulario__numero">01</span>
+      <div><h3>Materiales</h3><p>Se validan las existencias antes de guardar.</p></div>
+    </div>
+    <% const serialesPorItem = {}; items.forEach((item) => { serialesPorItem[String(item._id)] = (item.serials || []).filter((s) => s.status === 'available').map((s) => s.serial); }); %>
+    <script type="application/json" data-seriales-por-item><%- JSON.stringify(serialesPorItem).replace(/</g, '\\u003c') %></script>
+    <div class="tabla-scroll">
+      <table class="tabla tabla--venta">
+        <thead><tr><th>Artículo</th><th>Cantidad</th><th>Precio unitario</th><th>Serial(es)</th><th>Importe</th></tr></thead>
+        <tbody>
+          <% for (let i = 0; i < 5; i += 1) { %>
+            <% const itemId = itemIds[i] || lineas[i]?.itemId || ''; %>
+            <% const cantidad = cantidades[i] !== undefined ? cantidades[i] : (lineas[i]?.quantity ?? 1); %>
+            <% const precio = precios[i] !== undefined ? precios[i] : (lineas[i]?.unitPrice ?? 0); %>
+            <tr data-linea-venta>
+              <td data-etiqueta="Artículo">
+                <select name="itemId" class="campo-mini" data-item-venta>
+                  <option value="">Sin artículo</option>
+                  <% items.forEach((item) => { %>
+                    <option value="<%= item._id %>" data-precio="<%= item.price %>" data-tipo="<%= item.tracking %>" data-stock="<%= item.stock %>" data-unidad="<%= item.unit %>" <%= String(itemId) === String(item._id) ? 'selected' : '' %>><%= item.name %> · <%= item.code %> (<%= item.stock %> <%= item.unit %>)</option>
+                  <% }); %>
+                </select>
+              </td>
+              <td data-etiqueta="Cantidad"><input name="quantity" type="number" class="campo-mini" min="1" value="<%= cantidad %>" data-cantidad-venta></td>
+              <td data-etiqueta="Precio unitario"><input name="unitPrice" type="number" class="campo-mini" min="0" step="0.01" value="<%= precio %>" data-precio-venta></td>
+              <td data-etiqueta="Serial" data-celda-serial><select name="serials" class="campo-mini" data-seriales-venta data-serial-inicial="<%= (lineas[i]?.serials || []).join(', ') %>"><option value="">Elegir serial</option></select><span class="texto-suave" data-serial-no-aplica hidden>No aplica</span></td>
+              <td data-etiqueta="Importe"><strong data-importe-venta><%= formatearDinero(0) %></strong></td>
+            </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="tarjeta superficie formulario__seccion">
+    <div class="formulario__cabecera">
+      <span class="formulario__numero">02</span>
+      <div><h3>Cierre económico</h3><p>El total se recalcula en vivo.</p></div>
+    </div>
+    <div class="formulario__rejilla">
+      <div class="campo"><label for="installationCost">Costo de instalación</label><input id="installationCost" name="installationCost" type="number" min="0" step="0.01" value="<%= texto('installationCost', venta.installationCost ?? 0) %>" data-instalacion-venta></div>
+      <% if (config.billing.taxEnabled !== false) { %>
+        <div class="campo"><label for="taxRatePercent">IVA (%)</label><input id="taxRatePercent" name="taxRatePercent" type="number" min="0" max="100" step="0.01" value="<%= texto('taxRatePercent', venta.taxRatePercent ?? 0) %>" data-iva-venta></div>
+      <% } else { %>
+        <input type="hidden" name="taxRatePercent" value="0">
+        <div class="campo campo--ancho"><label>IVA</label><p class="campo__ayuda">Desactivado en todo el sistema.</p></div>
+      <% } %>
+      <div class="campo campo--ancho"><label for="notes">Notas</label><textarea id="notes" name="notes" rows="2" maxlength="500"><%= texto('notes', venta.notes) %></textarea></div>
+    </div>
+    <div class="resumen-servicio resumen-servicio--venta">
+      <div><small>Materiales</small><strong data-total-materiales><%= formatearDinero(venta.materialsTotal) %></strong></div>
+      <div><small>Instalación</small><strong data-total-instalacion><%= formatearDinero(venta.installationCost) %></strong></div>
+      <div><small>Subtotal</small><strong data-total-subtotal><%= formatearDinero(venta.subtotal) %></strong></div>
+      <% if (config.billing.taxEnabled !== false) { %>
+        <div><small>IVA</small><strong data-total-iva><%= formatearDinero(venta.tax) %></strong></div>
+      <% } %>
+      <div><small>Total</small><strong data-total-final><%= formatearDinero(venta.total) %></strong></div>
+    </div>
+  </section>
+
+  <div class="formulario__acciones">
+    <a class="boton boton--secundario" href="/ventas/<%= venta._id %>">Cancelar</a>
+    <button type="submit" class="boton boton--primario"><%- include('../partials/icon', { nombre: 'check' }) %> Guardar costo y materiales</button>
+  </div>
+</form>

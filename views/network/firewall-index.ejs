@@ -1,0 +1,67 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Red · Seguridad</p>
+    <h2 class="pagina-cabecera__titulo">Firewall de routers</h2>
+    <p class="pagina-cabecera__texto">Selecciona un router para ver y administrar sus reglas de filtro.</p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <% if (selectedRouter && selectedRouter.vendor !== 'cisco') { %>
+      <a class="boton boton--primario" href="/red/firewall/nuevo?routerId=<%= selectedRouter._id %>"><%- include('../partials/icon', { nombre: 'plus' }) %> Nueva regla</a>
+    <% } %>
+  </div>
+</section>
+
+<%- include('../partials/red-router-nav', { routers, selectedRouter, modulo, conteos }) %>
+
+<%- include('../partials/experimental-aviso') %>
+
+<% if (selectedRouter) { %>
+  <% if (selectedRouter.vendor === 'cisco') { %>
+    <div class="aviso aviso--advertencia" role="note">
+      <span class="aviso__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></span>
+      <div class="aviso__texto"><strong>Firewall Cisco todavía no se aplica automáticamente.</strong> Cisco está en modo experimental; por ahora usa SSH para VLANs y diagnóstico.</div>
+    </div>
+  <% } %>
+
+  <section class="tarjeta panel panel--tabla">
+    <div class="panel__cabecera">
+      <div><p class="etiqueta">Router seleccionado</p><h3><%= selectedRouter.name %> · <%= reglas.length %> regla(s)</h3></div>
+    </div>
+    <% if (!reglas.length) { %>
+      <div class="vacio vacio--compacto"><p class="vacio__icono"><%- include('../partials/icon', { nombre: 'shield' }) %></p><p class="vacio__texto">No hay reglas registradas para este router.</p></div>
+    <% } else { %>
+      <div class="tabla-scroll">
+        <table class="tabla">
+          <thead><tr><th>Cadena / acción</th><th>Protocolo / puerto</th><th>Origen</th><th>Comentario</th><th>Estado</th><th></th></tr></thead>
+          <tbody>
+            <% reglas.forEach((regla) => { %>
+              <tr>
+                <td data-etiqueta="Cadena"><strong><%= regla.chain %></strong><small><%= regla.action %></small></td>
+                <td data-etiqueta="Protocolo"><%= regla.protocol || 'cualquiera' %><%= regla.port ? ` · ${regla.port}` : '' %></td>
+                <td data-etiqueta="Origen"><span class="mono"><%= regla.srcAddress || 'cualquiera' %></span></td>
+                <td data-etiqueta="Comentario"><%= regla.comment || '—' %></td>
+                <td data-etiqueta="Estado">
+                  <span class="insignia insignia--<%= regla.status === 'applied' ? 'active' : regla.status === 'error' ? 'error' : regla.status === 'simulated' ? 'pending' : 'none' %>"><%= regla.status %></span>
+                  <small><%= regla.enabled ? 'Habilitada' : 'Inhabilitada' %></small>
+                </td>
+                <td>
+                  <div class="tabla__acciones">
+                    <a class="boton-icono boton-icono--sm" href="/red/firewall/<%= regla._id %>/editar" title="Editar" aria-label="Editar regla"><%- include('../partials/icon', { nombre: 'edit' }) %></a>
+                    <form action="/red/firewall/<%= regla._id %>/estado" method="post">
+                      <input type="hidden" name="accion" value="<%= regla.enabled ? 'inhabilitar' : 'habilitar' %>">
+                      <button type="submit" class="boton-icono boton-icono--sm" title="<%= regla.enabled ? 'Inhabilitar' : 'Habilitar' %>" aria-label="<%= regla.enabled ? 'Inhabilitar' : 'Habilitar' %>"><%- include('../partials/icon', { nombre: regla.enabled ? 'ban' : 'check' }) %></button>
+                    </form>
+                    <form action="/red/firewall/<%= regla._id %>" method="post" data-confirmar="¿Eliminar esta regla de firewall?">
+                      <input type="hidden" name="_method" value="DELETE">
+                      <button type="submit" class="boton-icono boton-icono--sm boton-icono--peligro" title="Eliminar" aria-label="Eliminar regla"><%- include('../partials/icon', { nombre: 'trash' }) %></button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </section>
+<% } %>

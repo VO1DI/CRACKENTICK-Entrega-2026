@@ -1,0 +1,81 @@
+<%
+  const experimentales = [
+    { clave: 'red.firewall', href: '/red/firewall', titulo: 'Firewall de filtros', texto: 'Crea reglas de filtro. Se probó crear y eliminar; no se verificó el bloqueo real de tráfico.' },
+    { clave: 'red.eoip', href: '/red/eoip', titulo: 'Túneles EOIP', texto: 'Crea y elimina túneles. No se probó tráfico entre sedes ni recuperación ante caída.' },
+    { clave: 'red.balanceo', href: '/red/balanceo', titulo: 'Balanceo PCC / ECMP', texto: 'Aplica tablas, mangle, rutas y NAT. No se probó reparto real ni failover con dos WAN.' },
+    { clave: 'red.dhcp', href: '/red/dhcp', titulo: 'Servidores DHCP', texto: 'Crea pool, red y servidor. Se probó el alta; no se verificó la entrega de leases a clientes.' },
+  ];
+  const visibles = experimentales.filter((item) => puede(item.clave));
+  const puedeRespaldos = puede('red.respaldos');
+  const puedeReparar = puede('red.routers');
+%>
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Red · Avanzado</p>
+    <h2 class="pagina-cabecera__titulo">Experimental</h2>
+    <p class="pagina-cabecera__texto">Funciones que existen en el sistema pero no están probadas de punta a punta. Pueden fallar o dejar el router en un estado inesperado.</p>
+  </div>
+</section>
+
+<%- include('../partials/red-router-nav', { routers, selectedRouter, modulo, conteos: null }) %>
+
+<% if (selectedRouter) { %>
+  <div class="aviso aviso--advertencia" role="note">
+    <span class="aviso__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></span>
+    <div class="aviso__texto"><strong>Zona experimental.</strong> Usa estas funciones en un equipo de laboratorio o con un respaldo reciente. No las presentes como funciones estables al cliente.</div>
+  </div>
+
+  <% if (!visibles.length && !(puedeRespaldos || puedeReparar)) { %>
+    <section class="tarjeta superficie panel">
+      <div class="vacio vacio--compacto"><p class="vacio__texto">No tienes permisos sobre las funciones experimentales de este router.</p></div>
+    </section>
+  <% } else { %>
+    <div class="rejilla rejilla--tres">
+      <% visibles.forEach((item) => { %>
+        <a class="tarjeta superficie panel" href="<%= item.href %>?routerId=<%= selectedRouter._id %>">
+          <div class="panel__cabecera">
+            <div><p class="etiqueta">Experimental</p><h3><%= item.titulo %></h3></div>
+            <span class="insignia insignia--pending">Sin probar</span>
+          </div>
+          <p class="texto-suave"><%= item.texto %></p>
+        </a>
+      <% }); %>
+
+      <% if (puedeRespaldos) { %>
+        <a class="tarjeta superficie panel" href="/red/respaldos?routerId=<%= selectedRouter._id %>">
+          <div class="panel__cabecera">
+            <div><p class="etiqueta">Experimental</p><h3>Restauración .rsc</h3></div>
+            <span class="insignia insignia--pending">Parcial</span>
+          </div>
+          <p class="texto-suave">Importa comandos sobre la configuración actual. Puede detenerse en el primer objeto duplicado y dejar una restauración parcial. Crea un respaldo antes de usarla.</p>
+        </a>
+      <% } %>
+
+      <% if (puedeReparar) { %>
+        <section class="tarjeta superficie panel">
+          <div class="panel__cabecera">
+            <div><p class="etiqueta">Experimental</p><h3>Reparación completa</h3></div>
+            <span class="insignia insignia--pending">Sin probar</span>
+          </div>
+          <p class="texto-suave">Guarda un respaldo y repone VLANs, firewall, EOIP y balanceo desde la base. Es una operación destructiva y no se probó en un equipo real.</p>
+          <form action="/red/routers/<%= selectedRouter._id %>/reparar" method="post" data-confirmar="¿Reparar <%= selectedRouter.name %>? Se guarda un respaldo y se reponen los objetos desde la base.">
+            <button type="submit" class="boton boton--peligro boton--bloque"><%- include('../partials/icon', { nombre: 'refresh' }) %> Reparar router</button>
+          </form>
+        </section>
+      <% } %>
+
+      <% if (selectedRouter.vendor === 'cisco') { %>
+        <section class="tarjeta superficie panel">
+          <div class="panel__cabecera">
+            <div><p class="etiqueta">Experimental</p><h3>Funciones Cisco</h3></div>
+            <span class="insignia insignia--pending">Sin probar</span>
+          </div>
+          <p class="texto-suave">VLAN y balanceo por SSH están implementados, pero no se probaron en un Cisco real. El aprovisionamiento de servicios, firewall y EOIP no se ejecuta en Cisco.</p>
+          <a class="boton boton--secundario boton--bloque" href="/red/vlans?routerId=<%= selectedRouter._id %>">Abrir VLANs</a>
+          <a class="boton boton--secundario boton--bloque" href="/red/balanceo?routerId=<%= selectedRouter._id %>">Abrir balanceo</a>
+          <a class="boton boton--secundario boton--bloque" href="/red/respaldos?routerId=<%= selectedRouter._id %>">Abrir respaldos</a>
+        </section>
+      <% } %>
+    </div>
+  <% } %>
+<% } %>

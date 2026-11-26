@@ -1,0 +1,23 @@
+<div class="p-tema-selector<%= typeof clase !== 'undefined' && clase ? ` ${clase}` : '' %>" data-p-tema>
+  <button type="button" class="p-icon-btn p-tema-btn" data-p-tema-btn aria-haspopup="true" aria-expanded="false" aria-controls="pTemaMenu" aria-label="Cambiar tema" title="Cambiar tema">
+    <span data-p-tema-icono><%- include('_icono', { nombre: 'moon' }) %></span>
+  </button>
+  <div class="p-tema-menu" id="pTemaMenu" data-p-tema-menu role="menu" aria-label="Elegir tema" hidden>
+    <p class="p-tema-menu__titulo">Tema del portal</p>
+    <button type="button" class="p-tema-menu__opcion" role="menuitemradio" data-p-tema-opcion="oscuro" aria-checked="false">
+      <span class="p-tema-muestra p-tema-muestra--oscuro" aria-hidden="true"></span>
+      <span class="p-tema-menu__texto"><strong>Oscuro</strong><small>Descanso visual</small></span>
+      <%- include('_icono', { nombre: 'check' }) %>
+    </button>
+    <button type="button" class="p-tema-menu__opcion" role="menuitemradio" data-p-tema-opcion="claro" aria-checked="false">
+      <span class="p-tema-muestra p-tema-muestra--arena" aria-hidden="true"></span>
+      <span class="p-tema-menu__texto"><strong>Claro arena</strong><small>Cálido y suave</small></span>
+      <%- include('_icono', { nombre: 'check' }) %>
+    </button>
+    <button type="button" class="p-tema-menu__opcion" role="menuitemradio" data-p-tema-opcion="claro-suave" aria-checked="true">
+      <span class="p-tema-muestra p-tema-muestra--lavanda" aria-hidden="true"></span>
+      <span class="p-tema-menu__texto"><strong>Claro lavanda</strong><small>Estilo original del portal</small></span>
+      <%- include('_icono', { nombre: 'check' }) %>
+    </button>
+  </div>
+</div>

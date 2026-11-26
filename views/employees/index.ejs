@@ -1,0 +1,148 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Administración · Nómina</p>
+    <h2 class="pagina-cabecera__titulo">Empleados y nómina</h2>
+    <p class="pagina-cabecera__texto">
+      Trabajadores por área. La nómina se registra como gasto cada quincena: automáticamente al cerrar el periodo o manualmente desde cada ficha.
+    </p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <a class="boton boton--primario" href="/admin/empleados/nuevo"><%- include('../partials/icon', { nombre: 'plus' }) %> Nuevo trabajador</a>
+  </div>
+</section>
+
+<%- include('_tabs', { activa: tab }) %>
+
+<section class="rejilla rejilla--cuatro">
+  <article class="tarjeta superficie kpi kpi--morado">
+    <div class="kpi__cabecera"><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'users' }) %></span><span class="kpi__periodo">Plantilla</span></div>
+    <p class="kpi__valor"><%= resumen.activos %></p>
+    <p class="kpi__etiqueta">Trabajadores activos</p>
+    <p class="kpi__detalle"><%= resumen.total %> registrado(s)</p>
+  </article>
+  <article class="tarjeta superficie kpi kpi--verde">
+    <div class="kpi__cabecera"><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'dollar' }) %></span><span class="kpi__periodo">Quincena</span></div>
+    <p class="kpi__valor"><%= formatearDinero(resumen.quincenal) %></p>
+    <p class="kpi__etiqueta">Nómina quincenal</p>
+    <p class="kpi__detalle" data-formatos="moneda">≈ <%= formatearDinero(resumen.mensual) %> mensual</p>
+  </article>
+  <article class="tarjeta superficie kpi kpi--ambar">
+    <div class="kpi__cabecera"><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'calendar' }) %></span><span class="kpi__periodo">Próximo pago</span></div>
+    <p class="kpi__valor"><%= formatearFecha(resumen.proximoPago, { day: '2-digit', month: 'short' }) %></p>
+    <p class="kpi__etiqueta">Quincena en curso</p>
+    <p class="kpi__detalle"><%= resumen.periodo.etiqueta %></p>
+  </article>
+  <article class="tarjeta superficie kpi kpi--<%= pagos.length ? 'verde' : 'rojo' %>">
+    <div class="kpi__cabecera"><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'receipt' }) %></span><span class="kpi__periodo">Pagos</span></div>
+    <p class="kpi__valor"><%= pagos.length %></p>
+    <p class="kpi__etiqueta">Últimos registros</p>
+    <p class="kpi__detalle">Nómina contabilizada</p>
+  </article>
+</section>
+
+<% if (tab === 'trabajadores') { %>
+<p class="nota nota--morado">
+  <%- include('../partials/icon', { nombre: 'clock' }) %>
+  <span>
+    La nómina se registra sola al terminar cada quincena (día 15 y último día del mes) como gasto de la categoría
+    <strong>Empleados</strong>. El botón <strong>Pagar quincena</strong> registra el pago en curso de inmediato y evita que se duplique.
+  </span>
+</p>
+
+<% if (!grupos.length) { %>
+  <section class="tarjeta panel">
+    <div class="vacio">
+      <p class="vacio__icono"><%- include('../partials/icon', { nombre: 'users' }) %></p>
+      <p class="vacio__texto">Aún no hay trabajadores registrados.</p>
+      <a class="boton boton--primario" href="/admin/empleados/nuevo"><%- include('../partials/icon', { nombre: 'plus' }) %> Registrar el primero</a>
+    </div>
+  </section>
+<% } %>
+
+<% grupos.forEach((grupo) => { %>
+  <section class="tarjeta panel">
+    <div class="panel__cabecera">
+      <div><p class="etiqueta">Área</p><h3><%= grupo.label %></h3></div>
+      <span class="insignia insignia--none"><%= grupo.empleados.filter((e) => e.active).length %> activo(s)</span>
+    </div>
+    <div class="tabla-scroll">
+      <table class="tabla tabla--compacta">
+        <thead>
+          <tr><th>Trabajador</th><th>Cargo</th><th>Sueldo</th><th>Método</th><th>Estado</th><th>Quincena</th><th>Acciones</th></tr>
+        </thead>
+        <tbody>
+          <% grupo.empleados.forEach((empleado) => { %>
+            <tr>
+              <td data-etiqueta="Trabajador">
+                <strong><%= empleado.name %></strong>
+                <small><%= empleado.email || empleado.phone || '—' %></small>
+              </td>
+              <td data-etiqueta="Cargo"><%= empleado.position %></td>
+              <td data-etiqueta="Sueldo">
+                <strong><%= formatearDinero(empleado.salary, empleado.currency) %></strong>
+                <small><%= formatearDinero(empleado.sueldoMensual, empleado.currency) %> / mes</small>
+              </td>
+              <td data-etiqueta="Método"><%= etiquetas[empleado.paymentMethod] || empleado.paymentMethod %></td>
+              <td data-etiqueta="Estado">
+                <span class="insignia insignia--<%= empleado.active ? 'active' : 'void' %>"><%= empleado.active ? 'Activo' : 'Inactivo' %></span>
+              </td>
+              <td data-etiqueta="Quincena">
+                <% if (!empleado.active) { %>
+                  <span class="texto-suave">—</span>
+                <% } else if (empleado.pagada) { %>
+                  <span class="insignia insignia--active">Pagada</span>
+                <% } else { %>
+                  <span class="insignia insignia--pending">Pendiente</span>
+                <% } %>
+              </td>
+              <td data-etiqueta="Acciones">
+                <div class="tabla__acciones">
+                  <% if (empleado.active && !empleado.pagada) { %>
+                    <form action="/admin/empleados/<%= empleado._id %>/pagar" method="post" data-confirmar="¿Registrar el pago de la quincena de <%= empleado.name %> por <%= formatearDinero(empleado.salary, empleado.currency) %>?">
+                      <button type="submit" class="boton boton--exito boton--xs"><%- include('../partials/icon', { nombre: 'check' }) %> Pagar quincena</button>
+                    </form>
+                  <% } %>
+                  <a class="boton-icono boton-icono--sm" href="/admin/empleados/rendimiento?empleado=<%= empleado._id %>" title="Rendimiento" aria-label="Ver rendimiento de <%= empleado.name %>"><%- include('../partials/icon', { nombre: 'activity' }) %></a>
+                  <a class="boton-icono boton-icono--sm" href="/admin/empleados/<%= empleado._id %>/editar" title="Editar" aria-label="Editar <%= empleado.name %>"><%- include('../partials/icon', { nombre: 'edit' }) %></a>
+                  <form action="/admin/empleados/<%= empleado._id %>" method="post" data-confirmar="¿Eliminar a <%= empleado.name %>? Solo se puede si no tiene pagos registrados.">
+                    <input type="hidden" name="_method" value="DELETE">
+                    <button type="submit" class="boton-icono boton-icono--sm" title="Eliminar" aria-label="Eliminar <%= empleado.name %>"><%- include('../partials/icon', { nombre: 'trash' }) %></button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+<% }); %>
+<% } else { %>
+
+<section class="tarjeta panel">
+  <div class="panel__cabecera">
+    <div><p class="etiqueta">Nómina</p><h3>Últimos pagos registrados</h3></div>
+    <a class="enlace-flecha" href="/admin/gastos?categoria=empleados">Ver en gastos <span aria-hidden="true">→</span></a>
+  </div>
+  <% if (!pagos.length) { %>
+    <div class="vacio vacio--compacto"><p class="vacio__texto">Todavía no hay pagos de nómina. Se registrarán al cerrar la quincena o con el botón de pago.</p></div>
+  <% } else { %>
+    <div class="tabla-scroll">
+      <table class="tabla tabla--compacta">
+        <thead><tr><th>Fecha</th><th>Trabajador</th><th>Periodo</th><th>Método</th><th>Monto</th></tr></thead>
+        <tbody>
+          <% pagos.forEach((pago) => { %>
+            <tr>
+              <td data-etiqueta="Fecha"><%= formatearFecha(pago.date) %></td>
+              <td data-etiqueta="Trabajador"><%= pago.employeeId ? pago.employeeId.name : pago.concept %></td>
+              <td data-etiqueta="Periodo"><span class="mono"><%= pago.payrollPeriod || '—' %></span></td>
+              <td data-etiqueta="Método"><%= etiquetas[pago.paymentMethod] || pago.paymentMethod || '—' %></td>
+              <td data-etiqueta="Monto"><strong class="monto--deuda">−<%= formatearDinero(pago.amount, pago.currency) %></strong></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</section>
+<% } %>

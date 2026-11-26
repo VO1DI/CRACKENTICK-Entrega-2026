@@ -1,0 +1,128 @@
+<%
+  const entradas = (balanceConfig && balanceConfig.entries && balanceConfig.entries.length)
+    ? balanceConfig.entries
+    : (valores && valores.entries && valores.entries.length ? valores.entries : [{}, {}]);
+  const metodo = balanceConfig?.method || (valores && valores.method) || 'pcc';
+  const lanInterface = balanceConfig?.lanInterface || (valores && valores.lanInterface) || '';
+%>
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Red · Balanceo</p>
+    <h2 class="pagina-cabecera__titulo">Balanceo de WAN</h2>
+    <p class="pagina-cabecera__texto">PCC por mangle y tablas de ruteo, o ECMP de rutas. Cisco se aplica por SSH en modo experimental.</p>
+  </div>
+</section>
+
+<%- include('../partials/red-router-nav', { routers, selectedRouter, modulo, conteos }) %>
+
+<%- include('../partials/experimental-aviso') %>
+
+<% if (selectedRouter) { %>
+  <% if (selectedRouter.vendor === 'cisco') { %>
+    <div class="aviso aviso--advertencia" role="note">
+      <span class="aviso__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></span>
+      <div class="aviso__texto"><strong>Cisco experimental.</strong> El balanceo genera rutas estáticas ECMP por SSH. El número máximo de rutas activas depende del modelo y de IOS/IOS-XE.</div>
+    </div>
+  <% } else { %>
+    <div class="aviso aviso--exito" role="note">
+      <span class="aviso__icono"><%- include('../partials/icon', { nombre: 'check' }) %></span>
+      <div class="aviso__texto"><strong>PCC o ECMP.</strong> PCC reparte conexiones por WAN con mangle, tablas de ruteo y NAT; ECMP solo crea rutas por defecto. PCC no funciona con HotSpot activo.</div>
+    </div>
+  <% } %>
+
+  <div class="rejilla rejilla--ficha">
+    <section class="tarjeta superficie panel">
+      <div class="panel__cabecera">
+        <div><p class="etiqueta">Configuración</p><h3><%= balanceConfig ? `${balanceConfig.entries.length} WAN configuradas` : 'Nuevo balanceo' %></h3></div>
+        <span class="insignia insignia--<%= balanceConfig?.status === 'applied' ? 'active' : balanceConfig?.status === 'error' ? 'error' : balanceConfig ? 'pending' : 'none' %>"><%= balanceConfig?.status || 'sin configurar' %></span>
+      </div>
+
+      <% if (errores && errores.length) { %>
+        <div class="aviso aviso--error" role="alert">
+          <span class="aviso__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></span>
+          <div class="aviso__texto"><strong>Revisa los datos:</strong><ul class="lista-errores"><% errores.forEach((m) => { %><li><%= m %></li><% }); %></ul></div>
+        </div>
+      <% } %>
+
+      <form action="/red/balanceo" method="post" class="formulario formulario--compacto" data-balanceo>
+        <input type="hidden" name="routerId" value="<%= selectedRouter._id %>">
+        <div class="formulario__rejilla">
+          <div class="campo">
+            <label for="method">Método</label>
+            <select id="method" name="method">
+              <option value="pcc" <%= metodo === 'pcc' ? 'selected' : '' %>>PCC (mangle + tablas + NAT)</option>
+              <option value="ecmp" <%= metodo === 'ecmp' ? 'selected' : '' %>>ECMP (solo rutas)</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label for="lanInterface">Interfaz LAN</label>
+            <input id="lanInterface" name="lanInterface" type="text" maxlength="60" value="<%= lanInterface %>" placeholder="bridge-lan">
+            <span class="campo__ayuda">Interfaz por donde entra el tráfico de los clientes.</span>
+          </div>
+        </div>
+        <div class="balanceo-cabecera">
+          <div><p class="etiqueta">Método</p><strong><%= metodo === 'pcc' ? 'PCC · marcas de conexión y ruteo' : 'ECMP · ruta por defecto multipath' %></strong></div>
+          <span class="texto-suave" data-balanceo-contador><%= entradas.length %> WAN</span>
+        </div>
+
+        <div class="balanceo-filas" data-balanceo-filas>
+          <% entradas.forEach((entrada, indice) => { %>
+            <div class="balanceo-fila" data-balanceo-fila>
+              <div class="campo">
+                <label>Proveedor / nombre</label>
+                <input name="wanName" type="text" maxlength="80" value="<%= entrada.name || '' %>" placeholder="Proveedor <%= indice + 1 %>">
+              </div>
+              <div class="campo">
+                <label>Gateway *</label>
+                <input name="wanGateway" type="text" maxlength="45" value="<%= entrada.gateway || '' %>" placeholder="192.0.2.1" required>
+              </div>
+              <div class="campo">
+                <label>Interfaz WAN</label>
+                <input name="wanInterface" type="text" maxlength="60" value="<%= entrada.interface || '' %>" placeholder="ether1">
+              </div>
+              <button type="button" class="boton-icono boton-icono--sm boton-icono--peligro" data-quitar-wan title="Quitar WAN" aria-label="Quitar WAN"><%- include('../partials/icon', { nombre: 'trash' }) %></button>
+            </div>
+          <% }); %>
+        </div>
+
+        <button type="button" class="boton boton--secundario boton--sm" data-agregar-wan><%- include('../partials/icon', { nombre: 'plus' }) %> Añadir WAN</button>
+
+        <div class="formulario__acciones formulario__acciones--izquierda">
+          <button type="submit" class="boton boton--primario"><%- include('../partials/icon', { nombre: 'check' }) %> <%= balanceConfig ? 'Guardar cambios y aplicar' : 'Guardar y aplicar balanceo' %></button>
+        </div>
+
+        <template data-balanceo-plantilla>
+          <div class="balanceo-fila" data-balanceo-fila>
+            <div class="campo"><label>Proveedor / nombre</label><input name="wanName" type="text" maxlength="80" placeholder="Proveedor"></div>
+            <div class="campo"><label>Gateway *</label><input name="wanGateway" type="text" maxlength="45" placeholder="192.0.2.1" required></div>
+            <div class="campo"><label>Interfaz WAN</label><input name="wanInterface" type="text" maxlength="60" placeholder="ether1"></div>
+            <button type="button" class="boton-icono boton-icono--sm boton-icono--peligro" data-quitar-wan title="Quitar WAN" aria-label="Quitar WAN"><%- include('../partials/icon', { nombre: 'trash' }) %></button>
+          </div>
+        </template>
+      </form>
+    </section>
+
+    <aside class="pila">
+      <section class="tarjeta superficie panel">
+        <div class="panel__cabecera"><div><p class="etiqueta">Estado</p><h3>Última aplicación</h3></div></div>
+        <p class="texto-suave"><%= balanceConfig?.lastResult || 'Todavía no se ha aplicado un balanceo en este router.' %></p>
+        <% if (balanceConfig?.appliedAt) { %><p class="texto-suave">Aplicado: <%= formatearFechaHoraExacta(balanceConfig.appliedAt) %></p><% } %>
+        <% if (balanceConfig) { %>
+          <form action="/red/balanceo/<%= balanceConfig._id %>/quitar" method="post" data-confirmar="¿Quitar el balanceo de <%= selectedRouter.name %>? Se eliminan tablas, mangle, rutas y NAT con la etiqueta.">
+            <button type="submit" class="boton boton--peligro boton--bloque"><%- include('../partials/icon', { nombre: 'trash' }) %> Quitar balanceo</button>
+          </form>
+        <% } %>
+      </section>
+      <section class="tarjeta superficie panel">
+        <div class="panel__cabecera"><div><p class="etiqueta">Alcance</p><h3>Cómo funciona</h3></div></div>
+        <ul class="notif-pasos">
+          <li><strong>PCC:</strong> crea una tabla de ruteo por WAN, marca conexiones nuevas con mangle, enruta por marca y aplica NAT por interfaz WAN.</li>
+          <li><strong>ECMP:</strong> crea una ruta por defecto por gateway con <span class="mono">check-gateway=ping</span>; no crea mangle ni NAT.</li>
+          <li>Las gateways y las interfaces WAN deben existir en el router.</li>
+          <li>Si el router tiene HotSpot, usa ECMP: el proxy de HotSpot no respeta las tablas de ruteo.</li>
+          <li>Al quitar el balanceo se limpian tablas, mangle, rutas y NAT por etiqueta.</li>
+        </ul>
+      </section>
+    </aside>
+  </div>
+<% } %>

@@ -1,0 +1,69 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Red · Firewall</p>
+    <h2 class="pagina-cabecera__titulo"><%= modo === 'crear' ? 'Nueva regla' : 'Editar regla' %></h2>
+    <p class="pagina-cabecera__texto"><%= router.name %> · <%= router.vendor === 'cisco' ? 'Cisco experimental' : 'MikroTik' %></p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <a class="boton boton--secundario" href="/red/firewall?routerId=<%= router._id %>"><%- include('../partials/icon', { nombre: 'arrowLeft' }) %> Volver</a>
+  </div>
+</section>
+
+<% if (errores && errores.length) { %>
+  <div class="aviso aviso--error" role="alert">
+    <span class="aviso__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></span>
+    <div class="aviso__texto"><strong>Revisa los datos:</strong><ul class="lista-errores"><% errores.forEach((m) => { %><li><%= m %></li><% }); %></ul></div>
+  </div>
+<% } %>
+
+<form class="formulario" action="<%= modo === 'crear' ? '/red/firewall' : `/red/firewall/${regla._id}` %>" method="post">
+  <% if (modo === 'editar') { %><input type="hidden" name="_method" value="PUT"><% } %>
+  <input type="hidden" name="routerId" value="<%= router._id %>">
+  <section class="tarjeta superficie formulario__seccion">
+    <div class="formulario__cabecera"><span class="formulario__numero">01</span><div><h3>Regla de filtro</h3><p>Se aplica a la cadena seleccionada del router.</p></div></div>
+    <div class="formulario__rejilla">
+      <div class="campo"><label>Router</label><input type="text" value="<%= router.name %>" readonly></div>
+      <div class="campo">
+        <label for="chain">Cadena *</label>
+        <select id="chain" name="chain">
+          <option value="forward" <%= regla.chain !== 'input' ? 'selected' : '' %>>forward</option>
+          <option value="input" <%= regla.chain === 'input' ? 'selected' : '' %>>input</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="action">Acción *</label>
+        <select id="action" name="action">
+          <option value="drop" <%= regla.action === 'drop' ? 'selected' : '' %>>drop</option>
+          <option value="accept" <%= regla.action === 'accept' ? 'selected' : '' %>>accept</option>
+          <option value="reject" <%= regla.action === 'reject' ? 'selected' : '' %>>reject</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="protocol">Protocolo</label>
+        <select id="protocol" name="protocol">
+          <option value="">Cualquiera</option>
+          <option value="tcp" <%= regla.protocol === 'tcp' ? 'selected' : '' %>>tcp</option>
+          <option value="udp" <%= regla.protocol === 'udp' ? 'selected' : '' %>>udp</option>
+          <option value="icmp" <%= regla.protocol === 'icmp' ? 'selected' : '' %>>icmp</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="port">Puerto destino</label>
+        <input id="port" name="port" type="number" min="1" max="65535" value="<%= regla.port ?? '' %>" placeholder="22">
+        <span class="campo__ayuda">Obligatorio para tcp/udp.</span>
+      </div>
+      <div class="campo campo--ancho">
+        <label for="srcAddress">Origen (IP o red)</label>
+        <input id="srcAddress" name="srcAddress" type="text" maxlength="45" value="<%= regla.srcAddress || '' %>" placeholder="10.0.0.0/24">
+      </div>
+      <div class="campo campo--ancho">
+        <label for="comment">Comentario</label>
+        <input id="comment" name="comment" type="text" maxlength="120" value="<%= regla.comment || '' %>" placeholder="Bloquear acceso externo">
+      </div>
+    </div>
+  </section>
+  <div class="formulario__acciones">
+    <a class="boton boton--secundario" href="/red/firewall?routerId=<%= router._id %>">Cancelar</a>
+    <button type="submit" class="boton boton--primario"><%- include('../partials/icon', { nombre: 'check' }) %> <%= modo === 'crear' ? 'Crear y aplicar' : 'Guardar y aplicar' %></button>
+  </div>
+</form>

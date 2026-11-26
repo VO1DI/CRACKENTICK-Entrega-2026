@@ -1,0 +1,629 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Sistema</p>
+    <h2 class="pagina-cabecera__titulo">Configuración</h2>
+    <p class="pagina-cabecera__texto">Empresa, reglas de cobro y conexión con el router MikroTik.</p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <a class="boton boton--secundario" href="/admin/configuracion/firewall/simulador">
+      <%- include('../partials/icon', { nombre: 'shield' }) %> Visor de comandos
+    </a>
+  </div>
+</section>
+
+<nav class="tabs" aria-label="Secciones de configuración">
+  <a class="tabs__enlace <%= tab === 'empresa' ? 'is-activo' : '' %>" href="/admin/configuracion?tab=empresa" <%= tab === 'empresa' ? 'aria-current="page"' : '' %>>Empresa</a>
+  <a class="tabs__enlace <%= tab === 'facturacion' ? 'is-activo' : '' %>" href="/admin/configuracion?tab=facturacion" <%= tab === 'facturacion' ? 'aria-current="page"' : '' %>>Facturación</a>
+  <a class="tabs__enlace <%= tab === 'firewall' ? 'is-activo' : '' %>" href="/admin/configuracion?tab=firewall" <%= tab === 'firewall' ? 'aria-current="page"' : '' %>>Firewall / API</a>
+  <a class="tabs__enlace <%= tab === 'ia' ? 'is-activo' : '' %>" href="/admin/configuracion?tab=ia" <%= tab === 'ia' ? 'aria-current="page"' : '' %>>Asistente IA</a>
+  <a class="tabs__enlace <%= tab === 'notificaciones' ? 'is-activo' : '' %>" href="/admin/configuracion?tab=notificaciones" <%= tab === 'notificaciones' ? 'aria-current="page"' : '' %>>Notificaciones</a>
+  <a class="tabs__enlace <%= tab === 'comandos' ? 'is-activo' : '' %>" href="/admin/configuracion?tab=comandos" <%= tab === 'comandos' ? 'aria-current="page"' : '' %>>Comandos API</a>
+  <% if (esAdmin) { %><a class="tabs__enlace <%= tab === 'respaldos' ? 'is-activo' : '' %>" href="/admin/configuracion?tab=respaldos" <%= tab === 'respaldos' ? 'aria-current="page"' : '' %>>Respaldos del sistema</a><% } %>
+</nav>
+
+<% if (tab === 'empresa') { %>
+  <div class="rejilla rejilla--ficha">
+    <section class="tarjeta superficie panel">
+      <div class="panel__cabecera">
+        <div><p class="etiqueta">Identidad</p><h3>Datos de la empresa</h3></div>
+      </div>
+      <form action="/admin/configuracion/empresa" method="post" class="formulario formulario--compacto">
+        <input type="hidden" name="_method" value="PUT">
+        <div class="formulario__rejilla">
+          <div class="campo campo--ancho">
+            <label for="name">Nombre de la empresa *</label>
+            <input id="name" name="name" type="text" value="<%= settings.company.name %>" maxlength="120" required>
+          </div>
+          <div class="campo">
+            <label for="taxId">RIF / identificación fiscal</label>
+            <input id="taxId" name="taxId" type="text" value="<%= settings.company.taxId || '' %>" maxlength="40">
+          </div>
+          <div class="campo">
+            <label for="phone">Teléfono</label>
+            <input id="phone" name="phone" type="tel" value="<%= settings.company.phone || '' %>" maxlength="40">
+          </div>
+          <div class="campo campo--ancho">
+            <label for="address">Dirección</label>
+            <input id="address" name="address" type="text" value="<%= settings.company.address || '' %>" maxlength="200">
+          </div>
+          <div class="campo campo--ancho">
+            <label for="email">Correo de contacto</label>
+            <input id="email" name="email" type="email" value="<%= settings.company.email || '' %>" maxlength="120">
+          </div>
+        </div>
+        <p class="nota">Estos datos aparecen en el encabezado de cada factura.</p>
+        <div class="formulario__acciones formulario__acciones--izquierda">
+          <button type="submit" class="boton boton--primario"><%- include('../partials/icon', { nombre: 'check' }) %> Guardar empresa</button>
+        </div>
+      </form>
+    </section>
+
+    <aside class="pila">
+      <section class="tarjeta superficie panel">
+        <div class="panel__cabecera"><div><p class="etiqueta">Resumen</p><h3>Estado del sistema</h3></div></div>
+        <div class="resumen-linea"><span>Servicios contratados</span><strong><%= subscripciones %></strong></div>
+        <div class="resumen-linea"><span>Facturas pendientes</span><strong><%= pendientes %></strong></div>
+      </section>
+      <section class="tarjeta superficie panel">
+        <div class="panel__cabecera"><div><p class="etiqueta">Ayuda</p><h3>Buenas prácticas</h3></div></div>
+        <ul class="lista-simple lista-simple--vertical">
+          <li><span class="punto punto--morado"></span> Prueba la conexión antes de guardar los cambios.</li>
+          <li><span class="punto punto--verde"></span> Usa un usuario API con permisos mínimos.</li>
+          <li><span class="punto punto--ambar"></span> Las credenciales se guardan cifradas con AES-256-GCM.</li>
+        </ul>
+      </section>
+    </aside>
+  </div>
+<% } %>
+
+<% if (tab === 'facturacion') { %>
+  <% if (pendientes > 0) { %>
+    <div class="nota nota--ambar">
+      <%- include('../partials/icon', { nombre: 'alert' }) %>
+      Hay <strong><%= pendientes %> factura(s)</strong> pendientes o vencidas. La moneda no se puede cambiar hasta cobrarlas o anularlas, para no mezclar importes.
+    </div>
+  <% } %>
+  <div class="rejilla rejilla--ficha">
+    <section class="tarjeta superficie panel">
+      <div class="panel__cabecera">
+        <div><p class="etiqueta">Cobro</p><h3>Reglas de facturación</h3></div>
+      </div>
+      <form action="/admin/configuracion/facturacion" method="post" class="formulario formulario--compacto">
+        <input type="hidden" name="_method" value="PUT">
+        <div class="formulario__rejilla">
+          <div class="campo">
+            <label for="currency">Moneda *</label>
+            <select id="currency" name="currency" required>
+              <% monedas.filter((monedaItem) => monedaItem.code === 'USD').forEach((monedaItem) => { %>
+                <option value="<%= monedaItem.code %>" selected><%= monedaItem.code %> · <%= monedaItem.label %></option>
+              <% }); %>
+            </select>
+            <span class="campo__ayuda">La facturación se lleva siempre en USD. Los cobros en Bs se calculan con la tasa BCV.</span>
+          </div>
+          <div class="campo">
+            <label for="locale">Formato regional</label>
+            <input id="locale" name="locale" type="text" value="<%= settings.billing.locale %>" maxlength="20" placeholder="es-VE">
+          </div>
+          <div class="campo">
+            <label for="timezone">Zona horaria</label>
+            <input id="timezone" name="timezone" type="text" value="<%= settings.billing.timezone %>" maxlength="60" placeholder="America/Caracas">
+          </div>
+          <div class="campo campo--ancho">
+            <label class="interruptor">
+              <input type="checkbox" name="taxEnabled" <%= settings.billing.taxEnabled !== false ? 'checked' : '' %>>
+              <span class="interruptor__pista" aria-hidden="true"></span>
+              <span>Cobrar IVA en todo el sistema</span>
+            </label>
+            <span class="campo__ayuda">Si lo desactivas, las facturas y ventas nuevas se emiten con IVA 0. Las pagadas o anuladas conservan su IVA histórico; las pendientes se recalculan sin IVA al editarlas.</span>
+          </div>
+          <div class="campo">
+            <label for="taxRatePercent">IVA de referencia (%)</label>
+            <input id="taxRatePercent" name="taxRatePercent" type="number" min="0" max="100" step="0.01" value="<%= Math.round(settings.billing.taxRate * 10000) / 100 %>" required>
+            <span class="campo__ayuda">Se usa cuando el IVA está activo y el plan no define una tasa propia.</span>
+          </div>
+          <div class="campo">
+            <label for="invoicePrefix">Prefijo de factura</label>
+            <input id="invoicePrefix" name="invoicePrefix" type="text" value="<%= settings.billing.invoicePrefix %>" maxlength="10" required>
+          </div>
+          <div class="campo">
+            <label for="dueDays">Días de vencimiento</label>
+            <input id="dueDays" name="dueDays" type="number" min="0" max="120" step="1" value="<%= settings.billing.dueDays %>" required>
+          </div>
+          <div class="campo">
+            <label for="graceDays">Días de gracia para corte</label>
+            <input id="graceDays" name="graceDays" type="number" min="0" max="120" step="1" value="<%= settings.billing.graceDays %>" required>
+          </div>
+          <div class="campo">
+            <label for="previewDays">Días de anticipación</label>
+            <input id="previewDays" name="previewDays" type="number" min="0" max="60" step="1" value="<%= settings.billing.previewDays %>" required>
+          </div>
+          <div class="campo">
+            <label for="tasaBcv">Tasa BCV (Bs por USD)</label>
+            <div class="campo__control">
+              <span class="campo__prefijo" aria-hidden="true">Bs</span>
+              <input id="tasaBcv" type="number" inputmode="decimal" step="any" value="<%= settings.billing.bcvRate || '' %>" readonly>
+            </div>
+            <span class="campo__ayuda">Se actualiza desde el botón del dólar en la barra superior.</span>
+          </div>
+        </div>
+        <p class="nota nota--<%= settings.billing.taxEnabled !== false ? 'morado' : 'ambar' %>">
+          <%- include('../partials/icon', { nombre: 'shield' }) %>
+          <%= settings.billing.taxEnabled !== false
+            ? 'Este IVA es el global de referencia. Cada plan puede definir su propia tasa y cada factura pendiente puede ajustar la suya antes del pago. Las facturas pagadas o anuladas no se recalculan.'
+            : 'IVA desactivado en todo el sistema: las facturas y ventas nuevas se crean con IVA 0. Las pagadas o anuladas conservan su IVA histórico; las pendientes se recalculan sin IVA al editarlas.' %>
+        </p>
+        <div class="formulario__acciones formulario__acciones--izquierda">
+          <button type="submit" class="boton boton--primario"><%- include('../partials/icon', { nombre: 'check' }) %> Guardar facturación</button>
+        </div>
+      </form>
+    </section>
+
+    <aside class="pila">
+      <section class="tarjeta superficie panel">
+        <div class="panel__cabecera"><div><p class="etiqueta">Ejemplo</p><h3>Cómo se calcula</h3></div></div>
+        <div class="resumen-linea"><span>Precio del plan</span><strong><%= formatearDinero(35) %></strong></div>
+        <% if (settings.billing.taxEnabled !== false) { %>
+          <div class="resumen-linea"><span>IVA <%= Math.round(settings.billing.taxRate * 100) %>%</span><strong><%= formatearDinero(35 * settings.billing.taxRate) %></strong></div>
+          <div class="resumen-linea"><span>Total factura</span><strong><%= formatearDinero(35 * (1 + settings.billing.taxRate)) %></strong></div>
+        <% } else { %>
+          <div class="resumen-linea"><span>IVA</span><strong class="monto--deuda">Desactivado</strong></div>
+          <div class="resumen-linea"><span>Total factura</span><strong><%= formatearDinero(35) %></strong></div>
+        <% } %>
+        <p class="texto-suave">Ejemplo con un plan de <%= formatearDinero(35) %>. Los importes se redondean a dos decimales.</p>
+      </section>
+      <section class="tarjeta superficie panel">
+        <div class="panel__cabecera"><div><p class="etiqueta">Consecutivo</p><h3>Numeración</h3></div></div>
+        <p class="cifra-grande"><%= settings.billing.invoicePrefix %>-<%= String(settings.billing.nextInvoiceNumber).padStart(6, '0') %></p>
+        <p class="texto-suave">Próximo número de factura. Es único y no se reutiliza aunque se anule una factura.</p>
+      </section>
+    </aside>
+  </div>
+<% } %>
+
+<% if (tab === 'firewall') { %>
+  <div class="rejilla rejilla--ficha">
+    <section class="tarjeta superficie panel">
+      <div class="panel__cabecera">
+        <div><p class="etiqueta">Red</p><h3>Conexión con RouterOS</h3></div>
+      </div>
+      <form action="/admin/configuracion/firewall" method="post" class="formulario formulario--compacto" data-firewall-form>
+        <input type="hidden" name="_method" value="PUT">
+
+        <div class="formulario__rejilla">
+          <div class="campo">
+            <label for="host">Host / IP del router</label>
+            <input id="host" name="host" type="text" value="<%= settings.firewall.host || '' %>" maxlength="120" placeholder="192.168.88.1" required>
+          </div>
+          <div class="campo">
+            <label for="port">Puerto API</label>
+            <input id="port" name="port" type="number" min="1" max="65535" step="1" value="<%= settings.firewall.port %>">
+          </div>
+          <div class="campo">
+            <label for="username">Usuario API</label>
+            <input id="username" name="username" type="text" value="<%= settings.firewall.username || '' %>" maxlength="80" autocomplete="off" required>
+          </div>
+          <div class="campo">
+            <label for="password">Contraseña API</label>
+            <input id="password" name="password" type="password" placeholder="<%= passwordConfigurado ? 'Configurada · dejar en blanco para conservar' : 'Sin contraseña configurada' %>" autocomplete="new-password" maxlength="120">
+          </div>
+          <div class="campo">
+            <label for="routerName">Nombre lógico del router</label>
+            <input id="routerName" name="routerName" type="text" value="<%= settings.firewall.routerName || 'principal' %>" maxlength="60">
+          </div>
+          <div class="campo">
+            <label class="switch">
+              <input type="checkbox" name="tls" <%= settings.firewall.tls ? 'checked' : '' %>>
+              <span class="switch__control"></span>
+              <span class="switch__texto">Usar API sobre TLS (api-ssl)</span>
+            </label>
+            <label class="switch">
+              <input type="checkbox" name="verifyTls" <%= settings.firewall.verifyTls ? 'checked' : '' %>>
+              <span class="switch__control"></span>
+              <span class="switch__texto">Verificar certificado TLS</span>
+            </label>
+          </div>
+        </div>
+        <p class="nota nota--morado">
+          <%- include('../partials/icon', { nombre: 'shield' }) %>
+          La contraseña se cifra antes de guardarse y nunca se muestra de vuelta. La API RouterOS se ejecuta con
+          <code>node-routeros</code>, declarado en <code>package.json</code>.
+        </p>
+        <div class="formulario__acciones formulario__acciones--izquierda">
+          <button type="submit" class="boton boton--primario"><%- include('../partials/icon', { nombre: 'check' }) %> Guardar firewall</button>
+        </div>
+      </form>
+    </section>
+
+    <aside class="pila">
+      <section class="tarjeta superficie panel">
+        <div class="panel__cabecera"><div><p class="etiqueta">Diagnóstico</p><h3>Probar conexión</h3></div></div>
+        <p class="texto-suave">Envía <code>/system/identity/print</code> al router configurado. La prueba queda en auditoría.</p>
+        <form action="/admin/configuracion/firewall/probar" method="post">
+          <button type="submit" class="boton boton--secundario boton--bloque"><%- include('../partials/icon', { nombre: 'activity' }) %> Probar conexión</button>
+        </form>
+        <a class="boton boton--secundario boton--bloque" href="/admin/configuracion/firewall/simulador"><%- include('../partials/icon', { nombre: 'play' }) %> Abrir visor</a>
+      </section>
+
+      <section class="tarjeta superficie panel">
+        <div class="panel__cabecera"><div><p class="etiqueta">Estado</p><h3>Credenciales</h3></div></div>
+        <div class="resumen-linea"><span>Contraseña</span><span class="insignia insignia--<%= passwordConfigurado ? 'active' : 'overdue' %>"><%= passwordConfigurado ? 'Configurada' : 'Faltante' %></span></div>
+        <div class="resumen-linea"><span>Host</span><strong><%= settings.firewall.host || 'Sin definir' %></strong></div>
+        <div class="resumen-linea"><span>Puerto</span><strong><%= settings.firewall.port %></strong></div>
+        <div class="resumen-linea"><span>Router</span><strong><%= settings.firewall.routerName %></strong></div>
+      </section>
+    </aside>
+  </div>
+<% } %>
+
+<% if (tab === 'ia') { %>
+  <div class="rejilla rejilla--ficha">
+    <section class="tarjeta superficie panel">
+      <div class="panel__cabecera">
+        <div><p class="etiqueta">Proveedor</p><h3>Asistente compatible con OpenAI</h3></div>
+        <span class="insignia insignia--<%= settings.ai.enabled ? 'active' : 'cancelled' %>"><%= settings.ai.enabled ? 'Activo' : 'Inactivo' %></span>
+      </div>
+      <form action="/admin/configuracion/ia" method="post" class="formulario formulario--compacto">
+        <input type="hidden" name="_method" value="PUT">
+        <div class="formulario__rejilla">
+          <div class="campo campo--ancho">
+            <label for="ai-baseUrl">URL base *</label>
+            <input id="ai-baseUrl" name="baseUrl" type="url" maxlength="200" value="<%= settings.ai.baseUrl || 'https://api.openai.com/v1' %>" placeholder="https://api.openai.com/v1">
+            <span class="campo__ayuda">Debe terminar en /v1 o en la raíz del proveedor compatible.</span>
+          </div>
+          <div class="campo">
+            <label for="ai-model">Modelo *</label>
+            <input id="ai-model" name="model" type="text" maxlength="80" list="modelos-ia" value="<%= settings.ai.model || '' %>" placeholder="gpt-4o-mini">
+            <datalist id="modelos-ia"><% (settings.ai.models || []).forEach((modelo) => { %><option value="<%= modelo %>"></option><% }); %></datalist>
+          </div>
+          <div class="campo">
+            <label for="ai-apiKey">Clave de API</label>
+            <input id="ai-apiKey" name="apiKey" type="password" maxlength="200" placeholder="<%= iaPasswordConfigurada ? 'Configurada · dejar vacío para conservar' : 'sk-...' %>" autocomplete="new-password">
+            <label class="check-linea"><input type="checkbox" name="limpiarApiKey"> Borrar la clave guardada</label>
+          </div>
+          <div class="campo campo--ancho">
+            <label for="ai-brave">Brave Search API (opcional)</label>
+            <input id="ai-brave" name="braveApiKey" type="password" maxlength="200" placeholder="<%= braveConfigurada ? 'Configurada · dejar vacío para conservar' : 'Clave de búsqueda web' %>" autocomplete="new-password">
+            <label class="check-linea"><input type="checkbox" name="limpiarBrave"> Borrar la clave de búsqueda</label>
+          </div>
+          <div class="campo campo--ancho">
+            <label class="check-linea"><input type="checkbox" name="enabled" <%= settings.ai.enabled ? 'checked' : '' %>> Activar el asistente flotante</label>
+            <span class="campo__ayuda">Solo los usuarios con el permiso “Asistente IA” verán el botón.</span>
+          </div>
+        </div>
+        <div class="formulario__acciones formulario__acciones--izquierda">
+          <button type="submit" class="boton boton--primario"><%- include('../partials/icon', { nombre: 'check' }) %> Guardar asistente</button>
+        </div>
+      </form>
+      <div class="campo">
+        <button type="button" class="boton boton--secundario boton--sm" data-asistente-restaurar><%- include('../partials/icon', { nombre: 'refresh' }) %> Mostrar el botón flotante en este navegador</button>
+        <span class="campo__ayuda">Si ocultaste la burbuja con la ×, vuelve a mostrarla con el botón del asistente en la barra superior o desde aquí. Afecta solo a este navegador.</span>
+      </div>
+      <form action="/admin/configuracion/ia/modelos" method="post" class="formulario formulario--compacto">
+        <button type="submit" class="boton boton--secundario"><%- include('../partials/icon', { nombre: 'refresh' }) %> Actualizar lista de modelos</button>
+        <span class="campo__ayuda">Consulta /models del proveedor con la clave guardada.</span>
+      </form>
+    </section>
+
+    <aside class="pila">
+      <section class="tarjeta superficie panel">
+        <div class="panel__cabecera"><div><p class="etiqueta">Alcance</p><h3>Qué puede hacer</h3></div></div>
+        <ul class="lista-simple lista-simple--vertical">
+          <li><div><strong>Consultar</strong><small>Clientes, tickets, red, averías e instalaciones según tus permisos.</small></div></li>
+          <li><div><strong>Buscar en Internet</strong><small>Solo con la clave de Brave configurada.</small></div></li>
+          <li><div><strong>Proponer cambios</strong><small>Crear ticket o solventar avería; siempre con vista previa y confirmación.</small></div></li>
+        </ul>
+      </section>
+      <section class="tarjeta superficie panel">
+        <div class="panel__cabecera"><div><p class="etiqueta">Privacidad</p><h3>Sin accesos directos</h3></div></div>
+        <p class="texto-suave">La IA no consulta MongoDB ni RouterOS. Solo usa herramientas internas con los permisos del usuario y deja cada intervención en la auditoría.</p>
+      </section>
+    </aside>
+  </div>
+<% } %>
+
+<% if (tab === 'notificaciones') { %>
+  <div class="rejilla rejilla--ficha">
+    <section class="tarjeta superficie panel">
+      <div class="panel__cabecera">
+        <div><p class="etiqueta">Canal</p><h3>Telegram</h3></div>
+        <span class="insignia insignia--<%= settings.notifications.telegram.enabled ? 'active' : 'cancelled' %>"><%= settings.notifications.telegram.enabled ? 'Activo' : 'Inactivo' %></span>
+      </div>
+      <form action="/admin/configuracion/notificaciones" method="post" class="formulario formulario--compacto" id="form-telegram">
+        <input type="hidden" name="_method" value="PUT">
+        <div class="campo campo--ancho">
+          <label class="check-linea"><input type="checkbox" name="telegramEnabled" <%= settings.notifications.telegram.enabled ? 'checked' : '' %>> Enviar alertas por Telegram</label>
+          <span class="campo__ayuda">Cada bot recibe solo las categorías que marques. Puedes usar bots distintos para chats o grupos distintos.</span>
+        </div>
+
+        <div id="lista-bots">
+          <% telegramBots.forEach((bot, indice) => { %>
+            <fieldset class="notif-bot" data-bot>
+              <legend>Bot <%= indice + 1 %><%= bot.name ? `: ${bot.name}` : '' %></legend>
+              <input type="hidden" name="bots[<%= indice %>][_id]" value="<%= bot._id %>">
+              <% if (bot.legacy) { %><input type="hidden" name="bots[<%= indice %>][legacy]" value="on"><% } %>
+              <div class="formulario__rejilla">
+                <div class="campo">
+                  <label for="bot-nombre-<%= indice %>">Nombre (opcional)</label>
+                  <input id="bot-nombre-<%= indice %>" name="bots[<%= indice %>][name]" type="text" maxlength="60" value="<%= bot.name %>" placeholder="Administración">
+                </div>
+                <div class="campo">
+                  <label for="bot-token-<%= indice %>">Token del bot</label>
+                  <input id="bot-token-<%= indice %>" name="bots[<%= indice %>][token]" type="password" maxlength="120" placeholder="<%= bot.tokenConfigured ? 'Configurado · dejar vacío para conservar' : '123456789:AA...' %>" autocomplete="new-password">
+                  <% if (bot.tokenConfigured) { %>
+                    <label class="check-linea"><input type="checkbox" name="bots[<%= indice %>][limpiarToken]"> Borrar el token guardado</label>
+                  <% } %>
+                </div>
+                <div class="campo">
+                  <label for="bot-chat-<%= indice %>">Chat ID</label>
+                  <input id="bot-chat-<%= indice %>" name="bots[<%= indice %>][chatId]" type="text" maxlength="80" value="<%= bot.chatId %>" placeholder="123456789, -100123456789 o @canal">
+                  <span class="campo__ayuda">Chat personal, grupo o canal donde está el bot.</span>
+                </div>
+              </div>
+              <div class="campo campo--ancho">
+                <span class="campo__etiqueta">Categorías que recibe</span>
+                <div class="notif-categorias">
+                  <% categoriasTelegram.forEach((categoria) => { %>
+                    <label class="check-linea">
+                      <input type="checkbox" name="bots[<%= indice %>][cat_<%= categoria.key %>]" <%= bot.categories.includes(categoria.key) ? 'checked' : '' %>>
+                      <span><strong><%= categoria.label %></strong><br><span class="texto-suave"><%= categoria.detalle %></span></span>
+                    </label>
+                  <% }); %>
+                </div>
+              </div>
+              <div class="formulario__acciones formulario__acciones--izquierda">
+                <button type="button" class="boton boton--secundario boton--sm" data-quitar-bot>Quitar este bot</button>
+              </div>
+            </fieldset>
+          <% }); %>
+        </div>
+
+        <% if (!telegramBots.length) { %>
+          <p class="texto-suave">Todavía no hay bots. Agrega uno con su token y chat ID.</p>
+        <% } %>
+
+        <template id="plantilla-bot">
+          <fieldset class="notif-bot" data-bot>
+            <legend>Bot nuevo</legend>
+            <div class="formulario__rejilla">
+              <div class="campo">
+                <label>Nombre (opcional)</label>
+                <input name="bots[__i__][name]" type="text" maxlength="60" placeholder="Administración">
+              </div>
+              <div class="campo">
+                <label>Token del bot</label>
+                <input name="bots[__i__][token]" type="password" maxlength="120" placeholder="123456789:AA..." autocomplete="new-password">
+              </div>
+              <div class="campo">
+                <label>Chat ID</label>
+                <input name="bots[__i__][chatId]" type="text" maxlength="80" placeholder="123456789, -100123456789 o @canal">
+                <span class="campo__ayuda">Chat personal, grupo o canal donde está el bot.</span>
+              </div>
+            </div>
+            <div class="campo campo--ancho">
+              <span class="campo__etiqueta">Categorías que recibe</span>
+              <div class="notif-categorias">
+                <% categoriasTelegram.forEach((categoria) => { %>
+                  <label class="check-linea">
+                    <input type="checkbox" name="bots[__i__][cat_<%= categoria.key %>]">
+                    <span><strong><%= categoria.label %></strong><br><span class="texto-suave"><%= categoria.detalle %></span></span>
+                  </label>
+                <% }); %>
+              </div>
+            </div>
+            <div class="formulario__acciones formulario__acciones--izquierda">
+              <button type="button" class="boton boton--secundario boton--sm" data-quitar-bot>Quitar este bot</button>
+            </div>
+          </fieldset>
+        </template>
+
+        <div class="formulario__acciones formulario__acciones--izquierda">
+          <button type="button" class="boton boton--secundario" id="agregar-bot"><%- include('../partials/icon', { nombre: 'plus' }) %> Agregar otro bot</button>
+          <button type="submit" class="boton boton--primario"><%- include('../partials/icon', { nombre: 'check' }) %> Guardar Telegram</button>
+        </div>
+      </form>
+
+      <form action="/admin/configuracion/notificaciones/probar" method="post" class="formulario formulario--compacto">
+        <button type="submit" class="boton boton--secundario"><%- include('../partials/icon', { nombre: 'mail' }) %> Enviar mensaje de prueba</button>
+        <span class="campo__ayuda">Envía una prueba a todos los bots guardados.</span>
+      </form>
+
+      <script>
+        (function () {
+          var lista = document.getElementById('lista-bots');
+          var plantilla = document.getElementById('plantilla-bot');
+          var agregar = document.getElementById('agregar-bot');
+          if (!lista || !plantilla || !agregar) return;
+          var contador = lista.querySelectorAll('[data-bot]').length;
+
+          agregar.addEventListener('click', function () {
+            var html = plantilla.innerHTML.replace(/__i__/g, String(contador++));
+            var caja = document.createElement('div');
+            caja.innerHTML = html.trim();
+            lista.appendChild(caja.firstElementChild);
+          });
+
+          lista.addEventListener('click', function (evento) {
+            var boton = evento.target.closest('[data-quitar-bot]');
+            if (!boton) return;
+            var tarjeta = boton.closest('[data-bot]');
+            if (tarjeta) tarjeta.remove();
+          });
+        })();
+      </script>
+    </section>
+
+    <aside class="pila">
+      <section class="tarjeta superficie panel">
+        <div class="panel__cabecera"><div><p class="etiqueta">Paso a paso</p><h3>Cómo conectar tu Telegram</h3></div></div>
+        <ol class="notif-pasos">
+          <li>Abre Telegram y busca <strong>@BotFather</strong>.</li>
+          <li>Envía <code>/newbot</code>, elige un nombre y copia el token.</li>
+          <li>Busca tu bot y envíale cualquier mensaje para abrir el chat.</li>
+          <li>Escribe a <strong>@userinfobot</strong> o consulta <code>getUpdates</code> para copiar tu chat ID.</li>
+          <li>Pega token y chat ID aquí, guarda y envía la prueba.</li>
+        </ol>
+      </section>
+      <section class="tarjeta superficie panel">
+        <div class="panel__cabecera"><div><p class="etiqueta">Privacidad</p><h3>Qué se envía</h3></div></div>
+        <p class="texto-suave">Solo el aviso, el router/WAN o el artículo afectado, el valor y la hora. No se envían credenciales, claves PPPoE ni datos de facturación.</p>
+      </section>
+    </aside>
+  </div>
+<% } %>
+
+<% if (tab === 'comandos') { %>
+  <section class="tarjeta superficie panel">
+    <div class="panel__cabecera">
+      <div><p class="etiqueta">Integración</p><h3>Comandos RouterOS usados por la API</h3></div>
+      <span class="insignia insignia--active"><%= catalogo.reduce((total, grupo) => total + grupo.comandos.length, 0) %> comandos</span>
+    </div>
+    <p class="texto-suave">
+      Todos los comandos se envían por la API RouterOS (puerto 8728 o api-ssl con TLS) y se auditan. Los lookups <code>print</code> se usan para resolver el <code>.id</code> del objeto antes de modificarlo.
+    </p>
+
+    <div class="catalogo-comandos">
+      <% catalogo.forEach((grupo) => { %>
+        <section class="catalogo-comandos__grupo">
+          <header class="catalogo-comandos__cabecera">
+            <div>
+              <h4><%= grupo.grupo %></h4>
+              <p><%= grupo.descripcion %></p>
+            </div>
+            <span class="chip"><%= grupo.comandos.length %></span>
+          </header>
+          <ul class="catalogo-comandos__lista">
+            <% grupo.comandos.forEach((comando) => { %>
+              <li class="catalogo-comandos__item">
+                <code class="comando"><%= comando.path %></code>
+                <div class="catalogo-comandos__detalle">
+                  <p><%= comando.descripcion %></p>
+                  <small><strong>Uso:</strong> <%= comando.uso %></small>
+                </div>
+              </li>
+            <% }); %>
+          </ul>
+        </section>
+      <% }); %>
+    </div>
+  </section>
+<% } %>
+
+<% if (tab === 'respaldos' && esAdmin) { %>
+  <% const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']; %>
+  <section class="tarjeta superficie panel">
+    <div class="panel__cabecera">
+      <div><p class="etiqueta">Sistema</p><h3>Respaldo automático a Google Drive</h3></div>
+      <span class="insignia insignia--<%= settings.backup.enabled ? 'active' : 'none' %>"><%= settings.backup.enabled ? 'Activo' : 'Desactivado' %></span>
+    </div>
+    <form action="/admin/configuracion/respaldos" method="post" class="formulario formulario--compacto">
+      <input type="hidden" name="_method" value="PUT">
+      <div class="formulario__rejilla">
+        <div class="campo">
+          <label for="backupRemote">Remoto rclone</label>
+          <input id="backupRemote" name="remote" type="text" maxlength="60" value="<%= settings.backup.remote %>" placeholder="gdrive">
+          <span class="campo__ayuda">Nombre del remoto configurado en rclone.</span>
+        </div>
+        <div class="campo">
+          <label for="backupFolder">Carpeta base</label>
+          <input id="backupFolder" name="folder" type="text" maxlength="120" value="<%= settings.backup.folder %>" placeholder="CRACKENTICK-RESPALDOS">
+        </div>
+        <div class="campo">
+          <label for="backupDia">Día</label>
+          <select id="backupDia" name="dayOfWeek">
+            <% dias.forEach((dia, indice) => { %><option value="<%= indice %>" <%= Number(settings.backup.dayOfWeek) === indice ? 'selected' : '' %>><%= dia %></option><% }); %>
+          </select>
+        </div>
+        <div class="campo">
+          <label for="backupHora">Hora (0-23)</label>
+          <input id="backupHora" name="hour" type="number" min="0" max="23" value="<%= settings.backup.hour %>">
+        </div>
+        <label class="check campo--ancho"><input type="checkbox" name="enabled" <%= settings.backup.enabled ? 'checked' : '' %>> Respaldo automático semanal</label>
+      </div>
+      <p class="campo__ayuda">Se guarda en <span class="mono"><%= settings.backup.remote %>:<%= settings.backup.folder %>/{Mes}-{Año}/</span>.</p>
+      <div class="formulario__acciones">
+        <button type="button" class="boton boton--secundario" id="btnProbarRespaldo">Probar conexión</button>
+        <button type="submit" class="boton boton--secundario">Guardar configuración</button>
+      </div>
+    </form>
+    <p class="nota nota--morado">
+      <%- include('../partials/icon', { nombre: 'alert' }) %>
+      <span>La primera vez hay que autorizar Google Drive con <span class="mono">rclone config</span> en el equipo. Después, desde aquí solo cambias el remoto y la carpeta.</span>
+    </p>
+  </section>
+
+  <section class="tarjeta superficie panel">
+    <div class="panel__cabecera">
+      <div><p class="etiqueta">Manual</p><h3>Crear respaldo ahora</h3></div>
+      <span class="insignia insignia--<%= settings.backup.lastRunAt ? 'active' : 'pending' %>"><%= settings.backup.lastRunAt ? formatearFechaHora(settings.backup.lastRunAt) : 'Sin ejecutar' %></span>
+    </div>
+    <p class="texto-suave">Exporta toda la base de datos a JSON, la comprime y la sube al remoto en la carpeta del mes.</p>
+    <% if (settings.backup.lastResult) { %><p class="texto-suave mono"><%= settings.backup.lastResult %></p><% } %>
+    <div class="barra-progreso" role="progressbar" aria-label="Progreso del respaldo"><span data-respaldo-barra></span></div>
+    <p class="texto-suave" data-respaldo-texto>Sin respaldo en curso.</p>
+    <div class="formulario__acciones">
+      <button type="button" class="boton boton--primario" id="btnRespaldoSistema">Crear respaldo del sistema</button>
+    </div>
+  </section>
+
+  <script>
+    (function () {
+      var boton = document.getElementById('btnRespaldoSistema');
+      var barra = document.querySelector('[data-respaldo-barra]');
+      var texto = document.querySelector('[data-respaldo-texto]');
+      var probar = document.getElementById('btnProbarRespaldo');
+      var temporizador = null;
+
+      if (probar) {
+        probar.addEventListener('click', async function () {
+          probar.disabled = true;
+          try {
+            var respuesta = await fetch('/admin/configuracion/respaldos/sistema/probar', { method: 'POST' });
+            var datos = await respuesta.json();
+            if (texto) texto.textContent = datos.mensaje || (datos.ok ? 'Conexión correcta.' : 'Error de conexión.');
+          } catch (error) {
+            if (texto) texto.textContent = 'No se pudo probar la conexión.';
+          }
+          probar.disabled = false;
+        });
+      }
+
+      if (!boton) return;
+
+      var seguir = async function () {
+        try {
+          var respuesta = await fetch('/admin/configuracion/respaldos/sistema/estado');
+          var datos = await respuesta.json();
+          var estado = datos.estado || {};
+          if (barra) barra.style.width = (estado.porcentaje || 0) + '%';
+          if (texto) texto.textContent = [estado.mensaje, estado.error, estado.archivo].filter(Boolean).join(' · ');
+          if (['listo', 'error', 'inactivo'].indexOf(estado.estado) !== -1) {
+            clearInterval(temporizador);
+            boton.disabled = false;
+            if (estado.estado === 'listo') setTimeout(function () { location.reload(); }, 1200);
+          }
+        } catch (error) {
+          clearInterval(temporizador);
+          boton.disabled = false;
+        }
+      };
+
+      boton.addEventListener('click', async function () {
+        boton.disabled = true;
+        try {
+          var respuesta = await fetch('/admin/configuracion/respaldos/sistema', { method: 'POST' });
+          var datos = await respuesta.json();
+          if (!datos.ok) {
+            if (texto) texto.textContent = datos.mensaje || 'No se pudo iniciar el respaldo.';
+            boton.disabled = false;
+            return;
+          }
+          temporizador = setInterval(seguir, 1500);
+          seguir();
+        } catch (error) {
+          if (texto) texto.textContent = 'No se pudo iniciar el respaldo.';
+          boton.disabled = false;
+        }
+      });
+    })();
+  </script>
+<% } %>

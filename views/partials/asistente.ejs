@@ -1,0 +1,48 @@
+<div class="asistente" data-asistente>
+  <button type="button" class="asistente__burbuja" data-asistente-abrir aria-label="Abrir asistente IA" aria-expanded="false" aria-controls="asistentePanel">
+    <%- include('icon', { nombre: 'message' }) %>
+    <span>Asistente</span>
+  </button>
+  <button type="button" class="asistente__ocultar" data-asistente-ocultar aria-label="Ocultar el asistente" title="Ocultar el asistente">
+    <%- include('icon', { nombre: 'x' }) %>
+  </button>
+
+  <section class="asistente__panel" id="asistentePanel" data-asistente-panel hidden aria-label="Asistente IA">
+    <header class="asistente__cabecera">
+      <div>
+        <strong>Asistente CRACKENTICK</strong>
+        <small data-asistente-estado>Comprobando configuración…</small>
+      </div>
+      <div class="asistente__cabecera-acciones">
+        <button type="button" class="boton-icono boton-icono--sm" data-asistente-voz aria-pressed="true" title="Leer respuestas en voz alta" aria-label="Leer respuestas en voz alta">
+          <%- include('icon', { nombre: 'activity' }) %>
+        </button>
+        <button type="button" class="boton-icono boton-icono--sm" data-asistente-cerrar aria-label="Cerrar asistente">
+          <%- include('icon', { nombre: 'x' }) %>
+        </button>
+      </div>
+    </header>
+
+    <div class="asistente__mensajes" data-asistente-mensajes aria-live="polite"></div>
+
+    <div class="asistente__pendiente" data-asistente-pendiente hidden>
+      <p><strong>Acción preparada</strong><span data-asistente-resumen></span></p>
+      <div class="asistente__pendiente-acciones">
+        <button type="button" class="boton boton--primario boton--xs" data-asistente-confirmar>Confirmar</button>
+        <button type="button" class="boton boton--secundario boton--xs" data-asistente-cancelar>Cancelar</button>
+      </div>
+    </div>
+
+    <form class="asistente__form" data-asistente-form>
+      <label class="sr-only" for="asistenteTexto">Mensaje para el asistente</label>
+      <textarea id="asistenteTexto" data-asistente-texto rows="2" maxlength="1000" placeholder="Pregunta por un cliente, la red o una avería…" required></textarea>
+      <div class="asistente__form-acciones">
+        <button type="button" class="boton-icono" data-asistente-microfono title="Dictar" aria-label="Dictar mensaje">
+          <%- include('icon', { nombre: 'phone' }) %>
+        </button>
+        <button type="submit" class="boton boton--primario boton--sm" data-asistente-enviar>Enviar</button>
+      </div>
+    </form>
+  </section>
+</div>
+<script src="/js/asistente.js" defer></script>

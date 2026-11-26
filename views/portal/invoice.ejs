@@ -1,0 +1,80 @@
+<%
+  const estados = { open: 'Pendiente', overdue: 'Vencida', paid: 'Pagada', void: 'Anulada' };
+  const clases = { open: 'pendiente', overdue: 'vencida', paid: 'pagada', void: 'anulada' };
+%>
+<section class="p-page-head p-page-head--compacta" data-motion="fade">
+  <div>
+    <span class="p-eyebrow">Facturación</span>
+    <h1>Factura <span class="p-mono"><%= factura.invoiceNumber %></span></h1>
+    <p>Emitida el <%= formatearFecha(factura.issueDate) %> · vence el <%= formatearFecha(factura.dueDate) %></p>
+  </div>
+  <div class="p-page-head__acciones p-no-imprimir">
+    <a class="p-btn p-btn--secundario" href="/portal/facturas"><%- include('_icono', { nombre: 'arrowLeft' }) %> Volver</a>
+    <button type="button" class="p-btn p-btn--primario" data-imprimir><%- include('_icono', { nombre: 'print' }) %> Imprimir</button>
+  </div>
+</section>
+
+<article class="p-card p-factura" data-motion="fade">
+  <header class="p-factura__cabecera">
+    <div class="p-factura__marca">
+      <span class="p-brand__logo" aria-hidden="true">
+        <svg viewBox="0 0 40 40" fill="none">
+          <path d="M20 3.5 34 11v18L20 36.5 6 29V11L20 3.5Z" stroke="currentColor" stroke-width="1.8"/>
+          <path d="M13 24c1.8-3.2 4-4.8 7-4.8s5.2 1.6 7 4.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+      </span>
+      <div><strong>CRACKENTICK</strong><small>Servicios de internet</small></div>
+    </div>
+    <div class="p-factura__estado">
+      <span class="p-status p-status--<%= clases[factura.status] || 'pendiente' %>"><%= estados[factura.status] || factura.status %></span>
+      <strong><%= formatearDinero(factura.total, factura.currency) %></strong>
+    </div>
+  </header>
+
+  <div class="p-factura__datos">
+    <div>
+      <span class="p-eyebrow">Facturado a</span>
+      <strong><%= clientePortal.fullName %></strong>
+      <small><%= clientePortal.clientCode %><%= clientePortal.taxId ? ` · ${clientePortal.taxId}` : '' %></small>
+      <% if (clientePortal.email) { %><small><%= clientePortal.email %></small><% } %>
+    </div>
+    <div>
+      <span class="p-eyebrow">Factura</span>
+      <strong class="p-mono"><%= factura.invoiceNumber %></strong>
+      <small>Emitida: <%= formatearFecha(factura.issueDate) %></small>
+      <small>Vence: <%= formatearFecha(factura.dueDate) %></small>
+      <% if (factura.periodStart && factura.periodEnd) { %><small>Período: <%= formatearFecha(factura.periodStart) %> – <%= formatearFecha(factura.periodEnd) %></small><% } %>
+    </div>
+  </div>
+
+  <div class="p-tabla-scroll">
+    <table class="p-tabla">
+      <thead><tr><th>Descripción</th><th class="p-der">Cantidad</th><th class="p-der">Precio</th><th class="p-der">Importe</th></tr></thead>
+      <tbody>
+        <% (factura.lines || []).forEach((linea) => { %>
+          <tr>
+            <td><%= linea.description %></td>
+            <td class="p-der"><%= linea.quantity %></td>
+            <td class="p-der"><%= formatearDinero(linea.unitPrice, factura.currency) %></td>
+            <td class="p-der"><strong><%= formatearDinero(linea.amount, factura.currency) %></strong></td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="p-factura__pie">
+    <div class="p-factura__notas">
+      <% if (factura.notes) { %><p><strong>Notas:</strong> <%= factura.notes %></p><% } %>
+      <% if (factura.status === 'paid' && factura.paidAt) { %><p><strong>Pagada el</strong> <%= formatearFecha(factura.paidAt) %><%= factura.paymentMethod ? ` · ${factura.paymentMethod}` : '' %></p><% } %>
+      <% if (factura.status === 'void') { %><p><strong>Anulada:</strong> <%= factura.voidReason || 'Sin motivo registrado' %></p><% } %>
+      <p class="p-texto--suave">Los pagos se registran en oficina o por transferencia. Consulta el monto exacto en esta factura.</p>
+    </div>
+    <dl class="p-totales">
+      <div><dt>Subtotal</dt><dd><%= formatearDinero(factura.subtotal, factura.currency) %></dd></div>
+      <% if (factura.discountAmount) { %><div><dt>Descuento</dt><dd>-<%= formatearDinero(factura.discountAmount, factura.currency) %></dd></div><% } %>
+      <div><dt>IVA (<%= Math.round((factura.taxRate || 0) * 100) %>%)</dt><dd><%= formatearDinero(factura.tax, factura.currency) %></dd></div>
+      <div class="p-totales__total"><dt>Total</dt><dd><%= formatearDinero(factura.total, factura.currency) %></dd></div>
+    </dl>
+  </div>
+</article>

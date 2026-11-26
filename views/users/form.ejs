@@ -1,0 +1,120 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Administración · Accesos</p>
+    <h2 class="pagina-cabecera__titulo"><%= modo === 'crear' ? 'Nuevo usuario' : `Editar ${usuarioEditado.name}` %></h2>
+    <p class="pagina-cabecera__texto">Define las credenciales y los nodos a los que puede acceder este usuario.</p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <a class="boton boton--secundario" href="/admin/usuarios"><%- include('../partials/icon', { nombre: 'arrowLeft' }) %> Volver</a>
+  </div>
+</section>
+
+<% if (errores && errores.length) { %>
+  <div class="aviso aviso--error" role="alert">
+    <span class="aviso__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></span>
+    <div class="aviso__texto"><strong>Revisa los datos:</strong><ul class="lista-errores"><% errores.forEach((m) => { %><li><%= m %></li><% }); %></ul></div>
+  </div>
+<% } %>
+
+<form class="formulario" action="<%= modo === 'crear' ? '/admin/usuarios' : `/admin/usuarios/${usuarioEditado._id}` %>" method="post" novalidate>
+  <% if (modo === 'editar') { %><input type="hidden" name="_method" value="PUT"><% } %>
+
+  <section class="tarjeta superficie formulario__seccion">
+    <div class="formulario__cabecera">
+      <span class="formulario__numero">01</span>
+      <div><h3>Identidad y credenciales</h3><p>El usuario de inicio de sesión se guarda en minúsculas.</p></div>
+    </div>
+    <div class="formulario__rejilla">
+      <div class="campo">
+        <label for="name">Nombre completo *</label>
+        <input id="name" name="name" type="text" maxlength="80" value="<%= usuarioEditado.name || '' %>" placeholder="Ej. Juan Echenique" required>
+      </div>
+      <div class="campo">
+        <label for="username">Usuario de inicio de sesión *</label>
+        <input id="username" name="username" type="text" maxlength="40" value="<%= usuarioEditado.username || '' %>" placeholder="carla.mendoza" pattern="[A-Za-z0-9._-]+" required>
+      </div>
+      <div class="campo">
+        <label for="email">Correo</label>
+        <input id="email" name="email" type="email" maxlength="120" value="<%= usuarioEditado.email || '' %>" placeholder="carla@crackentick.com">
+      </div>
+      <div class="campo">
+        <label for="role">Rol *</label>
+        <select id="role" name="role" data-rol-usuario>
+          <option value="staff" <%= usuarioEditado.role !== 'admin' ? 'selected' : '' %>>Operador (acceso por nodos)</option>
+          <% if (usuario && usuario.role === 'admin') { %>
+            <option value="admin" <%= usuarioEditado.role === 'admin' ? 'selected' : '' %>>Administrador (acceso total)</option>
+          <% } %>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="password"><%= modo === 'crear' ? 'Contraseña *' : 'Nueva contraseña' %></label>
+        <input id="password" name="password" type="password" autocomplete="new-password" minlength="6" placeholder="<%= modo === 'crear' ? 'Mínimo 6 caracteres' : 'Dejar en blanco para conservar' %>" <%= modo === 'crear' ? 'required' : '' %>>
+      </div>
+      <div class="campo">
+        <label class="switch switch--campo">
+          <input type="checkbox" name="active" <%= usuarioEditado.active ? 'checked' : '' %>>
+          <span class="switch__control"></span>
+          <span class="switch__texto">Usuario activo</span>
+        </label>
+      </div>
+    </div>
+  </section>
+
+  <section class="tarjeta superficie formulario__seccion" data-seccion-permisos>
+    <div class="formulario__cabecera">
+      <span class="formulario__numero">02</span>
+      <div><h3>Permisos por nodo</h3><p>Los usuarios con rol administrador no necesitan permisos individuales.</p></div>
+    </div>
+    <div class="permisos-grupos">
+      <p class="texto-suave">Sin acceso: no ve el nodo. Solo lectura: entra y consulta. Editar: puede crear y modificar.</p>
+      <% if (typeof presets !== 'undefined' && presets.length) { %>
+        <div class="campo campo--ancho">
+          <label for="presetPermisos">Cargar permisos desde un preset</label>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+            <select id="presetPermisos" data-preset-select style="max-width: 340px;">
+              <option value="">Elige un preset</option>
+              <% presets.forEach((preset) => { %><option value="<%= preset._id %>"><%= preset.name %><%= preset.description ? ` · ${preset.description}` : '' %></option><% }); %>
+            </select>
+            <button type="button" class="boton boton--secundario boton--sm" data-preset-aplicar><%- include('../partials/icon', { nombre: 'check' }) %> Aplicar</button>
+            <% if (puedeEditar('admin.usuarios')) { %><a class="boton boton--secundario boton--sm" href="/admin/usuarios/presets">Gestionar presets</a><% } %>
+          </div>
+          <span class="campo__ayuda">Rellena los permisos de abajo. Revísalos antes de guardar; el preset no se modifica.</span>
+        </div>
+      <% } else if (puedeEditar('admin.usuarios')) { %>
+        <p class="texto-suave">¿Quieres llenar los permisos más rápido? <a href="/admin/usuarios/presets">Crea un preset por cargo</a>.</p>
+      <% } %>
+      <% gruposPermisos.forEach((grupo) => { %>
+        <div class="permisos-grupo">
+          <div class="permisos-grupo__cabecera">
+            <span>
+              <strong><%= grupo.label %></strong>
+              <small><%= grupo.descripcion || '' %></small>
+            </span>
+          </div>
+          <div class="permisos-grupo__nodos">
+            <% grupo.nodos.forEach((nodo) => { %>
+              <% const listaPermisos = usuarioEditado.permissions || []; %>
+              <% const nivelNodo = listaPermisos.includes(nodo.key) ? 'editar' : (listaPermisos.includes(`${nodo.key}:read`) ? 'ver' : 'none'); %>
+              <label class="permiso-fila">
+                <span><%= nodo.label %></span>
+                <select name="perm__<%= nodo.key.replace(/\./g, '__') %>" class="campo-mini">
+                  <option value="none" <%= nivelNodo === 'none' ? 'selected' : '' %>>Sin acceso</option>
+                  <option value="ver" <%= nivelNodo === 'ver' ? 'selected' : '' %>>Solo lectura</option>
+                  <option value="editar" <%= nivelNodo === 'editar' ? 'selected' : '' %>>Editar</option>
+                </select>
+              </label>
+            <% }); %>
+          </div>
+        </div>
+      <% }); %>
+    </div>
+    <p class="nota nota--morado"><%- include('../partials/icon', { nombre: 'shield' }) %> Si el rol es Administrador, el usuario tiene control total aunque los niveles digan otra cosa.</p>
+  </section>
+
+  <div class="formulario__acciones">
+    <a class="boton boton--secundario" href="/admin/usuarios">Cancelar</a>
+    <button type="submit" class="boton boton--primario"><%- include('../partials/icon', { nombre: 'check' }) %> <%= modo === 'crear' ? 'Crear usuario' : 'Guardar cambios' %></button>
+  </div>
+</form>
+
+<script type="application/json" data-presets-permisos><%- JSON.stringify((typeof presets !== 'undefined' ? presets : []).map((preset) => ({ id: String(preset._id), name: preset.name, permissions: preset.permissions }))).replace(/</g, '\\u003c') %></script>

@@ -1,0 +1,77 @@
+<%
+  const estados = { open: 'Abierto', in_progress: 'En proceso', resolved: 'Resuelto', closed: 'Cerrado' };
+  const clases = { open: 'abierto', in_progress: 'proceso', resolved: 'resuelto', closed: 'cerrado' };
+  const prioridades = { low: 'Baja', medium: 'Media', high: 'Alta', urgent: 'Crítica' };
+  const categorias = { technical: 'Problema técnico', billing: 'Facturación o pago', installation: 'Instalación o visita', other: 'Otro' };
+  const mensajes = ticket.messages || [];
+%>
+<section class="p-page-head p-page-head--compacta" data-motion="fade">
+  <div>
+    <span class="p-eyebrow">Ticket <span class="p-mono"><%= ticket.code %></span></span>
+    <h1><%= ticket.subject %></h1>
+    <p><%= categorias[ticket.category] || 'Soporte' %> · abierto el <%= formatearFechaHora(ticket.createdAt) %></p>
+  </div>
+  <div class="p-page-head__acciones">
+    <a class="p-btn p-btn--secundario" href="/portal/tickets"><%- include('_icono', { nombre: 'arrowLeft' }) %> Volver</a>
+    <span class="p-status p-status--<%= clases[ticket.status] || 'abierto' %>"><%= estados[ticket.status] || ticket.status %></span>
+  </div>
+</section>
+
+<div class="p-grid p-grid--detalle">
+  <section class="p-card p-conversacion" data-motion="fade">
+    <header class="p-card__head">
+      <div><span class="p-eyebrow">Conversación</span><h2>Seguimiento con soporte</h2></div>
+      <span class="p-pill p-pill--suave">Prioridad: <%= prioridades[ticket.priority] || ticket.priority %></span>
+    </header>
+
+    <div class="p-timeline">
+      <article class="p-mensaje p-mensaje--cliente">
+        <span class="p-mensaje__avatar"><%= String(clientePortal.firstName || 'C').charAt(0) %><%= String(clientePortal.lastName || '').charAt(0) %></span>
+        <div class="p-mensaje__burbuja">
+          <header><strong><%= clientePortal.fullName %></strong><small><%= formatearFechaHora(ticket.createdAt) %></small></header>
+          <p><%= ticket.description %></p>
+        </div>
+      </article>
+      <% mensajes.forEach((mensaje) => { const propio = String(mensaje.author || '').trim() === String(clientePortal.fullName || '').trim(); %>
+        <article class="p-mensaje <%= propio ? 'p-mensaje--cliente' : 'p-mensaje--soporte' %>">
+          <span class="p-mensaje__avatar"><%= propio ? `${String(clientePortal.firstName || 'C').charAt(0)}${String(clientePortal.lastName || '').charAt(0)}` : 'S' %></span>
+          <div class="p-mensaje__burbuja">
+            <header><strong><%= mensaje.author || 'Soporte' %></strong><small><%= formatearFechaHora(mensaje.createdAt) %></small></header>
+            <p><%= mensaje.body %></p>
+          </div>
+        </article>
+      <% }); %>
+    </div>
+
+    <% if (ticket.status !== 'closed') { %>
+      <form id="respuesta" action="/portal/tickets/<%= ticket._id %>/mensajes" method="post" class="p-respuesta">
+        <label for="body">Responder a soporte</label>
+        <textarea id="body" name="body" rows="4" maxlength="2000" required placeholder="Escribe tu mensaje..."></textarea>
+        <div class="p-respuesta__acciones">
+          <small class="p-help">Tu mensaje queda en este ticket. No incluyas contraseñas.</small>
+          <button type="submit" class="p-btn p-btn--primario">Enviar mensaje <%- include('_icono', { nombre: 'arrowRight' }) %></button>
+        </div>
+      </form>
+    <% } else { %>
+      <div class="p-alerta p-alerta--aviso"><%- include('_icono', { nombre: 'alert' }) %><div><strong>Este ticket está cerrado.</strong><span>Si necesitas algo más, abre uno nuevo.</span></div><a class="p-btn p-btn--pequeno p-btn--secundario" href="/portal/tickets/nuevo">Abrir ticket</a></div>
+    <% } %>
+  </section>
+
+  <aside class="p-lateral">
+    <section class="p-card" data-motion="fade">
+      <header class="p-card__head"><div><span class="p-eyebrow">Detalle</span><h2><%= ticket.code %></h2></div></header>
+      <dl class="p-datos">
+        <div><dt>Estado</dt><dd><span class="p-status p-status--<%= clases[ticket.status] || 'abierto' %>"><%= estados[ticket.status] || ticket.status %></span></dd></div>
+        <div><dt>Tipo</dt><dd><%= categorias[ticket.category] || 'Soporte' %></dd></div>
+        <div><dt>Prioridad</dt><dd><%= prioridades[ticket.priority] || ticket.priority %></dd></div>
+        <div><dt>Asignado a</dt><dd><%= ticket.assignedTo || 'Soporte' %></dd></div>
+        <div><dt>Creado</dt><dd><%= formatearFechaHora(ticket.createdAt) %></dd></div>
+      </dl>
+    </section>
+    <section class="p-card p-card--ayuda p-card--ayuda-clara" data-motion="fade">
+      <span class="p-card__icono-grande"><%- include('_icono', { nombre: 'clock' }) %></span>
+      <h2>Seguimiento</h2>
+      <p>Te responderemos por aquí. Puedes volver cuando quieras para ver la conversación.</p>
+    </section>
+  </aside>
+</div>

@@ -1,0 +1,62 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Administración · Accesos</p>
+    <h2 class="pagina-cabecera__titulo">Presets de permisos</h2>
+    <p class="pagina-cabecera__texto">Plantillas para llenar los permisos de un usuario nuevo. Editar o borrar un preset nunca cambia los permisos de un usuario existente.</p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <a class="boton boton--secundario boton--sm" href="/admin/usuarios"><%- include('../partials/icon', { nombre: 'arrowLeft' }) %> Usuarios</a>
+    <% if (puedeEditar('admin.usuarios')) { %>
+      <a class="boton boton--primario boton--sm" href="/admin/usuarios/presets/nuevo"><%- include('../partials/icon', { nombre: 'plus' }) %> Nuevo preset</a>
+    <% } %>
+  </div>
+</section>
+
+<nav class="tabs" aria-label="Usuarios">
+  <a class="tabs__enlace" href="/admin/usuarios">Usuarios</a>
+  <a class="tabs__enlace is-activo" href="/admin/usuarios/presets" aria-current="page">Presets de permisos</a>
+</nav>
+
+<section class="tarjeta superficie panel panel--tabla">
+  <div class="panel__cabecera">
+    <div><p class="etiqueta">Plantillas</p><h3><%= presets.length %> preset(s)</h3></div>
+  </div>
+  <% if (!presets.length) { %>
+    <div class="vacio vacio--compacto">
+      <p class="vacio__icono"><%- include('../partials/icon', { nombre: 'shield' }) %></p>
+      <p class="vacio__texto">No hay presets. Crea uno con los permisos de un cargo para asignarlos en un clic.</p>
+    </div>
+  <% } else { %>
+    <div class="tabla-scroll">
+      <table class="tabla">
+        <thead><tr><th>Preset</th><th>Permisos</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <tbody>
+          <% presets.forEach((preset) => { %>
+            <tr>
+              <td data-etiqueta="Preset">
+                <strong><%= preset.name %></strong>
+                <% if (preset.description) { %><br><small class="texto-suave"><%= preset.description %></small><% } %>
+              </td>
+              <td data-etiqueta="Permisos">
+                <div class="chips">
+                  <% (preset.permissions || []).slice(0, 6).forEach((permiso) => { %><span class="chip"><%= etiquetasPermiso[String(permiso).replace(/:read$/, '')] || permiso %></span><% }); %>
+                  <% if ((preset.permissions || []).length > 6) { %><span class="chip">+<%= preset.permissions.length - 6 %></span><% } %>
+                </div>
+              </td>
+              <td data-etiqueta="Estado"><span class="insignia insignia--<%= preset.active ? 'active' : 'overdue' %>"><%= preset.active ? 'Activo' : 'Inactivo' %></span></td>
+              <td data-etiqueta="Acciones" class="tabla__acciones">
+                <% if (puedeEditar('admin.usuarios')) { %>
+                  <a class="boton-icono boton-icono--sm" href="/admin/usuarios/presets/<%= preset._id %>/editar" title="Editar" aria-label="Editar <%= preset.name %>"><%- include('../partials/icon', { nombre: 'edit' }) %></a>
+                  <form action="/admin/usuarios/presets/<%= preset._id %>" method="post" data-confirmar="¿Eliminar el preset <%= preset.name %>? Los usuarios existentes conservan sus permisos.">
+                    <input type="hidden" name="_method" value="DELETE">
+                    <button type="submit" class="boton-icono boton-icono--sm" title="Eliminar" aria-label="Eliminar <%= preset.name %>"><%- include('../partials/icon', { nombre: 'trash' }) %></button>
+                  </form>
+                <% } %>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</section>

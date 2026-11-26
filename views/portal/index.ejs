@@ -1,0 +1,119 @@
+﻿<%
+  const plan = suscripcion?.planId || null;
+  const estadosFactura = { open: 'Pendiente', overdue: 'Vencida', paid: 'Pagada', void: 'Anulada' };
+  const clasesFactura = { open: 'pendiente', overdue: 'vencida', paid: 'pagada', void: 'anulada' };
+  const estadosTicket = { open: 'Abierto', in_progress: 'En proceso', resolved: 'Resuelto', closed: 'Cerrado' };
+  const clasesTicket = { open: 'abierto', in_progress: 'proceso', resolved: 'resuelto', closed: 'cerrado' };
+  const estadosServicio = { active: 'Activo', suspended: 'Suspendido', cancelled: 'Cancelado' };
+  const proxima = cuenta.proxima;
+%>
+<section class="p-page-head" data-motion="fade">
+  <div>
+    <span class="p-eyebrow">Hola de nuevo</span>
+    <h1><%= clientePortal.firstName %>, este es tu resumen</h1>
+    <p>Cliente <strong class="p-mono"><%= clientePortal.clientCode %></strong><%= clientePortal.email ? ` · ${clientePortal.email}` : '' %></p>
+  </div>
+  <div class="p-page-head__acciones">
+    <a class="p-btn p-btn--secundario" href="/portal/facturas"><%- include('_icono', { nombre: 'receipt' }) %> Ver facturas</a>
+    <a class="p-btn p-btn--primario" href="/portal/tickets/nuevo"><%- include('_icono', { nombre: 'plus' }) %> Nuevo ticket</a>
+  </div>
+</section>
+
+<section class="p-stats" data-motion="stagger">
+  <article class="p-stat p-stat--morado">
+    <span class="p-stat__icono"><%- include('_icono', { nombre: 'receipt' }) %></span>
+    <div><small>Saldo pendiente</small><strong><%= formatearDinero(cuenta.deuda) %></strong><em><%= cuenta.facturas.pendientes %> factura(s) por pagar</em></div>
+  </article>
+  <article class="p-stat p-stat--ambar">
+    <span class="p-stat__icono"><%- include('_icono', { nombre: 'calendar' }) %></span>
+    <div><small>Próximo vencimiento</small><strong><%= proxima ? formatearFecha(proxima.dueDate) : '—' %></strong><em><%= proxima ? formatearDinero(proxima.total, proxima.currency) : 'Sin facturas pendientes' %></em></div>
+  </article>
+  <article class="p-stat p-stat--verde">
+    <span class="p-stat__icono"><%- include('_icono', { nombre: 'wifi' }) %></span>
+    <div><small>Servicio</small><strong><%= suscripcion ? (estadosServicio[suscripcion.status] || suscripcion.status) : 'Sin servicio' %></strong><em><%= plan ? plan.name : 'Sin plan contratado' %></em></div>
+  </article>
+  <article class="p-stat p-stat--azul">
+    <span class="p-stat__icono"><%- include('_icono', { nombre: 'message' }) %></span>
+    <div><small>Tickets abiertos</small><strong><%= cuenta.tickets.abiertos %></strong><em><%= cuenta.tickets.total %> en total</em></div>
+  </article>
+</section>
+
+<% if (cuenta.facturas.vencidas) { %>
+  <div class="p-alerta p-alerta--aviso" data-motion="fade">
+    <%- include('_icono', { nombre: 'alert' }) %>
+    <div><strong>Tienes <%= cuenta.facturas.vencidas %> factura(s) vencida(s).</strong><span>Revisa el detalle y regulariza el pago para evitar la suspensión del servicio.</span></div>
+    <a class="p-btn p-btn--pequeno p-btn--secundario" href="/portal/facturas?estado=vencidas">Ver vencidas</a>
+  </div>
+<% } %>
+
+<div class="p-grid p-grid--principal">
+  <section class="p-card" data-motion="fade">
+    <header class="p-card__head">
+      <div><span class="p-eyebrow">Facturación</span><h2>Últimas facturas</h2></div>
+      <a class="p-link" href="/portal/facturas">Ver todas <%- include('_icono', { nombre: 'arrowRight' }) %></a>
+    </header>
+    <% if (!facturas.length) { %>
+      <div class="p-vacio"><span class="p-vacio__icono"><%- include('_icono', { nombre: 'receipt' }) %></span><strong>Sin facturas todavía</strong><p>Cuando se emita tu primera factura aparecerá aquí.</p></div>
+    <% } else { %>
+      <div class="p-lista">
+        <% facturas.forEach((factura) => { %>
+          <a class="p-fila" href="/portal/facturas/<%= factura._id %>">
+            <span class="p-fila__icono"><%- include('_icono', { nombre: 'receipt' }) %></span>
+            <span class="p-fila__texto"><strong><%= factura.invoiceNumber %></strong><small>Emitida el <%= formatearFecha(factura.issueDate) %> · vence el <%= formatearFecha(factura.dueDate) %></small></span>
+            <span class="p-status p-status--<%= clasesFactura[factura.status] || 'pendiente' %>"><%= estadosFactura[factura.status] || factura.status %></span>
+            <span class="p-fila__monto"><%= formatearDinero(factura.total, factura.currency) %></span>
+            <%- include('_icono', { nombre: 'arrowRight' }) %>
+          </a>
+        <% }); %>
+      </div>
+    <% } %>
+  </section>
+
+  <aside class="p-lateral">
+    <section class="p-card p-card--servicio" data-motion="fade">
+      <header class="p-card__head"><div><span class="p-eyebrow">Mi servicio</span><h2><%= plan ? plan.name : 'Sin plan' %></h2></div>
+        <span class="p-status p-status--<%= suscripcion?.status === 'active' ? 'activo' : 'vencida' %>"><%= suscripcion ? (estadosServicio[suscripcion.status] || suscripcion.status) : 'Sin servicio' %></span>
+      </header>
+      <% if (plan) { %>
+        <div class="p-velocidad">
+          <div><small>Descarga</small><strong><%= plan.downloadSpeed || 0 %><span>Mbps</span></strong></div>
+          <div><small>Subida</small><strong><%= plan.uploadSpeed || 0 %><span>Mbps</span></strong></div>
+        </div>
+      <% } %>
+      <dl class="p-datos">
+        <div><dt>Código de cliente</dt><dd class="p-mono"><%= clientePortal.clientCode %></dd></div>
+        <div><dt>Correo</dt><dd><%= clientePortal.email || 'No registrado' %></dd></div>
+        <div><dt>Teléfono</dt><dd><%= clientePortal.phone || 'No registrado' %></dd></div>
+      </dl>
+    </section>
+
+    <section class="p-card p-card--ayuda" data-motion="fade">
+      <span class="p-card__glow" aria-hidden="true"></span>
+      <span class="p-card__icono-grande"><%- include('_icono', { nombre: 'message' }) %></span>
+      <h2>¿Algo no funciona?</h2>
+      <p>Abre un ticket y cuéntanos qué pasa. Soporte lo revisa y te responde en el mismo portal.</p>
+      <a class="p-btn p-btn--claro p-btn--bloque" href="/portal/tickets/nuevo">Abrir un ticket</a>
+    </section>
+  </aside>
+</div>
+
+<section class="p-card" data-motion="fade">
+  <header class="p-card__head">
+    <div><span class="p-eyebrow">Soporte</span><h2>Tus últimos tickets</h2></div>
+    <a class="p-link" href="/portal/tickets">Ver todos <%- include('_icono', { nombre: 'arrowRight' }) %></a>
+  </header>
+  <% if (!tickets.length) { %>
+    <div class="p-vacio"><span class="p-vacio__icono"><%- include('_icono', { nombre: 'ticket' }) %></span><strong>No has abierto tickets</strong><p>Si necesitas ayuda, abre uno y seguimos la conversación aquí.</p><a class="p-btn p-btn--secundario p-btn--pequeno" href="/portal/tickets/nuevo">Crear el primero</a></div>
+  <% } else { %>
+    <div class="p-lista">
+      <% tickets.forEach((ticket) => { %>
+        <a class="p-fila" href="/portal/tickets/<%= ticket._id %>">
+          <span class="p-fila__icono p-fila__icono--ticket"><%- include('_icono', { nombre: 'ticket' }) %></span>
+          <span class="p-fila__texto"><strong><%= ticket.subject %></strong><small><span class="p-mono"><%= ticket.code %></span> · <%= formatearFechaHora(ticket.createdAt) %> · <%= (ticket.messages || []).filter((m) => !m.internal).length %> mensaje(s)</small></span>
+          <span class="p-status p-status--<%= clasesTicket[ticket.status] || 'abierto' %>"><%= estadosTicket[ticket.status] || ticket.status %></span>
+          <%- include('_icono', { nombre: 'arrowRight' }) %>
+        </a>
+      <% }); %>
+    </div>
+  <% } %>
+</section>

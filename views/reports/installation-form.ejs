@@ -1,0 +1,105 @@
+<%
+  const isoHora = (valor) => {
+    const d = valor ? new Date(valor) : new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}T${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  };
+  const cliente = reporte.clientId && reporte.clientId.firstName
+    ? `${reporte.clientId.firstName} ${reporte.clientId.lastName}`.trim()
+    : (reporte.clientName || '—');
+  const creando = modo === 'crear';
+  const clienteActual = String(reporte.clientId?._id || reporte.clientId || '');
+  const planActual = String(reporte.planId?._id || reporte.planId || '');
+%>
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Reportes · Instalaciones</p>
+    <h2 class="pagina-cabecera__titulo"><%= creando ? 'Nueva instalación' : 'Editar reporte de instalación' %></h2>
+    <p class="pagina-cabecera__texto"><%= creando ? 'Registra una instalación que no venga de una venta.' : 'Cliente, plan y venta vienen de la instalación; solo cambian zona, técnico, fecha/hora y notas.' %></p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <a class="boton boton--secundario" href="/red/reportes/instalaciones"><%- include('../partials/icon', { nombre: 'arrowLeft' }) %> Volver</a>
+  </div>
+</section>
+
+<% if (errores && errores.length) { %>
+  <div class="aviso aviso--error" role="alert">
+    <span class="aviso__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></span>
+    <div class="aviso__texto"><strong>Revisa los datos:</strong><ul class="lista-errores"><% errores.forEach((m) => { %><li><%= m %></li><% }); %></ul></div>
+  </div>
+<% } %>
+
+<form class="formulario" action="<%= creando ? '/red/reportes/instalaciones' : `/red/reportes/instalaciones/${reporte._id}` %>" method="post">
+  <% if (!creando) { %><input type="hidden" name="_method" value="PUT"><% } %>
+
+  <section class="tarjeta superficie formulario__seccion">
+    <div class="formulario__cabecera"><span class="formulario__numero">01</span><div><h3>Datos de la instalación</h3><p><%= creando ? 'Elige el cliente y el plan.' : 'Estos datos no se editan desde el reporte.' %></p></div></div>
+    <div class="formulario__rejilla">
+      <% if (creando) { %>
+        <div class="campo">
+          <label for="clientId">Cliente</label>
+          <select id="clientId" name="clientId" required>
+            <option value="">Selecciona un cliente</option>
+            <% (clientes || []).forEach((item) => { %>
+              <option value="<%= item._id %>" <%= clienteActual === String(item._id) ? 'selected' : '' %>><%= item.clientCode %> · <%= item.firstName %> <%= item.lastName %></option>
+            <% }); %>
+          </select>
+        </div>
+        <div class="campo">
+          <label for="planId">Plan</label>
+          <select id="planId" name="planId">
+            <option value="">Sin plan</option>
+            <% (planes || []).forEach((item) => { %>
+              <option value="<%= item._id %>" <%= planActual === String(item._id) ? 'selected' : '' %>><%= item.name %></option>
+            <% }); %>
+          </select>
+        </div>
+      <% } else { %>
+        <div class="campo"><label>Cliente</label><input type="text" value="<%= cliente %>" readonly></div>
+        <div class="campo"><label>Plan</label><input type="text" value="<%= reporte.planName || '—' %>" readonly></div>
+        <div class="campo"><label>Venta</label><input type="text" value="<%= reporte.saleId?.code || '—' %>" readonly></div>
+        <div class="campo"><label>Factura</label><input type="text" value="<%= reporte.saleId?.invoiceId ? 'Emitida' : '—' %>" readonly></div>
+      <% } %>
+    </div>
+  </section>
+
+  <section class="tarjeta superficie formulario__seccion">
+    <div class="formulario__cabecera"><span class="formulario__numero">02</span><div><h3>Zona y técnico</h3><p>La zona se asigna manualmente en este reporte.</p></div></div>
+    <div class="formulario__rejilla">
+      <div class="campo">
+        <label for="zoneId">Zona</label>
+        <select id="zoneId" name="zoneId">
+          <option value="">Sin zona</option>
+          <% zonas.forEach((zona) => { %>
+            <option value="<%= zona._id %>" <%= String(reporte.zoneId?._id || reporte.zoneId || '') === String(zona._id) ? 'selected' : '' %>><%= zona.name %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="technician">Técnico</label>
+        <input id="technician" name="technician" type="text" maxlength="80" list="tecnicos-instalacion" value="<%= reporte.technician || '' %>">
+        <datalist id="tecnicos-instalacion"><% tecnicos.forEach((nombre) => { %><option value="<%= nombre %>"></option><% }); %></datalist>
+      </div>
+      <div class="campo">
+        <label for="installedAt">Fecha y hora</label>
+        <input id="installedAt" name="installedAt" type="datetime-local" value="<%= isoHora(reporte.installedAt) %>">
+      </div>
+      <div class="campo">
+        <label for="macAddress">MAC del equipo</label>
+        <input id="macAddress" name="macAddress" type="text" maxlength="40" value="<%= reporte.macAddress || '' %>" placeholder="AA:BB:CC:DD:EE:FF">
+        <span class="campo__ayuda">Se guarda en el reporte; en el servicio se puede editar.</span>
+      </div>
+      <div class="campo">
+        <label class="check"><input type="checkbox" name="macAuthEnabled" <%= reporte.macAuthEnabled ? 'checked' : '' %>> Autenticación por MAC</label>
+      </div>
+      <div class="campo campo--ancho">
+        <label for="notes">Notas</label>
+        <textarea id="notes" name="notes" rows="3" maxlength="500"><%= reporte.notes || '' %></textarea>
+      </div>
+    </div>
+  </section>
+
+  <div class="formulario__acciones">
+    <a class="boton boton--secundario" href="/red/reportes/instalaciones">Cancelar</a>
+    <button type="submit" class="boton boton--primario"><%- include('../partials/icon', { nombre: 'check' }) %> <%= creando ? 'Agregar instalación' : 'Guardar reporte' %></button>
+  </div>
+</form>

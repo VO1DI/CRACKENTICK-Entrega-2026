@@ -1,0 +1,104 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Operación · Agenda</p>
+    <h2 class="pagina-cabecera__titulo"><%= modo === 'crear' ? 'Nueva tarea' : 'Editar tarea' %></h2>
+    <p class="pagina-cabecera__texto">Asigna un responsable y una fecha. La persona marca el inicio y el fin.</p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <a class="boton boton--secundario" href="/agenda"><%- include('../partials/icon', { nombre: 'arrowLeft' }) %> Volver</a>
+  </div>
+</section>
+
+<form class="formulario" action="<%= modo === 'crear' ? '/agenda' : `/agenda/${tarea._id}` %>" method="post" data-duracion>
+  <% if (modo === 'editar') { %><input type="hidden" name="_method" value="PUT"><% } %>
+
+  <% if (errores && errores.length) { %>
+    <div class="aviso aviso--error" role="alert">
+      <span class="aviso__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></span>
+      <div class="aviso__texto"><strong>Revisa los datos:</strong><ul class="lista-errores"><% errores.forEach((mensaje) => { %><li><%= mensaje %></li><% }); %></ul></div>
+    </div>
+  <% } %>
+
+  <section class="tarjeta superficie formulario__seccion">
+    <div class="formulario__cabecera"><span class="formulario__numero">01</span><div><h3>Datos de la tarea</h3><p>Título, responsable y cuándo debe hacerse.</p></div></div>
+    <div class="formulario__rejilla">
+      <div class="campo campo--ancho">
+        <label for="title">Título *</label>
+        <input id="title" name="title" type="text" maxlength="120" required value="<%= tarea.title || '' %>" placeholder="Instalación en casa del cliente">
+      </div>
+      <div class="campo">
+        <label for="assignedTo">Responsable *</label>
+        <select id="assignedTo" name="assignedTo" required>
+          <option value="">Selecciona</option>
+          <% usuarios.forEach((usuario) => { %>
+            <option value="<%= usuario._id %>" <%= String(tarea.assignedTo?._id || tarea.assignedTo || '') === String(usuario._id) ? 'selected' : '' %>><%= usuario.name %> · @<%= usuario.username %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="scheduledAt">Fecha y hora *</label>
+        <input id="scheduledAt" name="scheduledAt" type="datetime-local" required value="<%= typeof tarea.scheduledAt === 'string' ? tarea.scheduledAt : '' %>">
+      </div>
+      <div class="campo">
+        <label for="durationMode">Forma de duración</label>
+        <select id="durationMode" name="durationMode">
+          <option value="minutos" <%= (tarea.durationMode || 'minutos') === 'minutos' ? 'selected' : '' %>>En minutos</option>
+          <option value="horas" <%= tarea.durationMode === 'horas' ? 'selected' : '' %>>En horas</option>
+          <option value="rango" <%= tarea.durationMode === 'rango' ? 'selected' : '' %>>De hora a hora</option>
+        </select>
+      </div>
+      <div class="campo" data-duracion-grupo="minutos">
+        <label for="durationMinutes">Duración (minutos)</label>
+        <input id="durationMinutes" name="durationMinutes" type="number" min="15" max="720" step="15" value="<%= tarea.durationMinutes || 60 %>">
+        <span class="campo__ayuda">Entre 15 y 720 minutos. Ej. 60, 90 o 120.</span>
+      </div>
+      <div class="campo" data-duracion-grupo="horas" hidden>
+        <label for="durationHours">Duración (horas)</label>
+        <input id="durationHours" name="durationHours" type="number" min="0.25" max="12" step="0.25" value="<%= tarea.durationHours || 1 %>">
+        <span class="campo__ayuda">De 0.25 a 12 horas. Ej. 1, 1.5 o 4.</span>
+      </div>
+      <div class="campo" data-duracion-grupo="rango" hidden>
+        <label for="durationFrom">Desde</label>
+        <input id="durationFrom" name="durationFrom" type="time" step="300" value="<%= tarea.durationFrom || '08:00' %>">
+      </div>
+      <div class="campo" data-duracion-grupo="rango" hidden>
+        <label for="durationTo">Hasta</label>
+        <input id="durationTo" name="durationTo" type="time" step="300" value="<%= tarea.durationTo || '09:00' %>">
+        <span class="campo__ayuda">Mínimo 15 min y máximo 12 h. 00:00 como fin significa medianoche.</span>
+      </div>
+      <div class="campo">
+        <label for="priority">Prioridad</label>
+        <select id="priority" name="priority">
+          <% Object.entries(prioridades).forEach(([clave, etiqueta]) => { %>
+            <option value="<%= clave %>" <%= tarea.priority === clave ? 'selected' : '' %>><%= etiqueta %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="category">Tipo de tarea</label>
+        <select id="category" name="category">
+          <% Object.entries(categorias).forEach(([clave, etiqueta]) => { %>
+            <option value="<%= clave %>" <%= tarea.category === clave ? 'selected' : '' %>><%= etiqueta %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="location">Ubicación</label>
+        <input id="location" name="location" type="text" maxlength="160" value="<%= tarea.location || '' %>" placeholder="Sector, calle, referencia">
+      </div>
+      <div class="campo campo--ancho">
+        <label for="description">Descripción</label>
+        <textarea id="description" name="description" rows="3" maxlength="600"><%= tarea.description || '' %></textarea>
+      </div>
+      <div class="campo campo--ancho">
+        <label for="notes">Notas internas</label>
+        <textarea id="notes" name="notes" rows="2" maxlength="600"><%= tarea.notes || '' %></textarea>
+      </div>
+    </div>
+  </section>
+
+  <div class="formulario__acciones">
+    <a class="boton boton--secundario" href="/agenda">Cancelar</a>
+    <button type="submit" class="boton boton--primario"><%- include('../partials/icon', { nombre: 'check' }) %> Guardar tarea</button>
+  </div>
+</form>

@@ -1,0 +1,112 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Comercial · <%= venta.code %></p>
+    <h2 class="pagina-cabecera__titulo">Venta a <%= venta.clientId ? `${venta.clientId.firstName} ${venta.clientId.lastName}` : venta.clienteNombre %></h2>
+    <p class="pagina-cabecera__texto">
+      <span class="insignia insignia--<%= venta.status === 'installed' ? 'active' : venta.status === 'waiting' ? 'pending' : 'cancelled' %>"><%= etiquetas[venta.status] %></span>
+      · Registrada <%= formatearFechaHora(venta.createdAt) %>
+    </p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <a class="boton boton--secundario" href="/ventas"><%- include('../partials/icon', { nombre: 'arrowLeft' }) %> Volver</a>
+    <% if (venta.status === 'installed' && venta.invoiceId) { %>
+      <a class="boton boton--secundario" href="/finanzas/facturas/<%= venta.invoiceId._id %>"><%- include('../partials/icon', { nombre: 'receipt' }) %> Ver factura</a>
+    <% } %>
+    <% if (venta.status === 'installed' && venta.subscriptionId) { %>
+      <a class="boton boton--secundario" href="/red/monitoreo/cliente/<%= venta.subscriptionId._id %>"><%- include('../partials/icon', { nombre: 'gauge' }) %> Monitorear</a>
+    <% } %>
+  </div>
+</section>
+
+<div class="dash-grid">
+  <section class="tarjeta panel panel--ocho">
+    <div class="panel__cabecera"><div><p class="etiqueta">Detalle</p><h3>Materiales e instalación</h3></div><span class="insignia insignia--<%= venta.status === 'installed' ? 'active' : 'none' %>"><%= venta.status === 'installed' ? 'Stock descontado' : venta.status === 'waiting' ? 'Stock intacto' : 'Sin movimientos' %></span></div>
+    <% if (venta.items.length === 0) { %>
+      <p class="texto-suave">Esta venta no incluye materiales.</p>
+    <% } else { %>
+      <div class="tabla-scroll">
+        <table class="tabla tabla--compacta">
+          <thead><tr><th>Artículo</th><th>Cantidad</th><th>Precio</th><th>Importe</th><th>Seriales</th></tr></thead>
+          <tbody>
+            <% venta.items.forEach((item) => { %>
+              <tr>
+                <td data-etiqueta="Artículo"><strong><%= item.name %></strong><small><%= item.tracking === 'serial' ? 'Serializado' : 'Por cantidad' %></small></td>
+                <td data-etiqueta="Cantidad"><%= item.quantity %> <%= item.unit %></td>
+                <td data-etiqueta="Precio"><%= formatearDinero(item.unitPrice) %></td>
+                <td data-etiqueta="Importe"><%= formatearDinero(item.amount) %></td>
+                <td data-etiqueta="Seriales"><span class="mono"><%= item.serials?.join(', ') || '—' %></span></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+
+    <div class="resumen-servicio resumen-servicio--cuatro">
+      <div><small>Materiales</small><strong><%= formatearDinero(venta.materialsTotal) %></strong></div>
+      <div><small>Instalación</small><strong><%= formatearDinero(venta.installationCost) %></strong></div>
+      <div><small>IVA (<%= venta.taxRatePercent %> %)</small><strong><%= formatearDinero(venta.tax) %></strong></div>
+      <div><small>Total</small><strong><%= formatearDinero(venta.total) %></strong></div>
+    </div>
+
+    <% if (venta.status === 'waiting') { %>
+      <div class="panel__cabecera"><div><p class="etiqueta">Cierre</p><h3>Instalar o cancelar</h3></div></div>
+      <% if (!venta.service?.planId) { %>
+        <div class="aviso aviso--advertencia" role="note">
+          <span class="aviso__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></span>
+          <p class="aviso__texto">Servicio pendiente: el técnico debe completar plan, router, pool e IP antes de instalar.</p>
+        </div>
+      <% } %>
+      <div class="pila pila--separada">
+        <% if (puedeEditar('ventas.instalar')) { %>
+          <a class="boton boton--secundario boton--bloque" href="/ventas/<%= venta._id %>/servicio/editar"><%- include('../partials/icon', { nombre: 'edit' }) %> Modificar servicio</a>
+          <form action="/ventas/<%= venta._id %>/instalar" method="post" class="formulario formulario--compacto" data-confirmar="Se creará el cliente, el servicio, se descontará inventario y se emitirá la factura de instalación. ¿Continuar?">
+            <button type="submit" class="boton boton--primario boton--bloque"><%- include('../partials/icon', { nombre: 'check' }) %> Instalar venta</button>
+          </form>
+        <% } %>
+        <% if (puedeEditar('ventas.inventario')) { %>
+          <a class="boton boton--secundario boton--bloque" href="/ventas/<%= venta._id %>/materiales/editar"><%- include('../partials/icon', { nombre: 'box' }) %> Editar costo y materiales</a>
+        <% } %>
+        <% if (puedeEditar('ventas.ventas')) { %>
+        <form action="/ventas/<%= venta._id %>/cancelar" method="post" class="formulario formulario--compacto" data-confirmar="¿Cancelar la venta? No se modificará el inventario.">
+          <div class="campo"><label for="reason">Motivo de cancelación</label><input id="reason" name="reason" type="text" maxlength="300" placeholder="Cliente desistió"></div>
+          <button type="submit" class="boton boton--peligro boton--bloque"><%- include('../partials/icon', { nombre: 'ban' }) %> Cancelar venta</button>
+        </form>
+        <% } %>
+      </div>
+    <% } else if (venta.status === 'installed' && venta.clientId) { %>
+      <div class="panel__cabecera"><div><p class="etiqueta">Servicio</p><h3>Cliente instalado</h3></div></div>
+      <a class="boton boton--secundario boton--bloque" href="/clientes/<%= venta.clientId._id || venta.clientId %>?tab=servicio"><%- include('../partials/icon', { nombre: 'edit' }) %> Modificar servicio del cliente</a>
+    <% } %>
+  </section>
+
+  <aside class="pila">
+    <section class="tarjeta panel">
+      <div class="panel__cabecera"><div><p class="etiqueta">Cliente</p><h3>Datos</h3></div></div>
+      <div class="resumen-linea"><span>Nombre</span><strong><%= venta.clientId ? `${venta.clientId.firstName} ${venta.clientId.lastName}` : venta.clienteNombre %></strong></div>
+      <div class="resumen-linea"><span>Código</span><strong class="mono"><%= venta.clientId?.clientCode || 'Pendiente' %></strong></div>
+      <div class="resumen-linea"><span>Identificación</span><strong><%= venta.customer?.taxId || '—' %></strong></div>
+      <div class="resumen-linea"><span>Email</span><strong><%= venta.customer?.email || '—' %></strong></div>
+      <div class="resumen-linea"><span>Teléfono</span><strong><%= venta.customer?.phone || '—' %></strong></div>
+      <div class="resumen-linea"><span>Dirección</span><strong><%= [venta.customer?.address, venta.customer?.city, venta.customer?.state].filter(Boolean).join(', ') || '—' %></strong></div>
+    </section>
+
+    <section class="tarjeta panel">
+      <div class="panel__cabecera"><div><p class="etiqueta">Servicio</p><h3>Configuración</h3></div></div>
+      <div class="resumen-linea"><span>Plan</span><strong><%= venta.service?.planId?.name || '—' %></strong></div>
+      <div class="resumen-linea"><span>Conexión</span><strong><%= etiquetas[venta.service?.connectionType] || '—' %></strong></div>
+      <div class="resumen-linea"><span>Router</span><strong><%= venta.service?.routerId?.name || 'Automático' %></strong></div>
+      <div class="resumen-linea"><span>Pool</span><strong class="mono"><%= venta.service?.ipPoolId?.cidr || '—' %></strong></div>
+      <div class="resumen-linea"><span>IP</span><strong class="mono"><%= venta.service?.ipAddress || '—' %></strong></div>
+      <div class="resumen-linea"><span>PPPoE</span><strong class="mono"><%= venta.service?.pppoeUsername || '—' %></strong></div>
+      <% if (venta.scheduledAt) { %><div class="resumen-linea"><span>Agendada</span><strong><%= formatearFecha(venta.scheduledAt) %></strong></div><% } %>
+      <div class="resumen-linea"><span>Técnico</span><strong><%= venta.technicianId?.name || 'Sin asignar' %></strong></div>
+      <div class="resumen-linea"><span>Promotor</span><strong><%= venta.promoterId?.name || 'Sin asignar' %></strong></div>
+      <% if (venta.cancelReason) { %><div class="resumen-linea"><span>Cancelación</span><strong><%= venta.cancelReason %></strong></div><% } %>
+    </section>
+
+    <% if (venta.notes) { %>
+      <section class="tarjeta panel"><div class="panel__cabecera"><div><p class="etiqueta">Notas</p><h3>Observaciones</h3></div></div><p class="texto-suave"><%= venta.notes %></p></section>
+    <% } %>
+  </aside>
+</div>

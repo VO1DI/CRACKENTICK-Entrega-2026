@@ -1,0 +1,369 @@
+<%
+  const bsOrden = ['pago_movil', 'transfer', 'cash', 'other'];
+  const bsPorClave = new Map(pagos.bs.map((fila) => [fila.key, fila]));
+  const usdPorClave = new Map(pagos.usd.map((fila) => [fila.key, fila]));
+  const instalacionesEquipos = economia.instalaciones + economia.equipos;
+  const baseEtiqueta = base === 'devengo' ? 'Devengo' : 'Caja';
+  const enlaceBase = (valor) => {
+    const parametros = new URLSearchParams({ mes, base: valor });
+    if (pagos.periodo === 'diario') { parametros.set('periodo', 'diario'); parametros.set('fecha', pagos.fecha); }
+    if (pagos.periodo === 'anual') { parametros.set('periodo', 'anual'); parametros.set('anio', pagos.anio); }
+    return `/finanzas?${parametros.toString()}`;
+  };
+  const enlacePeriodo = (periodo) => {
+    const parametros = new URLSearchParams({ mes, periodo, base });
+    if (periodo === 'diario') parametros.set('fecha', pagos.fecha);
+    if (periodo === 'anual') parametros.set('anio', pagos.anio);
+    return `/finanzas?${parametros.toString()}`;
+  };
+%>
+
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Finanzas · Contabilidad</p>
+    <h2 class="pagina-cabecera__titulo">Resumen contable de <%= mesEtiqueta %></h2>
+    <p class="pagina-cabecera__texto">Base <strong><%= baseEtiqueta %></strong>: <%= base === 'devengo' ? 'facturado en el mes, esté cobrado o no' : 'solo facturas cobradas' %>. Ingresos sin IVA, con el total con IVA como referencia.</p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <a class="boton boton--secundario boton--sm" href="/finanzas?mes=<%= mesAnterior %>"><%- include('../partials/icon', { nombre: 'arrowLeft' }) %> Mes anterior</a>
+    <form class="buscador buscador--mes" action="/finanzas" method="get">
+      <%- include('../partials/icon', { nombre: 'calendar' }) %>
+      <input type="month" name="mes" value="<%= mes %>" aria-label="Mes a consultar" data-auto-enviar>
+    </form>
+    <a class="boton boton--secundario boton--sm" href="/finanzas?mes=<%= mesSiguiente %>">Mes siguiente <%- include('../partials/icon', { nombre: 'chevronRight' }) %></a>
+    <button type="button" class="boton boton--secundario boton--sm" data-imprimir><%- include('../partials/icon', { nombre: 'fileText' }) %> Imprimir / PDF</button>
+    <a class="boton boton--primario boton--sm" href="/admin/gastos/nuevo?mes=<%= mes %>"><%- include('../partials/icon', { nombre: 'plus' }) %> Registrar gasto o ingreso</a>
+  </div>
+</section>
+
+<div class="base-contable">
+  <span class="base-contable__etiqueta">Base contable</span>
+  <div class="segmentado" role="group" aria-label="Base contable">
+    <a class="segmentado__boton <%= base === 'caja' ? 'is-activo' : '' %>" href="<%= enlaceBase('caja') %>" aria-pressed="<%= base === 'caja' %>">Caja</a>
+    <a class="segmentado__boton <%= base === 'devengo' ? 'is-activo' : '' %>" href="<%= enlaceBase('devengo') %>" aria-pressed="<%= base === 'devengo' %>">Devengo</a>
+  </div>
+  <span class="texto-suave">Caja suma lo cobrado. Devengo suma lo facturado en el mes.</span>
+</div>
+
+<section class="rejilla rejilla--cuatro">
+  <article class="tarjeta superficie kpi kpi--verde">
+    <div class="kpi__cabecera"><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'dollar' }) %></span><span class="kpi__periodo"><%= base === 'devengo' ? 'Facturado (sin IVA)' : 'Cobrado (sin IVA)' %></span></div>
+    <p class="kpi__valor"><%= formatearDinero(resumen.ingresos) %></p>
+    <p class="kpi__etiqueta">Sin IVA · <%= baseEtiqueta.toLowerCase() %></p>
+    <p class="kpi__detalle">Con IVA <%= formatearDinero(resumen.ingresosBrutos) %> · IVA <%= formatearDinero(resumen.ivaCobrado) %></p>
+    <p class="kpi__detalle">Mensualidades <%= formatearDinero(economia.servicio) %> · Instalaciones y equipos <%= formatearDinero(instalacionesEquipos) %></p>
+  </article>
+
+  <article class="tarjeta superficie kpi kpi--rojo">
+    <div class="kpi__cabecera"><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'trendUp', clase: 'icon--invertido' }) %></span><span class="kpi__periodo">Gastos del mes</span></div>
+    <p class="kpi__valor"><%= formatearDinero(resumen.gastos) %></p>
+    <p class="kpi__etiqueta">Incluye instalación, operativos y nómina</p>
+    <p class="kpi__detalle">Pendientes de pago: <%= formatearDinero(resumen.gastosPendientes) %></p>
+  </article>
+
+  <article class="tarjeta superficie kpi kpi--<%= resumen.neto >= 0 ? 'verde' : 'rojo' %>">
+    <div class="kpi__cabecera"><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'activity' }) %></span><span class="kpi__periodo">Utilidad neta</span></div>
+    <p class="kpi__valor"><%= formatearDinero(resumen.neto) %></p>
+    <p class="kpi__etiqueta">Después de costo de equipos y gastos</p>
+    <p class="kpi__detalle">La deuda por cobrar no se resta: es un activo. Margen neto: <%= resumen.margen %>%</p>
+  </article>
+
+  <article class="tarjeta superficie kpi kpi--morado">
+    <div class="kpi__cabecera"><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'receipt' }) %></span><span class="kpi__periodo">Por cobrar del mes</span></div>
+    <p class="kpi__valor"><%= formatearDinero(resumen.porCobrar) %></p>
+    <p class="kpi__etiqueta">Facturas abiertas o vencidas del mes</p>
+    <p class="kpi__detalle"><%= resumen.porCobrarCantidad %> factura(s) · <%= resumen.facturas %> cobrada(s)</p>
+  </article>
+</section>
+
+<section class="tarjeta panel contabilidad-pagos" id="pagos">
+  <div class="panel__cabecera contabilidad-pagos__cabecera">
+    <div>
+      <p class="etiqueta">Cobros</p>
+      <h3>Cobros por moneda y método de pago</h3>
+      <p class="texto-suave">Dinero recibido, independiente de la base contable. Detalle por día, mes o año.</p>
+    </div>
+    <div class="contabilidad-pagos__filtros">
+      <div class="segmentado" role="group" aria-label="Periodo de pagos">
+        <a class="segmentado__boton <%= pagos.periodo === 'diario' ? 'is-activo' : '' %>" href="<%= enlacePeriodo('diario') %>" aria-pressed="<%= pagos.periodo === 'diario' %>">Diario</a>
+        <a class="segmentado__boton <%= pagos.periodo === 'mensual' ? 'is-activo' : '' %>" href="<%= enlacePeriodo('mensual') %>" aria-pressed="<%= pagos.periodo === 'mensual' %>">Mensual</a>
+        <a class="segmentado__boton <%= pagos.periodo === 'anual' ? 'is-activo' : '' %>" href="<%= enlacePeriodo('anual') %>" aria-pressed="<%= pagos.periodo === 'anual' %>">Anual</a>
+      </div>
+      <% if (pagos.periodo === 'diario') { %>
+        <form class="buscador buscador--mes" action="/finanzas" method="get">
+          <input type="hidden" name="mes" value="<%= mes %>">
+          <input type="hidden" name="periodo" value="diario">
+          <%- include('../partials/icon', { nombre: 'calendar' }) %>
+          <input type="date" name="fecha" value="<%= pagos.fecha %>" aria-label="Día a consultar" data-auto-enviar>
+        </form>
+      <% } else if (pagos.periodo === 'mensual') { %>
+        <form class="buscador buscador--mes" action="/finanzas" method="get">
+          <input type="hidden" name="periodo" value="mensual">
+          <%- include('../partials/icon', { nombre: 'calendar' }) %>
+          <input type="month" name="mes" value="<%= pagos.mes %>" aria-label="Mes de pagos" data-auto-enviar>
+        </form>
+      <% } else { %>
+        <form class="buscador buscador--mes" action="/finanzas" method="get">
+          <input type="hidden" name="mes" value="<%= mes %>">
+          <input type="hidden" name="periodo" value="anual">
+          <%- include('../partials/icon', { nombre: 'calendar' }) %>
+          <input type="number" name="anio" min="2000" max="2100" step="1" value="<%= pagos.anio %>" aria-label="Año de pagos" data-auto-enviar>
+        </form>
+      <% } %>
+    </div>
+  </div>
+
+  <div class="contabilidad-pagos__cuerpo">
+    <section class="pagos-tarjeta">
+      <header class="pagos-tarjeta__cabecera">
+        <strong><%= pagos.etiqueta %></strong>
+        <span>Acumulado del periodo</span>
+      </header>
+
+      <div class="pagos-tarjeta__bloque">
+        <% bsOrden.forEach((clave) => { const fila = bsPorClave.get(clave); if (!fila) return; %>
+          <div class="pago-linea">
+            <span><%= fila.label %> (Bs) <small><%= fila.cantidad %> pago(s)</small></span>
+            <strong><%= formatearDinero(fila.total, 'VES') %></strong>
+          </div>
+        <% }); %>
+        <div class="pago-linea pago-linea--total">
+          <span>Total Bs <small><%= pagos.countBs %> pago(s)</small></span>
+          <strong><%= formatearDinero(pagos.totalBs, 'VES') %></strong>
+          <small>≈ <%= pagos.equivalenteUsd == null ? '—' : formatearDinero(pagos.equivalenteUsd, 'USD') %></small>
+        </div>
+      </div>
+
+      <div class="pagos-tarjeta__bloque">
+        <% ['cash', 'other'].forEach((clave) => { const fila = usdPorClave.get(clave); if (!fila) return; %>
+          <div class="pago-linea">
+            <span><%= fila.label %> (USD) <small><%= fila.cantidad %> pago(s)</small></span>
+            <strong><%= formatearDinero(fila.total, 'USD') %></strong>
+          </div>
+        <% }); %>
+        <div class="pago-linea pago-linea--total">
+          <span>Total USD <small><%= pagos.countUsd %> pago(s)</small></span>
+          <strong><%= formatearDinero(pagos.totalUsd, 'USD') %></strong>
+          <small>≈ <%= pagos.equivalenteBs == null ? '—' : formatearDinero(pagos.equivalenteBs, 'VES') %></small>
+        </div>
+      </div>
+
+      <div class="pagos-tarjeta__ventas">
+        <p>PAGOS REGISTRADOS</p>
+        <div class="resumen-linea"><span>En Bs</span><strong><%= pagos.countBs %></strong></div>
+        <div class="resumen-linea"><span>En USD</span><strong><%= pagos.countUsd %></strong></div>
+        <div class="resumen-linea"><span>Total</span><strong><%= pagos.total %></strong></div>
+      </div>
+
+      <footer class="pagos-tarjeta__pie">
+        Tasa BCV:
+        <% if (pagos.tasa) { %>
+          <strong><%= formatearDinero(pagos.tasa, 'VES') %> / USD</strong>
+          <small><%= pagos.tasaFuente || 'guardada' %></small>
+        <% } else { %>
+          <strong>sin tasa</strong>
+          <small>actualiza la tasa en Configuración</small>
+        <% } %>
+      </footer>
+    </section>
+
+    <% if (pagos.desglose.length) { %>
+      <div class="tabla-scroll contabilidad-pagos__tabla">
+        <table class="tabla tabla--compacta">
+          <thead>
+            <tr>
+              <th><%= pagos.periodo === 'anual' ? 'Mes' : 'Día' %></th>
+              <th>Bs Pago Móvil</th>
+              <th>Bs Transferencia</th>
+              <th>Bs Efectivo</th>
+              <th>Bs Otros</th>
+              <th>USD Efectivo</th>
+              <th>USD Otros</th>
+              <th>Cobrado (USD)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% pagos.desglose.forEach((fila) => { %>
+              <tr>
+                <td data-etiqueta="Periodo"><%= fila.etiqueta %></td>
+                <td data-etiqueta="Bs Pago Móvil"><%= formatearDinero(fila.bs.pago_movil || 0, 'VES') %></td>
+                <td data-etiqueta="Bs Transferencia"><%= formatearDinero(fila.bs.transfer || 0, 'VES') %></td>
+                <td data-etiqueta="Bs Efectivo"><%= formatearDinero(fila.bs.cash || 0, 'VES') %></td>
+                <td data-etiqueta="Bs Otros"><%= formatearDinero(fila.bs.other || 0, 'VES') %></td>
+                <td data-etiqueta="USD Efectivo"><%= formatearDinero(fila.usd.cash || 0, 'USD') %></td>
+                <td data-etiqueta="USD Otros"><%= formatearDinero(fila.usd.other || 0, 'USD') %></td>
+                <td data-etiqueta="Cobrado"><strong><%= formatearDinero(fila.totalCobradoUsd, 'USD') %></strong></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <div class="vacio vacio--compacto contabilidad-pagos__vacio"><p class="vacio__texto">Sin pagos registrados en este periodo.</p></div>
+    <% } %>
+  </div>
+</section>
+
+<div class="dash-grid">
+  <section class="tarjeta superficie panel dash-chart">
+    <div class="panel__cabecera">
+      <div><p class="etiqueta">Últimos 6 meses · Base <%= baseEtiqueta.toLowerCase() %></p><h3>Evolución de ingresos y gastos</h3><small class="texto-suave">Mensualidades, instalaciones, ventas de equipos y otros ingresos frente a gastos.</small></div>
+    </div>
+    <%- include('../partials/grafico-economia', { serie, tasa: pagos.tasa, enlaceMes: false, base }) %>
+  </section>
+
+  <section class="tarjeta superficie panel panel--cuatro economia-panel">
+    <div class="panel__cabecera">
+      <div><p class="etiqueta">Resultado del período</p><h3><%= mesEtiqueta %></h3></div>
+    </div>
+    <div class="economia-panel__filas">
+      <div class="resumen-linea economia-panel__separador"><span>Mensualidades de internet</span><strong><%= formatearDinero(economia.servicio) %></strong></div>
+      <div class="resumen-linea"><span>Instalaciones</span><strong><%= formatearDinero(economia.instalaciones) %></strong></div>
+      <div class="resumen-linea"><span>Venta de equipos</span><strong><%= formatearDinero(economia.equipos) %></strong></div>
+      <div class="resumen-linea"><span>Otros ingresos</span><strong><%= formatearDinero(economia.otros) %></strong></div>
+      <div class="resumen-linea economia-panel__total"><span>Total de ingresos (sin IVA)</span><strong><%= formatearDinero(economia.ingresos) %></strong></div>
+      <div class="resumen-linea"><span>IVA cobrado</span><strong><%= formatearDinero(economia.ivaCobrado) %></strong></div>
+      <div class="resumen-linea"><span>Total con IVA</span><strong><%= formatearDinero(economia.ingresosBrutos) %></strong></div>
+
+      <div class="economia-panel__destacado">
+        <span>Ganancia bruta de instalaciones y equipos</span>
+        <strong class="<%= economia.gananciaInstalaciones >= 0 ? 'monto--ok' : 'monto--deuda' %>"><%= formatearDinero(economia.gananciaInstalaciones) %></strong>
+        <small>Solo instalaciones y ventas de equipos; no incluye mensualidades ni otros ingresos.</small>
+      </div>
+
+      <div class="resumen-linea economia-panel__separador"><span>Costo de equipos</span><strong class="monto--deuda">−<%= formatearDinero(economia.costoEquipos) %></strong></div>
+      <% if (economia.comprasInventario) { %><div class="resumen-linea"><span>Compras de inventario (activo, no resta utilidad)</span><strong><%= formatearDinero(economia.comprasInventario) %></strong></div><% } %>
+      <div class="resumen-linea"><span>Gastos directos de instalación</span><strong class="monto--deuda">−<%= formatearDinero(economia.gastosInstalaciones) %></strong></div>
+      <div class="resumen-linea"><span>Gastos operativos</span><strong class="monto--deuda">−<%= formatearDinero(economia.gastosOperativos) %></strong></div>
+      <div class="resumen-linea"><span>Nómina</span><strong class="monto--deuda">−<%= formatearDinero(economia.nomina) %></strong></div>
+      <div class="resumen-linea economia-panel__total"><span>Total de costos y gastos</span><strong class="monto--deuda">−<%= formatearDinero(economia.costoEquipos + economia.gastos) %></strong></div>
+      <div class="resumen-linea economia-panel__total"><span>Utilidad neta</span><strong class="<%= economia.utilidadNeta >= 0 ? 'monto--ok' : 'monto--deuda' %>"><%= formatearDinero(economia.utilidadNeta) %></strong></div>
+      <div class="resumen-linea"><span>Margen neto</span><strong><%= economia.margenNeto %>%</strong></div>
+      <div class="resumen-linea"><span>Por cobrar del mes</span><strong><%= formatearDinero(economia.pendienteCobro) %></strong></div>
+    </div>
+    <div class="economia-panel__acciones">
+      <a class="boton boton--secundario boton--sm" href="/admin/gastos?mes=<%= mes %>"><%- include('../partials/icon', { nombre: 'store' }) %> Gastos e ingresos</a>
+      <a class="boton boton--primario boton--sm" href="/finanzas/facturas?estado=paid"><%- include('../partials/icon', { nombre: 'receipt' }) %> Facturas cobradas</a>
+    </div>
+  </section>
+</div>
+
+<div class="dash-grid">
+  <section class="tarjeta superficie panel panel--tabla panel--ocho">
+    <div class="panel__cabecera">
+      <div><p class="etiqueta">Detalle del mes</p><h3>Gastos e ingresos registrados</h3></div>
+      <a class="boton boton--secundario boton--sm" href="/admin/gastos?mes=<%= mes %>">Ver todos <%- include('../partials/icon', { nombre: 'arrowUpRight' }) %></a>
+    </div>
+    <% if (!movimientos.length) { %>
+      <div class="vacio vacio--compacto"><p class="vacio__texto">No hay gastos o ingresos manuales registrados en <%= mesEtiqueta %>.</p></div>
+    <% } else { %>
+      <div class="tabla-scroll">
+        <table class="tabla tabla--compacta">
+          <thead><tr><th>Fecha</th><th>Concepto</th><th>Categoría</th><th>Tipo</th><th>Método</th><th>Estado</th><th>Monto</th></tr></thead>
+          <tbody>
+            <% movimientos.slice(0, 10).forEach((movimiento) => { %>
+              <tr>
+                <td data-etiqueta="Fecha"><%= formatearFecha(movimiento.date) %></td>
+                <td data-etiqueta="Concepto"><strong><%= movimiento.concept %></strong><small><%= movimiento.vendor || '—' %></small></td>
+                <td data-etiqueta="Categoría"><%= etiquetasCategoria[movimiento.category] || movimiento.category %></td>
+                <td data-etiqueta="Tipo"><span class="insignia insignia--<%= movimiento.type === 'income' ? 'active' : 'overdue' %>"><%= etiquetas[movimiento.type] || movimiento.type %></span></td>
+                <td data-etiqueta="Método"><%= movimiento.paymentMethod ? (etiquetas[movimiento.paymentMethod] || movimiento.paymentMethod) : '—' %></td>
+                <td data-etiqueta="Estado"><span class="insignia insignia--<%= movimiento.status === 'paid' ? 'active' : 'pending' %>"><%= etiquetas[movimiento.status] || movimiento.status %></span></td>
+                <td data-etiqueta="Monto"><strong class="<%= movimiento.type === 'income' ? 'monto--ok' : 'monto--deuda' %>"><%= movimiento.type === 'income' ? '+' : '−' %><%= formatearDinero(movimiento.amount, movimiento.currency) %></strong></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </section>
+
+  <section class="tarjeta superficie panel panel--tabla panel--cuatro">
+    <div class="panel__cabecera">
+      <div><p class="etiqueta">Cobros</p><h3>Facturas cobradas</h3></div>
+      <a class="enlace-flecha" href="/finanzas/facturas?estado=paid">Ver facturas <span aria-hidden="true">→</span></a>
+    </div>
+    <% if (!facturas.length) { %>
+      <div class="vacio vacio--compacto"><p class="vacio__texto">Sin facturas cobradas este mes.</p></div>
+    <% } else { %>
+      <ul class="lista-simple lista-simple--vertical">
+        <% facturas.forEach((factura) => { %>
+          <li>
+            <div>
+              <a href="/finanzas/facturas/<%= factura._id %>"><strong><%= factura.invoiceNumber %></strong> · <%= factura.clientId ? `${factura.clientId.firstName} ${factura.clientId.lastName}` : 'Cliente' %></a>
+              <small><%= formatearFecha(factura.paidAt) %> · <%= etiquetas[factura.type] || factura.type %></small>
+            </div>
+            <strong class="monto--ok"><%= formatearDinero(factura.total, factura.currency) %></strong>
+          </li>
+        <% }); %>
+      </ul>
+    <% } %>
+  </section>
+</div>
+
+<section class="tarjeta panel">
+  <div class="panel__cabecera">
+    <div><p class="etiqueta">Distribución</p><h3>Gastos por categoría</h3></div>
+    <a class="enlace-flecha" href="/admin/gastos?mes=<%= mes %>">Gestionar <span aria-hidden="true">→</span></a>
+  </div>
+  <% if (!categorias.length) { %>
+    <div class="vacio vacio--compacto"><p class="vacio__texto">Sin gastos registrados en este mes.</p></div>
+  <% } else { %>
+    <div class="categoria-grafico">
+      <div class="categoria-grafico__lienzo">
+        <canvas id="graficoGastosCategoria" role="img" aria-label="Distribución de gastos por categoría"></canvas>
+      </div>
+      <ul class="categoria-leyenda">
+        <% categorias.forEach((categoria, indice) => { %>
+          <li>
+            <span class="categoria-leyenda__punto" data-color="<%= indice %>"></span>
+            <span class="categoria-leyenda__nombre"><%= categoria.etiqueta %></span>
+            <strong><%= formatearDinero(categoria.total) %></strong>
+            <small><%= categoria.porcentaje %>%</small>
+          </li>
+        <% }); %>
+      </ul>
+    </div>
+  <% } %>
+</section>
+
+<% if (categorias.length) { %>
+<script>
+  (function () {
+    var lienzo = document.getElementById('graficoGastosCategoria');
+    if (!lienzo || !window.Chart) return;
+    var categorias = <%- JSON.stringify(categorias).replace(/</g, '\\u003c') %>;
+    var moneda = (document.querySelector('meta[name="moneda"]') || {}).content || 'USD';
+    var locale = (document.querySelector('meta[name="locale"]') || {}).content || 'es-VE';
+    var formateador = new Intl.NumberFormat(locale, { style: 'currency', currency: moneda, maximumFractionDigits: 2 });
+    var paleta = ['#7c5cff', '#f59e0b', '#3b82f6', '#22c55e', '#f43f5e', '#06b6d4', '#a855f7', '#eab308', '#64748b', '#ec4899'];
+    var colores = categorias.map(function (_, indice) { return paleta[indice % paleta.length]; });
+    document.querySelectorAll('.categoria-leyenda__punto').forEach(function (punto) {
+      punto.style.background = colores[Number(punto.dataset.color)] || paleta[0];
+    });
+    new window.Chart(lienzo, {
+      type: 'doughnut',
+      data: {
+        labels: categorias.map(function (item) { return item.etiqueta; }),
+        datasets: [{ data: categorias.map(function (item) { return item.total; }), backgroundColor: colores, borderWidth: 0, hoverOffset: 6 }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '62%',
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function (contexto) {
+                var item = categorias[contexto.dataIndex];
+                return item.etiqueta + ': ' + formateador.format(item.total) + ' (' + item.porcentaje + '%)';
+              },
+            },
+          },
+        },
+      },
+    });
+  })();
+</script>
+<% } %>

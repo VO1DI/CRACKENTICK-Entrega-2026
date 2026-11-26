@@ -1,0 +1,96 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Almacén · Inventario</p>
+    <h2 class="pagina-cabecera__titulo">Artículos y equipos</h2>
+    <p class="pagina-cabecera__texto"><%= resumen.articulos %> artículo(s) activo(s) · <%= resumen.seriales %> serial(es) registrados</p>
+  </div>
+  <div class="pagina-cabecera__acciones"><a class="boton boton--primario" href="/inventario/nuevo"><%- include('../partials/icon', { nombre: 'plus' }) %> Nuevo artículo</a></div>
+</section>
+
+<section class="dash-kpis">
+  <article class="kpi kpi--morado"><div class="kpi__cabecera"><span class="kpi__titulo">Artículos</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'box' }) %></span></div><p class="kpi__valor" data-contador data-valor="<%= resumen.articulos %>" data-formato="entero"><%= resumen.articulos %></p><p class="kpi__detalle">Activos en catálogo</p></article>
+  <article class="kpi kpi--ambar"><div class="kpi__cabecera"><span class="kpi__titulo">Bajo mínimo</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></span></div><p class="kpi__valor" data-contador data-valor="<%= resumen.bajoMinimo %>" data-formato="entero"><%= resumen.bajoMinimo %></p><p class="kpi__detalle"><a href="/inventario?stock=bajo">Revisar reposición →</a></p></article>
+  <article class="kpi kpi--verde"><div class="kpi__cabecera"><span class="kpi__titulo">Seriales</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'key' }) %></span></div><p class="kpi__valor" data-contador data-valor="<%= resumen.seriales %>" data-formato="entero"><%= resumen.seriales %></p><p class="kpi__detalle">Routers y ONUs</p></article>
+  <article class="kpi kpi--verde"><div class="kpi__cabecera"><span class="kpi__titulo">Valor de inventario</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'dollar' }) %></span></div><p class="kpi__valor" data-contador data-valor="<%= resumen.costo %>" data-formato="moneda"><%= formatearDinero(resumen.costo) %></p><p class="kpi__detalle">Costo de todas las existencias</p></article>
+</section>
+
+<section class="tarjeta superficie filtros">
+  <form method="get" action="/inventario" class="filtros__form">
+    <div class="campo campo--busqueda"><label class="sr-only" for="q">Buscar artículo</label><div class="campo__control"><%- include('../partials/icon', { nombre: 'search' }) %><input id="q" type="search" name="q" value="<%= filtros.q %>" placeholder="Nombre, código o serial"></div></div>
+    <div class="campo"><label for="categoria">Categoría</label><select id="categoria" name="categoria" data-auto-enviar><option value="">Todas</option><% ['router', 'onu', 'antenna', 'switch', 'cable', 'connector', 'other'].forEach((v) => { %><option value="<%= v %>" <%= filtros.categoria === v ? 'selected' : '' %>><%= etiquetas[v] %></option><% }); %></select></div>
+    <div class="campo"><label for="tipo">Seguimiento</label><select id="tipo" name="tipo" data-auto-enviar><option value="">Todos</option><option value="bulk" <%= filtros.tipo === 'bulk' ? 'selected' : '' %>>Por cantidad</option><option value="serial" <%= filtros.tipo === 'serial' ? 'selected' : '' %>>Serializado</option></select></div>
+    <div class="campo"><label for="stock">Stock</label><select id="stock" name="stock" data-auto-enviar><option value="">Todos</option><option value="bajo" <%= filtros.stock === 'bajo' ? 'selected' : '' %>>Bajo mínimo</option></select></div>
+    <button type="submit" class="boton boton--secundario boton--sm">Filtrar</button>
+  </form>
+</section>
+
+<section class="tarjeta panel panel--tabla">
+  <% if (items.length === 0) { %>
+    <div class="vacio vacio--compacto"><p class="vacio__icono"><%- include('../partials/icon', { nombre: 'box' }) %></p><p class="vacio__texto">No hay artículos con estos filtros.</p></div>
+  <% } else { %>
+    <div class="tabla-scroll">
+      <table class="tabla">
+        <thead><tr><th>Código</th><th>Artículo</th><th>Categoría</th><th>Seguimiento</th><th>Stock</th><th>Mínimo</th><th>Precio</th><th></th></tr></thead>
+        <tbody>
+          <% items.forEach((item) => { %>
+            <tr>
+              <td data-etiqueta="Código"><span class="mono"><%= item.code %></span></td>
+              <td data-etiqueta="Artículo"><a href="/inventario/<%= item._id %>"><strong><%= item.name %></strong></a><small><%= item.location || item.supplier || '—' %></small></td>
+              <td data-etiqueta="Categoría"><%= etiquetas[item.category] %></td>
+              <td data-etiqueta="Seguimiento"><span class="insignia insignia--<%= item.tracking === 'serial' ? 'morado' : 'none' %>"><%= etiquetas[item.tracking] %></span></td>
+              <td data-etiqueta="Stock"><strong><%= item.stock %></strong> <small><%= item.unit %></small></td>
+              <td data-etiqueta="Mínimo"><%= item.minStock %></td>
+              <td data-etiqueta="Precio"><%= formatearDinero(item.price) %></td>
+              <td><a class="boton-icono boton-icono--sm" href="/inventario/<%= item._id %>" aria-label="Ver artículo"><%- include('../partials/icon', { nombre: 'eye' }) %></a></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+    <%- include('../partials/pagination', { paginacion, filtros }) %>
+  <% } %>
+</section>
+
+<section class="tarjeta panel panel--tabla" id="alertas-stock">
+  <div class="panel__cabecera">
+    <div>
+      <p class="etiqueta">Almacén</p>
+      <h3>Alertas de stock</h3>
+    </div>
+    <div class="panel__acciones">
+      <span class="texto-suave"><%= alertasStock.length %> pendiente(s)</span>
+      <a class="enlace-flecha" href="/notificaciones">Notificaciones <span aria-hidden="true">→</span></a>
+    </div>
+  </div>
+  <% if (alertasStock.length === 0) { %>
+    <div class="vacio vacio--compacto">
+      <p class="vacio__icono vacio__icono--verde"><%- include('../partials/icon', { nombre: 'check' }) %></p>
+      <p class="vacio__texto">Sin alertas de stock pendientes.</p>
+    </div>
+  <% } else { %>
+    <div class="tabla-scroll">
+      <table class="tabla">
+        <thead><tr><th>Mensaje</th><th>Inicio</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <tbody>
+          <% alertasStock.forEach((alerta) => { %>
+            <tr>
+              <td data-etiqueta="Mensaje"><%= alerta.message %></td>
+              <td data-etiqueta="Inicio"><%= formatearFechaHora(alerta.startedAt) %></td>
+              <td data-etiqueta="Estado"><span class="insignia insignia--<%= alerta.status === 'active' ? 'overdue' : 'pending' %>"><%= etiquetas[alerta.status] || alerta.status %></span></td>
+              <td data-etiqueta="Acciones" class="tabla__acciones">
+                <% if (alerta.status === 'active') { %>
+                  <form action="/inventario/alertas/<%= alerta._id %>/reconocer" method="post">
+                    <button type="submit" class="boton-icono boton-icono--sm" title="Reconocer"><%- include('../partials/icon', { nombre: 'eye' }) %></button>
+                  </form>
+                <% } %>
+                <form action="/inventario/alertas/<%= alerta._id %>/resolver" method="post">
+                  <button type="submit" class="boton-icono boton-icono--sm" title="Resolver"><%- include('../partials/icon', { nombre: 'check' }) %></button>
+                </form>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</section>

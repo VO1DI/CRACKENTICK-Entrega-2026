@@ -1,0 +1,61 @@
+CRACKENTICK - PAQUETE PARA LA LAPTOP
+Pruebas del 23/11/2026
+====================================
+
+QUE TRAE
+--------
+- Aplicacion completa con node_modules (no hace falta npm install).
+- .env listo para esta prueba.
+- CHR RouterOS 7.20.2 + QEMU en las carpetas chr\ y qemu\.
+- Dos bats: sembrar.bat e iniciar.bat.
+- Guia de pruebas: docs\PRUEBAS-2026-11-23.md
+
+REQUISITOS
+----------
+- Windows de 64 bits.
+- Node.js 26 LTS (ya lo tienes).
+- MongoDB iniciado como servicio (ya lo tienes).
+- No se incluye rclone: las pruebas de respaldo a Google Drive quedan opcionales.
+
+PASOS
+-----
+1. Descomprime el ZIP en C:\CRACKENTICK.
+   Evita ejecutarlo desde OneDrive o desde el ZIP abierto.
+
+2. Doble clic en sembrar.bat y escribe SI.
+   Borra la base "crackentick" y carga los datos de ejemplo con UN solo
+   router: el CHR incluido. Tarda unos segundos.
+
+3. Doble clic en iniciar.bat.
+   Arranca MongoDB si hace falta, arranca el CHR y luego la aplicacion.
+   El CHR tarda entre 30 y 90 segundos en aceptar la API.
+
+4. Abre http://localhost:3000  ->  admin / admin123
+
+Datos que debes ver despues de sembrar
+--------------------------------------
+- 40 clientes, 38 servicios, 1 router, 5 planes activos.
+- IPAM: 4 pools, 38 IPs usadas, 1746 libres, 0 conflictos.
+  Estaticas Caracas     192.168.10.0/24  total 254  usadas 3   libres 251
+  Estaticas Occidente   192.168.30.0/24  total 254  usadas 3   libres 251
+  PPPoE Caracas         10.10.0.0/22     total 1022 usadas 18  libres 1004
+  PPPoE Maracaibo       10.20.0.0/24     total 254  usadas 14  libres 240
+
+CHR INCLUIDO
+------------
+- Nombre en la app: CHR QEMU (prueba)
+- API:    127.0.0.1:8728   crackentick-api / CAMBIAR_CLAVE_CHR
+- WinBox: 127.0.0.1:8291   admin / CAMBIAR_CLAVE_ADMIN
+- SSH:    127.0.0.1:2222   crackentick-api / CAMBIAR_CLAVE_CHR
+- Cerrar la ventana minimizada "CHR QEMU" apaga la VM.
+- No ejecutes otro CHR si el puerto 8728 ya esta ocupado.
+
+IMPORTANTE
+----------
+- El ZIP contiene .env con las claves de la instalacion. No lo compartas.
+- sembrar.bat BORRA la base crackentick de la laptop.
+- El CHR usa red NAT de QEMU: sirve para API, SSH y WinBox, pero no para
+  conectarse por WiFi al hotspot. El vencimiento de vouchers se prueba con
+  pruebas\forzar-vencido.js.
+- Si Windows SmartScreen advierte por los .bat, elige "Mas informacion" >
+  "Ejecutar de todas formas".

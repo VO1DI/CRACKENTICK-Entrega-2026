@@ -1,0 +1,71 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Operación · Agenda</p>
+    <h2 class="pagina-cabecera__titulo"><%= modo === 'crear' ? 'Nuevo tipo de tarea' : `Editar ${tipo.name}` %></h2>
+    <p class="pagina-cabecera__texto">El nombre y el color se usan en la agenda. La clave interna no cambia al editar para no romper las tareas existentes.</p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <a class="boton boton--secundario boton--sm" href="/agenda/tipos"><%- include('../partials/icon', { nombre: 'arrowLeft' }) %> Volver</a>
+  </div>
+</section>
+
+<nav class="tabs" aria-label="Agenda">
+  <a class="tabs__enlace" href="/agenda">Cuadrícula</a>
+  <a class="tabs__enlace is-activo" href="/agenda/tipos" aria-current="page">Tipos de tarea</a>
+</nav>
+
+<% if (errores && errores.length) { %>
+  <div class="aviso aviso--error" role="alert">
+    <span class="aviso__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></span>
+    <div class="aviso__texto"><strong>Revisa los datos:</strong><ul class="lista-errores"><% errores.forEach((m) => { %><li><%= m %></li><% }); %></ul></div>
+  </div>
+<% } %>
+
+<form class="formulario" action="<%= modo === 'crear' ? '/agenda/tipos' : `/agenda/tipos/${tipo._id}` %>" method="post">
+  <% if (modo === 'editar') { %><input type="hidden" name="_method" value="PUT"><% } %>
+
+  <section class="tarjeta superficie formulario__seccion">
+    <div class="formulario__cabecera">
+      <span class="formulario__numero">01</span>
+      <div><h3>Datos del tipo</h3><p>Nombre visible, color y orden en la lista.</p></div>
+    </div>
+    <div class="formulario__rejilla">
+      <div class="campo">
+        <label for="name">Nombre *</label>
+        <input id="name" name="name" type="text" maxlength="60" minlength="2" required value="<%= tipo.name || '' %>" placeholder="Ej. Instalación">
+      </div>
+      <div class="campo">
+        <label for="color">Color *</label>
+        <input id="color" name="color" type="color" required value="<%= tipo.color || '#94a3b8' %>">
+        <span class="campo__ayuda">Se usa como fondo del bloque en la agenda.</span>
+      </div>
+      <div class="campo">
+        <label for="order">Orden</label>
+        <input id="order" name="order" type="number" min="0" max="999" step="1" value="<%= tipo.order ?? 70 %>">
+      </div>
+      <div class="campo">
+        <label class="switch switch--campo">
+          <input type="checkbox" name="active" <%= tipo.active !== false ? 'checked' : '' %>>
+          <span class="switch__control"></span>
+          <span class="switch__texto">Tipo activo (se puede asignar)</span>
+        </label>
+      </div>
+      <% if (modo === 'editar') { %>
+        <div class="campo">
+          <label>Clave interna</label>
+          <p class="mono"><%= tipo.key %></p>
+          <span class="campo__ayuda">No cambia al editar el nombre.</span>
+        </div>
+      <% } %>
+      <div class="campo campo--ancho">
+        <label for="description">Descripción</label>
+        <input id="description" name="description" type="text" maxlength="200" value="<%= tipo.description || '' %>" placeholder="Para qué se usa este tipo">
+      </div>
+    </div>
+  </section>
+
+  <div class="formulario__acciones">
+    <a class="boton boton--secundario" href="/agenda/tipos">Cancelar</a>
+    <button type="submit" class="boton boton--primario"><%- include('../partials/icon', { nombre: 'check' }) %> Guardar tipo</button>
+  </div>
+</form>

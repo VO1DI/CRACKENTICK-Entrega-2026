@@ -1,0 +1,49 @@
+<% if (!selectedRouter) { %>
+  <section class="tarjeta superficie panel">
+    <div class="panel__cabecera">
+      <div><p class="etiqueta">Paso 1</p><h3>Selecciona un router</h3><small class="texto-suave">Después podrás administrar sus VLANs, firewall, EOIP, balanceo y respaldos.</small></div>
+    </div>
+    <% if (!routers.length) { %>
+      <div class="vacio vacio--compacto"><p class="vacio__texto">No hay routers registrados. Crea uno en Red → Routers.</p></div>
+    <% } else { %>
+      <div class="rejilla rejilla--tres router-picker">
+        <% routers.forEach((router) => { %>
+          <a class="tarjeta router-picker__item" href="/red/<%= modulo %>?routerId=<%= router._id %>">
+            <span class="router-picker__icono"><%- include('../partials/icon', { nombre: router.vendor === 'cisco' ? 'network' : 'server' }) %></span>
+            <strong><%= router.name %></strong>
+            <small><%= router.vendor === 'cisco' ? 'Cisco experimental' : 'MikroTik' %><%= router.model ? ` · ${router.model}` : '' %></small>
+            <span class="insignia insignia--<%= router.active ? 'active' : 'cancelled' %>"><%= router.active ? 'Activo' : 'Inactivo' %></span>
+            <% if (conteos) { %><span class="router-picker__cuenta"><%= conteos[String(router._id)] || 0 %> registro(s)</span><% } %>
+          </a>
+        <% }); %>
+      </div>
+    <% } %>
+  </section>
+<% } else { %>
+  <section class="tarjeta superficie panel red-router-nav">
+    <div class="red-router-nav__fila">
+      <div>
+        <p class="etiqueta">Router seleccionado</p>
+        <h3><%= selectedRouter.name %> <span class="insignia insignia--<%= selectedRouter.vendor === 'cisco' ? 'pending' : 'modulo' %>"><%= selectedRouter.vendor === 'cisco' ? 'Cisco experimental' : 'MikroTik' %></span></h3>
+        <small class="texto-suave"><%= selectedRouter.model || 'Sin modelo' %> · <%= selectedRouter.host || 'Sin host' %>:<%= selectedRouter.port %></small>
+      </div>
+      <form method="get" action="/red/<%= modulo %>" class="red-router-nav__selector">
+        <label class="sr-only" for="routerId">Cambiar router</label>
+        <select id="routerId" name="routerId" data-auto-enviar>
+          <% routers.forEach((router) => { %>
+            <option value="<%= router._id %>" <%= String(selectedRouter._id) === String(router._id) ? 'selected' : '' %>><%= router.name %><%= router.vendor === 'cisco' ? ' · Cisco' : '' %></option>
+          <% }); %>
+        </select>
+      </form>
+    </div>
+    <nav class="tabs tabs--sub" aria-label="Configuración del router">
+      <% const enExperimental = ['firewall', 'eoip', 'balanceo', 'dhcp', 'experimental'].includes(modulo); %>
+      <% const puedeExperimental = ['red.firewall', 'red.eoip', 'red.balanceo', 'red.dhcp', 'red.routers', 'red.respaldos'].some((clave) => typeof puede === 'function' && puede(clave)); %>
+      <a class="tabs__enlace <%= modulo === 'vlans' ? 'is-activo' : '' %>" href="/red/vlans?routerId=<%= selectedRouter._id %>">VLANs</a>
+      <a class="tabs__enlace <%= modulo === 'respaldos' ? 'is-activo' : '' %>" href="/red/respaldos?routerId=<%= selectedRouter._id %>">Respaldos</a>
+      <% if (puedeExperimental) { %>
+        <a class="tabs__enlace <%= enExperimental ? 'is-activo' : '' %>" href="/red/experimental?routerId=<%= selectedRouter._id %>">Experimental</a>
+      <% } %>
+    </nav>
+  </section>
+<% } %>

@@ -1,0 +1,168 @@
+<section class="pagina-cabecera dash-cabecera">
+  <div>
+    <p class="etiqueta">Panel · <%= etiquetaMes %></p>
+    <h2 class="pagina-cabecera__titulo">Operación en vivo</h2>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <% if (ver.red) { %><a class="boton boton--secundario boton--sm" href="/monitoreo"><%- include('../partials/icon', { nombre: 'gauge' }) %> Monitorización</a><% } %>
+    <% if (ver.ventas) { %><a class="boton boton--primario boton--sm" href="/ventas/nueva"><%- include('../partials/icon', { nombre: 'plus' }) %> Nueva venta</a><% } %>
+  </div>
+</section>
+
+<% if (ver.red && alertas.length) { %>
+  <section class="alerta-strip" aria-label="Alertas activas">
+    <span class="alerta-strip__titulo"><%- include('../partials/icon', { nombre: 'alert' }) %> Alertas</span>
+    <div class="alerta-strip__items">
+      <% alertas.forEach((alerta) => { %>
+        <span class="alerta-strip__item alerta-strip__item--<%= alerta.severity %>">
+          <span class="punto punto--<%= alerta.severity === 'critical' ? 'rojo' : 'ambar' %>"></span>
+          <%= alerta.message %>
+        </span>
+      <% }); %>
+    </div>
+    <a class="enlace-flecha" href="/monitoreo">Ver todas <span aria-hidden="true">→</span></a>
+  </section>
+<% } %>
+
+<% if (ver.finanzas || ver.clientes || ver.tickets) { %>
+<% if (ver.finanzas) { %>
+<div class="base-contable">
+  <span class="base-contable__etiqueta">Base contable</span>
+  <div class="segmentado" role="group" aria-label="Base contable">
+    <a class="segmentado__boton <%= base === 'caja' ? 'is-activo' : '' %>" href="/?base=caja" aria-pressed="<%= base === 'caja' %>">Caja</a>
+    <a class="segmentado__boton <%= base === 'devengo' ? 'is-activo' : '' %>" href="/?base=devengo" aria-pressed="<%= base === 'devengo' %>">Devengo</a>
+  </div>
+  <span class="texto-suave">Caja: cobrado. Devengo: facturado en el mes.</span>
+</div>
+<% } %>
+
+<section class="dash-kpis" aria-label="Indicadores principales">
+  <% if (ver.finanzas) { %>
+  <article class="kpi kpi--verde">
+    <div class="kpi__cabecera"><span class="kpi__titulo"><%= base === 'devengo' ? 'Facturado (sin IVA)' : 'Cobrado (sin IVA)' %></span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'dollar' }) %></span></div>
+    <p class="kpi__valor" data-contador data-valor="<%= kpis.ingresos %>" data-formato="moneda"><%= formatearDinero(kpis.ingresos) %></p>
+    <p class="kpi__detalle"><a href="/finanzas?base=<%= base %>">Con IVA <%= formatearDinero(kpis.ingresosBrutos) %> · ver contabilidad <span aria-hidden="true">→</span></a></p>
+  </article>
+  <% } %>
+
+  <% if (ver.clientes) { %>
+  <article class="kpi kpi--morado">
+    <div class="kpi__cabecera"><span class="kpi__titulo">Servicios activos</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'wifi' }) %></span></div>
+    <p class="kpi__valor" data-contador data-valor="<%= kpis.serviciosActivos %>" data-formato="entero"><%= kpis.serviciosActivos %></p>
+    <p class="kpi__detalle"><a href="/clientes"><%= kpis.clientesActivos %> cliente(s) activo(s) <span aria-hidden="true">→</span></a></p>
+  </article>
+  <% } %>
+
+  <% if (ver.finanzas) { %>
+  <article class="kpi kpi--ambar">
+    <div class="kpi__cabecera"><span class="kpi__titulo">Por cobrar (total)</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'creditCard' }) %></span></div>
+    <p class="kpi__valor" data-contador data-valor="<%= kpis.deudaTotal %>" data-formato="moneda"><%= formatearDinero(kpis.deudaTotal) %></p>
+    <p class="kpi__detalle"><a href="/facturas?estado=pendientes"><%= kpis.deudaCantidad %> factura(s) abiertas o vencidas <span aria-hidden="true">→</span></a></p>
+  </article>
+  <% } %>
+
+  <% if (ver.tickets) { %>
+  <article class="kpi kpi--rojo">
+    <div class="kpi__cabecera"><span class="kpi__titulo">Tickets abiertos</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'ticket' }) %></span></div>
+    <p class="kpi__valor" data-contador data-valor="<%= kpis.ticketsAbiertos %>" data-formato="entero"><%= kpis.ticketsAbiertos %></p>
+    <p class="kpi__detalle"><a href="/tickets?estado=open">Soporte técnico <span aria-hidden="true">→</span></a></p>
+  </article>
+  <% } %>
+</section>
+<% } %>
+
+<div class="dash-grid">
+  <% if (ver.finanzas) { %>
+  <section class="tarjeta panel dash-chart">
+    <div class="panel__cabecera">
+      <div><p class="etiqueta">Financiero · últimos 6 meses · Base <%= base === 'devengo' ? 'devengo' : 'caja' %></p><h3>Ingresos y gastos</h3><small class="texto-suave">Mensualidades, instalaciones, ventas de equipos y otros ingresos frente a gastos.</small></div>
+    </div>
+    <%- include('../partials/grafico-economia', { serie, tasa, enlaceMes: puede('finanzas.gestion'), base }) %>
+  </section>
+  <% } %>
+
+  <% if (ver.clientes) { %>
+  <section class="tarjeta panel dash-altas">
+    <div class="panel__cabecera">
+      <div>
+        <p class="etiqueta">Altas y bajas</p>
+        <h3>Activaciones y desconexiones</h3>
+        <small class="texto-suave">Instalaciones nuevas del mes y estado actual del padrón.</small>
+      </div>
+    </div>
+    <%- include('../partials/grafico-altas-bajas', { altasBajas }) %>
+  </section>
+  <% } %>
+
+  <% const accesos = [
+    { ver: ver.ventas, href: '/ventas/nueva', icono: 'cart', titulo: 'Nueva venta', detalle: 'Alta + instalación' },
+    { ver: ver.tickets, href: '/tickets/nuevo', icono: 'ticket', titulo: 'Abrir ticket', detalle: 'Soporte' },
+    { ver: ver.facturacion, href: '/facturas/nueva', icono: 'receipt', titulo: 'Factura de venta', detalle: 'No corta servicio' },
+    { ver: ver.stock, href: '/inventario/nuevo', icono: 'box', titulo: 'Inventario', detalle: 'Nuevo artículo' },
+    { ver: ver.routers, href: '/routers', icono: 'server', titulo: 'Routers', detalle: 'Red y pools' },
+    { ver: ver.configuracion, href: '/configuracion/firewall/simulador', icono: 'shield', titulo: 'Comandos', detalle: 'Visor RouterOS' },
+  ].filter((acceso) => acceso.ver); %>
+  <% if (accesos.length) { %>
+  <section class="tarjeta panel dash-actions">
+    <div class="panel__cabecera"><div><p class="etiqueta">Atajos</p><h3>Acciones rápidas</h3></div></div>
+    <div class="accesos">
+      <% accesos.forEach((acceso) => { %>
+        <a class="acceso" href="<%= acceso.href %>"><span><%- include('../partials/icon', { nombre: acceso.icono }) %></span><strong><%= acceso.titulo %></strong><small><%= acceso.detalle %></small></a>
+      <% }); %>
+    </div>
+  </section>
+  <% } %>
+
+  <% if (ver.tickets) { %>
+  <section class="tarjeta panel dash-tickets">
+    <div class="panel__cabecera">
+      <div><p class="etiqueta">Soporte</p><h3>Tickets abiertos</h3></div>
+      <a class="enlace-flecha" href="/tickets">Ver todos <span aria-hidden="true">→</span></a>
+    </div>
+    <% if (ticketsRecientes.length === 0) { %>
+      <div class="vacio vacio--compacto"><p class="vacio__icono vacio__icono--verde"><%- include('../partials/icon', { nombre: 'check' }) %></p><p class="vacio__texto">Sin tickets pendientes.</p></div>
+    <% } else { %>
+      <ul class="lista-simple lista-simple--vertical">
+        <% ticketsRecientes.forEach((ticket) => { %>
+          <li>
+            <div>
+              <a href="/tickets/<%= ticket._id %>"><strong><%= ticket.code %></strong> · <%= ticket.subject %></a>
+              <small><%= ticket.clientId ? `${ticket.clientId.firstName} ${ticket.clientId.lastName}` : 'Cliente' %> · <%= etiquetas[ticket.priority] %></small>
+            </div>
+            <span class="insignia insignia--<%= ticket.status %>"><%= etiquetas[ticket.status] %></span>
+          </li>
+        <% }); %>
+      </ul>
+    <% } %>
+  </section>
+  <% } %>
+
+  <% if (ver.stock) { %>
+  <section class="tarjeta panel dash-stock">
+    <div class="panel__cabecera">
+      <div><p class="etiqueta">Almacén</p><h3>Stock bajo</h3></div>
+      <a class="enlace-flecha" href="/inventario?stock=bajo">Inventario <span aria-hidden="true">→</span></a>
+    </div>
+    <% if (stockBajo.length === 0) { %>
+      <div class="vacio vacio--compacto"><p class="vacio__icono vacio__icono--verde"><%- include('../partials/icon', { nombre: 'check' }) %></p><p class="vacio__texto">Existencias saludables.</p></div>
+    <% } else { %>
+      <ul class="lista-simple lista-simple--vertical">
+        <% stockBajo.forEach((item) => { %>
+          <li>
+            <div><a href="/inventario/<%= item._id %>"><strong><%= item.name %></strong></a><small><%= item.code %> · mínimo <%= item.minStock %></small></div>
+            <span class="insignia insignia--<%= item.stock === 0 ? 'overdue' : 'pending' %>"><%= item.stock %> <%= item.unit %></span>
+          </li>
+        <% }); %>
+      </ul>
+    <% } %>
+  </section>
+  <% } %>
+</div>
+
+<% if (!ver.finanzas && !ver.clientes && !ver.tickets && !ver.stock) { %>
+  <section class="tarjeta superficie vacio">
+    <p class="vacio__icono"><%- include('../partials/icon', { nombre: 'shield' }) %></p>
+    <h3 class="vacio__titulo">Sin indicadores para tu usuario</h3>
+    <p class="vacio__texto">Pide a un administrador que habilite los nodos que necesitas en Usuarios.</p>
+  </section>
+<% } %>

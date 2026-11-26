@@ -1,0 +1,105 @@
+<% const puedeVer = (clave) => typeof puede === 'function' && puede(clave); %>
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Reportes · <%= resumen.desde.toLocaleDateString('es-VE', { month: 'long', year: 'numeric' }) %></p>
+    <h2 class="pagina-cabecera__titulo">Reportes</h2>
+    <p class="pagina-cabecera__texto">Resumen del mes y accesos a los reportes de operación, red y finanzas.</p>
+  </div>
+</section>
+
+<section class="dash-kpis" aria-label="Resumen de reportes">
+  <article class="kpi kpi--morado">
+    <div class="kpi__cabecera"><span class="kpi__titulo">Instalaciones del mes</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'box' }) %></span></div>
+    <p class="kpi__valor"><%= resumen.instalacionesMes %></p>
+    <p class="kpi__detalle"><%= resumen.ventasInstaladas %> venta(s) instalada(s) en el mismo periodo</p>
+  </article>
+  <article class="kpi kpi--ambar">
+    <div class="kpi__cabecera"><span class="kpi__titulo">Averías abiertas</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></span></div>
+    <p class="kpi__valor"><%= resumen.averiasAbiertas %></p>
+    <p class="kpi__detalle"><%= resumen.averiasMes %> reportada(s) este mes</p>
+  </article>
+  <article class="kpi kpi--rojo">
+    <div class="kpi__cabecera"><span class="kpi__titulo">Deuda vencida</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'creditCard' }) %></span></div>
+    <p class="kpi__valor"><%= formatearDinero(resumen.deuda) %></p>
+    <p class="kpi__detalle"><%= resumen.facturasVencidas %> factura(s) vencida(s)</p>
+  </article>
+  <article class="kpi kpi--verde">
+    <div class="kpi__cabecera"><span class="kpi__titulo">Servicios activos</span><span class="kpi__icono"><%- include('../partials/icon', { nombre: 'wifi' }) %></span></div>
+    <p class="kpi__valor"><%= resumen.serviciosActivos %></p>
+    <p class="kpi__detalle"><%= resumen.clientesActivos %> cliente(s) activo(s) · <%= resumen.clientesSuspendidos %> suspendido(s)</p>
+  </article>
+</section>
+
+<div class="rejilla rejilla--tres">
+  <% if (puedeVer('red.instalaciones')) { %>
+  <a class="reporte-card" href="/red/reportes/instalaciones">
+    <span class="reporte-card__icono"><%- include('../partials/icon', { nombre: 'box' }) %></span>
+    <strong>Instalaciones</strong>
+    <p>Altas del mes por técnico y zona, con fecha, plan y venta asociada.</p>
+    <span class="reporte-card__dato"><%= resumen.instalacionesMes %> este mes</span>
+  </a>
+  <% } %>
+
+  <% if (puedeVer('red.averias')) { %>
+  <a class="reporte-card" href="/red/reportes/averias">
+    <span class="reporte-card__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></span>
+    <strong>Averías</strong>
+    <p>Reportes diarios de fallas, estado, técnico y zona afectada.</p>
+    <span class="reporte-card__dato"><%= resumen.averiasAbiertas %> abierta(s)</span>
+  </a>
+  <% } %>
+
+  <% if (puedeVer('red.monitoreo')) { %>
+  <a class="reporte-card" href="/red/monitoreo">
+    <span class="reporte-card__icono"><%- include('../partials/icon', { nombre: 'gauge' }) %></span>
+    <strong>Monitorización de red</strong>
+    <p>Tráfico por WAN, estado de las conexiones y clientes con consumo.</p>
+    <span class="reporte-card__dato">En vivo</span>
+  </a>
+  <% } %>
+
+  <% if (puedeVer('finanzas.facturas')) { %>
+  <a class="reporte-card" href="/facturas?estado=overdue">
+    <span class="reporte-card__icono"><%- include('../partials/icon', { nombre: 'receipt' }) %></span>
+    <strong>Facturas vencidas</strong>
+    <p>Cartera por cobrar con cliente, monto y fecha de vencimiento.</p>
+    <span class="reporte-card__dato"><%= resumen.facturasVencidas %> vencida(s)</span>
+  </a>
+  <% } %>
+
+  <% if (puedeVer('finanzas.gestion')) { %>
+  <a class="reporte-card" href="/finanzas">
+    <span class="reporte-card__icono"><%- include('../partials/icon', { nombre: 'activity' }) %></span>
+    <strong>Contabilidad</strong>
+    <p>Ingresos, gastos y resultado por base caja o devengo.</p>
+    <span class="reporte-card__dato">Ver balances</span>
+  </a>
+  <% } %>
+
+  <% if (puedeVer('general.clientes')) { %>
+  <a class="reporte-card" href="/clientes?estado=suspended">
+    <span class="reporte-card__icono"><%- include('../partials/icon', { nombre: 'users' }) %></span>
+    <strong>Clientes suspendidos</strong>
+    <p>Padrón en mora con su servicio y estado de facturación.</p>
+    <span class="reporte-card__dato"><%= resumen.clientesSuspendidos %> suspendido(s)</span>
+  </a>
+  <% } %>
+
+  <% if (puedeVer('ventas.inventario')) { %>
+  <a class="reporte-card" href="/inventario?stock=bajo">
+    <span class="reporte-card__icono"><%- include('../partials/icon', { nombre: 'layers' }) %></span>
+    <strong>Stock bajo</strong>
+    <p>Artículos por debajo del mínimo, con seriales disponibles.</p>
+    <span class="reporte-card__dato"><%= resumen.stockBajo %> en mínimo</span>
+  </a>
+  <% } %>
+
+  <% if (puedeVer('ventas.ventas')) { %>
+  <a class="reporte-card" href="/ventas?estado=installed">
+    <span class="reporte-card__icono"><%- include('../partials/icon', { nombre: 'cart' }) %></span>
+    <strong>Ventas instaladas</strong>
+    <p>Ventas cerradas con su factura e instalación asociada.</p>
+    <span class="reporte-card__dato"><%= resumen.ventasInstaladas %> este mes</span>
+  </a>
+  <% } %>
+</div>

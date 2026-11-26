@@ -1,0 +1,245 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Red · <%= modo === 'crear' ? 'Alta' : 'Edición' %></p>
+    <h2 class="pagina-cabecera__titulo"><%= modo === 'crear' ? 'Nuevo router' : `Editar ${router.name}` %></h2>
+    <p class="pagina-cabecera__texto">Configura el equipo real que gestiona la red.</p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <a class="boton boton--secundario" href="/red/routers"><%- include('../partials/icon', { nombre: 'arrowLeft' }) %> Cancelar</a>
+  </div>
+</section>
+
+<% if (errores && errores.length) { %>
+  <div class="aviso aviso--error" role="alert">
+    <span class="aviso__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></span>
+    <div class="aviso__texto"><strong>Revisa los datos:</strong><ul class="lista-errores"><% errores.forEach((m) => { %><li><%= m %></li><% }); %></ul></div>
+  </div>
+<% } %>
+
+<form class="formulario" action="<%= modo === 'crear' ? '/red/routers' : `/red/routers/${router._id}` %>" method="post" data-router-form>
+  <% if (modo === 'editar') { %><input type="hidden" name="_method" value="PUT"><% } %>
+
+  <section class="tarjeta superficie formulario__seccion">
+    <div class="formulario__cabecera">
+      <span class="formulario__numero">01</span>
+      <div><h3>Identidad</h3><p>Nombre interno y modo de operación.</p></div>
+    </div>
+    <div class="formulario__rejilla">
+      <div class="campo<%= claseCampo(erroresCampo, 'name') %>">
+        <label for="name">Nombre *</label>
+        <input id="name" name="name" type="text" value="<%= router.name || '' %>" minlength="3" maxlength="60" placeholder="MikroTik principal" required>
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'name') }) %>
+      </div>
+      <div class="campo campo--ancho">
+        <label for="description">Descripción</label>
+        <input id="description" name="description" type="text" maxlength="200" value="<%= router.description || '' %>" placeholder="Nodo norte · CCR2004">
+      </div>
+      <div class="campo">
+        <label for="vendor">Fabricante *</label>
+        <select id="vendor" name="vendor" data-vendor-router>
+          <option value="mikrotik" <%= (router.vendor || 'mikrotik') !== 'cisco' ? 'selected' : '' %>>MikroTik · RouterOS</option>
+          <option value="cisco" <%= router.vendor === 'cisco' ? 'selected' : '' %>>Cisco · IOS/IOS-XE (experimental)</option>
+        </select>
+        <span class="campo__ayuda" data-vendor-aviso role="status"></span>
+      </div>
+      <div class="campo">
+        <label for="model">Modelo</label>
+        <input id="model" name="model" type="text" maxlength="80" value="<%= router.model || '' %>" placeholder="CCR2004 / C9300-48P">
+      </div>
+      <div class="campo<%= claseCampo(erroresCampo, 'planMode') %>">
+        <label for="planMode">Manejo de planes *</label>
+        <select id="planMode" name="planMode">
+          <option value="simple_queue" <%= router.planMode !== 'address_list' ? 'selected' : '' %>>Colas simples</option>
+          <option value="address_list" <%= router.planMode === 'address_list' ? 'selected' : '' %>>Address list + queue tree</option>
+        </select>
+        <span class="campo__ayuda">Define qué planes puede usar este router.</span>
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'planMode') }) %>
+      </div>
+      <div class="campo">
+        <label for="contractedDownloadMbps">Mbps contratados · bajada</label>
+        <input id="contractedDownloadMbps" name="contractedDownloadMbps" type="number" min="0" step="1" value="<%= router.contractedDownloadMbps ?? 0 %>">
+        <span class="campo__ayuda">Sugerencia: suma de tus WAN. Puedes corregirlo.</span>
+      </div>
+      <div class="campo">
+        <label for="contractedUploadMbps">Mbps contratados · subida</label>
+        <input id="contractedUploadMbps" name="contractedUploadMbps" type="number" min="0" step="1" value="<%= router.contractedUploadMbps ?? 0 %>">
+      </div>
+      <div class="campo campo--ancho">
+        <button type="button" class="boton boton--secundario boton--sm" data-sugerir-capacidad><%- include('../partials/icon', { nombre: 'refresh' }) %> Usar la suma de las WAN</button>
+      </div>
+      <div class="campo">
+        <label for="mangleChain">Cadena de mangle</label>
+        <select id="mangleChain" name="mangleChain">
+          <option value="forward" <%= router.mangleChain !== 'prerouting' ? 'selected' : '' %>>forward (recomendado)</option>
+          <option value="prerouting" <%= router.mangleChain === 'prerouting' ? 'selected' : '' %>>prerouting</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="queueParent">Padre del queue tree</label>
+        <input id="queueParent" name="queueParent" type="text" maxlength="60" value="<%= router.queueParent || 'global' %>" placeholder="global">
+        <span class="campo__ayuda">Solo se usa en planes por address list.</span>
+      </div>
+      <div class="campo campo--ancho">
+        <label for="notes">Notas</label>
+        <textarea id="notes" name="notes" rows="2" maxlength="500"><%= router.notes || '' %></textarea>
+      </div>
+    </div>
+    <label class="switch">
+      <input type="checkbox" name="active" <%= router.active ? 'checked' : '' %>>
+      <span class="switch__control"></span>
+      <span class="switch__texto">Router activo</span>
+    </label>
+  </section>
+
+  <section class="tarjeta superficie formulario__seccion">
+    <div class="formulario__cabecera">
+      <span class="formulario__numero">02</span>
+      <div><h3>Conexión API</h3><p>MikroTik usa RouterOS API. Cisco usa SSH y queda marcado como experimental.</p></div>
+    </div>
+    <div class="aviso aviso--advertencia" data-vendor-cisco hidden role="note">
+      <span class="aviso__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></span>
+      <div class="aviso__texto"><strong>Cisco experimental.</strong> Se conecta por SSH para diagnóstico, VLAN y respaldos. El aprovisionamiento de PPPoE, colas, address list, EOIP y firewall todavía no se aplica automáticamente en Cisco.</div>
+    </div>
+    <div class="formulario__rejilla">
+      <div class="campo<%= claseCampo(erroresCampo, 'host') %>">
+        <label for="host">Host / IP</label>
+        <input id="host" name="host" type="text" maxlength="120" value="<%= router.host || '' %>" placeholder="192.168.88.1" required>
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'host') }) %>
+      </div>
+      <div class="campo<%= claseCampo(erroresCampo, 'port') %>">
+        <label for="port">Puerto</label>
+        <input id="port" name="port" type="number" min="1" max="65535" value="<%= router.port || (router.vendor === 'cisco' ? 22 : 8728) %>">
+        <span class="campo__ayuda" data-port-ayuda>MikroTik: 8728. Con TLS: 8729. Cisco: 22 (SSH).</span>
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'port') }) %>
+      </div>
+      <div class="campo">
+        <label for="sshPort">Puerto SSH</label>
+        <input id="sshPort" name="sshPort" type="number" min="1" max="65535" value="<%= router.sshPort || 22 %>">
+        <span class="campo__ayuda">Solo para respaldos MikroTik. Debe coincidir con /ip/service ssh.</span>
+      </div>
+      <div class="campo<%= claseCampo(erroresCampo, 'username') %>">
+        <label for="username">Usuario <span data-vendor-usuario>API</span></label>
+        <input id="username" name="username" type="text" maxlength="80" value="<%= router.username || '' %>" placeholder="crackentick" required>
+        <%- include('../partials/campo-error', { mensaje: errorCampo(erroresCampo, 'username') }) %>
+      </div>
+      <div class="campo">
+        <label for="password">Contraseña</label>
+        <input id="password" name="password" type="password" autocomplete="new-password" placeholder="<%= tienePassword ? 'Dejar vacío para conservar' : 'Contraseña de la API / SSH' %>">
+        <% if (tienePassword) { %>
+          <span class="campo__ayuda">Ya hay una contraseña guardada.</span>
+        <% } %>
+      </div>
+      <div class="campo">
+        <label for="enablePassword">Contraseña enable (Cisco)</label>
+        <input id="enablePassword" name="enablePassword" type="password" autocomplete="new-password" placeholder="<%= typeof tieneEnablePassword !== 'undefined' && tieneEnablePassword ? 'Configurada · dejar vacío para conservar' : 'Opcional para modo privilegiado' %>">
+        <span class="campo__ayuda">Solo se usa si Cisco pide contraseña al entrar en modo enable.</span>
+        <% if (typeof tieneEnablePassword !== 'undefined' && tieneEnablePassword) { %>
+          <label class="check-linea"><input type="checkbox" name="quitarEnablePassword"> Borrar la contraseña enable</label>
+        <% } %>
+      </div>
+    </div>
+    <div class="formulario__rejilla">
+      <label class="check"><input type="checkbox" name="tls" <%= router.tls ? 'checked' : '' %>> Usar API-SSL (TLS)</label>
+      <label class="check"><input type="checkbox" name="verifyTls" <%= router.verifyTls ? 'checked' : '' %>> Verificar certificado TLS</label>
+      <% if (tienePassword) { %>
+        <label class="check"><input type="checkbox" name="quitarPassword"> Borrar contraseña guardada</label>
+      <% } %>
+    </div>
+    <div class="campo">
+      <label for="transport">Transporte de gestión</label>
+      <select id="transport" name="transport">
+        <option value="api" <%= (router.transport || 'api') === 'api' ? 'selected' : '' %>>API (recomendado)</option>
+        <option value="ssh" <%= router.transport === 'ssh' ? 'selected' : '' %>>SSH</option>
+      </select>
+      <span class="campo__ayuda">SSH envía los cambios por consola cuando la API falla o la bloquean. Las lecturas de tráfico siguen usando la API.</span>
+    </div>
+  </section>
+
+  <section class="tarjeta superficie formulario__seccion">
+    <div class="formulario__cabecera">
+      <span class="formulario__numero">03</span>
+      <div><h3>Interfaces WAN</h3><p>Agrega una o varias interfaces. Se monitorean cada 5 segundos para detectar caídas y generar alertas.</p></div>
+      <button type="button" class="boton boton--secundario boton--sm" data-agregar-wan>
+        <%- include('../partials/icon', { nombre: 'plus' }) %> Agregar interfaz
+      </button>
+    </div>
+
+    <div class="wan-rows" data-wan-rows>
+      <%
+        const filasWan = (router.wanInterfaces && router.wanInterfaces.length)
+          ? router.wanInterfaces
+          : [{ name: 'ether1', provider: '', downloadMbps: 100, uploadMbps: 50, notes: '' }];
+        filasWan.forEach((wan, indice) => {
+      %>
+        <div class="wan-row" data-wan-row>
+          <div class="wan-row__titulo">
+            <span class="etiqueta">Interfaz <span data-wan-numero><%= indice + 1 %></span></span>
+            <button type="button" class="boton-icono boton-icono--sm" data-quitar-wan title="Quitar esta interfaz" aria-label="Quitar interfaz">
+              <%- include('../partials/icon', { nombre: 'trash' }) %>
+            </button>
+          </div>
+          <div class="formulario__rejilla">
+            <div class="campo">
+              <label>Interfaz</label>
+              <input name="wanName" type="text" maxlength="60" value="<%= wan.name || '' %>" placeholder="ether1, sfp1, pppoe-out1">
+            </div>
+            <div class="campo">
+              <label>Proveedor</label>
+              <input name="wanProvider" type="text" maxlength="80" value="<%= wan.provider || '' %>" placeholder="ISP local">
+            </div>
+            <div class="campo">
+              <label>Bajada (Mbps)</label>
+              <input name="wanDownload" type="number" min="0" value="<%= wan.downloadMbps ?? '' %>" placeholder="200">
+            </div>
+            <div class="campo">
+              <label>Subida (Mbps)</label>
+              <input name="wanUpload" type="number" min="0" value="<%= wan.uploadMbps ?? '' %>" placeholder="100">
+            </div>
+            <div class="campo campo--ancho">
+              <label>Notas</label>
+              <input name="wanNotes" type="text" maxlength="200" value="<%= wan.notes || '' %>" placeholder="Enlace principal, contingencia, etc.">
+            </div>
+          </div>
+        </div>
+      <% }); %>
+    </div>
+
+    <template id="plantillaWan">
+      <div class="wan-row" data-wan-row>
+        <div class="wan-row__titulo">
+          <span class="etiqueta">Interfaz <span data-wan-numero>1</span></span>
+          <button type="button" class="boton-icono boton-icono--sm" data-quitar-wan title="Quitar esta interfaz" aria-label="Quitar interfaz">
+            <%- include('../partials/icon', { nombre: 'trash' }) %>
+          </button>
+        </div>
+        <div class="formulario__rejilla">
+          <div class="campo">
+            <label>Interfaz</label>
+            <input name="wanName" type="text" maxlength="60" placeholder="ether1, sfp1, pppoe-out1">
+          </div>
+          <div class="campo">
+            <label>Proveedor</label>
+            <input name="wanProvider" type="text" maxlength="80" placeholder="ISP local">
+          </div>
+          <div class="campo">
+            <label>Bajada (Mbps)</label>
+            <input name="wanDownload" type="number" min="0" placeholder="200">
+          </div>
+          <div class="campo">
+            <label>Subida (Mbps)</label>
+            <input name="wanUpload" type="number" min="0" placeholder="100">
+          </div>
+          <div class="campo campo--ancho">
+            <label>Notas</label>
+            <input name="wanNotes" type="text" maxlength="200" placeholder="Enlace principal, contingencia, etc.">
+          </div>
+        </div>
+      </div>
+    </template>
+  </section>
+
+  <div class="formulario__acciones">
+    <a class="boton boton--secundario" href="/red/routers">Cancelar</a>
+    <button type="submit" class="boton boton--primario"><%- include('../partials/icon', { nombre: 'check' }) %> <%= modo === 'crear' ? 'Crear router' : 'Guardar cambios' %></button>
+  </div>
+</form>

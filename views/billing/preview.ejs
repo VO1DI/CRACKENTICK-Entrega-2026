@@ -1,0 +1,128 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Financiero · Corrida</p>
+    <h2 class="pagina-cabecera__titulo">Previsualización de facturación</h2>
+    <p class="pagina-cabecera__texto">
+      <%= items.length %> factura(s) elegible(s) · vencimiento a
+      <strong><%= config.billing.dueDays %> día(s)</strong> ·
+      <% if (settings.billing.taxEnabled !== false) { %>
+        IVA global <strong><%= Math.round(settings.billing.taxRate * 10000) / 100 %>%</strong>
+        <span class="texto-suave">· cada plan puede usar su propia tasa</span>
+      <% } else { %>
+        <strong>IVA desactivado</strong>
+      <% } %>
+    </p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <a class="boton boton--secundario" href="/facturacion"><%- include('../partials/icon', { nombre: 'arrowLeft' }) %> Volver</a>
+    <% if (items.length) { %>
+      <form action="/facturacion/emitir" method="post" data-confirmar="Se emitirán <%= items.length %> factura(s) por un total de <%= formatearDinero(totales.total) %>. ¿Continuar?">
+        <button type="submit" class="boton boton--primario"><%- include('../partials/icon', { nombre: 'zap' }) %> Emitir <%= items.length %> factura(s)</button>
+      </form>
+    <% } %>
+  </div>
+</section>
+
+<section class="rejilla rejilla--tres">
+  <article class="tarjeta superficie kpi kpi--morado">
+    <p class="kpi__etiqueta">Facturas elegibles</p>
+    <p class="kpi__valor"><%= items.length %></p>
+    <p class="kpi__detalle"><%= omitidas.length %> omitida(s) por periodo ya facturado</p>
+  </article>
+  <article class="tarjeta superficie kpi kpi--ambar">
+    <p class="kpi__etiqueta">Subtotal</p>
+    <p class="kpi__valor"><%= formatearDinero(totales.subtotal) %></p>
+    <p class="kpi__detalle"><%= settings.billing.taxEnabled !== false ? `IVA: ${formatearDinero(totales.tax)}` : 'IVA desactivado' %></p>
+  </article>
+  <article class="tarjeta superficie kpi kpi--verde">
+    <p class="kpi__etiqueta">Total a facturar</p>
+    <p class="kpi__valor"><%= formatearDinero(totales.total) %></p>
+    <p class="kpi__detalle">Moneda <%= settings.billing.currency %></p>
+  </article>
+</section>
+
+<section class="tarjeta superficie tabla-panel">
+  <div class="panel__cabecera panel__cabecera--pad">
+    <div><p class="etiqueta">Detalle</p><h3>Servicios a facturar</h3></div>
+    <span class="insignia"><%= settings.billing.currency %></span>
+  </div>
+  <% if (items.length === 0) { %>
+    <div class="vacio">
+      <p class="vacio__icono"><%- include('../partials/icon', { nombre: 'check' }) %></p>
+      <h3 class="vacio__titulo">No hay servicios por facturar</h3>
+      <p class="vacio__texto">Ningún servicio activo termina su periodo dentro de los próximos <%= settings.billing.previewDays %> día(s).</p>
+      <a class="boton boton--secundario" href="/clientes">Revisar servicios</a>
+    </div>
+  <% } else { %>
+    <div class="tabla-scroll">
+      <table class="tabla">
+        <thead>
+          <tr><th>Cliente</th><th>Plan</th><th>Periodo</th><th>Subtotal</th><% if (settings.billing.taxEnabled !== false) { %><th>IVA</th><% } %><th>Total</th><th>Vencimiento</th></tr>
+        </thead>
+        <tbody>
+          <% items.forEach((item) => { %>
+            <tr>
+              <td data-etiqueta="Cliente">
+                <a class="persona" href="/clientes/<%= item.client._id %>?tab=servicio">
+                  <span class="avatar avatar--sm"><%= `${String(item.client.firstName).charAt(0)}${String(item.client.lastName).charAt(0)}`.toUpperCase() %></span>
+                  <span>
+                    <strong><%= item.client.firstName %> <%= item.client.lastName %></strong>
+                    <small><%= item.client.clientCode %></small>
+                  </span>
+                </a>
+              </td>
+              <td data-etiqueta="Plan">
+                <strong><%= item.plan.name %></strong>
+                <small class="texto-suave"><%= item.plan.downloadSpeed %> / <%= item.plan.uploadSpeed %> Mbps</small>
+              </td>
+              <td data-etiqueta="Periodo"><%= formatearFecha(item.periodStart) %> → <%= formatearFecha(item.periodEnd) %></td>
+              <td data-etiqueta="Subtotal"><%= formatearDinero(item.subtotal, settings.billing.currency) %></td>
+              <% if (settings.billing.taxEnabled !== false) { %>
+                <td data-etiqueta="IVA">
+                  <strong><%= formatearDinero(item.tax, settings.billing.currency) %></strong>
+                  <small class="texto-suave"><%= Math.round((item.taxRate || 0) * 10000) / 100 %>%</small>
+                </td>
+              <% } %>
+              <td data-etiqueta="Total"><strong><%= formatearDinero(item.total, settings.billing.currency) %></strong></td>
+              <td data-etiqueta="Vencimiento"><%= formatearFecha(item.dueDate) %></td>
+            </tr>
+          <% }); %>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="3">Totales</td>
+            <td><%= formatearDinero(totales.subtotal, settings.billing.currency) %></td>
+            <% if (settings.billing.taxEnabled !== false) { %>
+              <td><%= formatearDinero(totales.tax, settings.billing.currency) %></td>
+            <% } %>
+            <td><strong><%= formatearDinero(totales.total, settings.billing.currency) %></strong></td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  <% } %>
+</section>
+
+<% if (omitidas.length) { %>
+  <section class="tarjeta superficie panel">
+    <div class="panel__cabecera">
+      <div><p class="etiqueta">Control de duplicados</p><h3>Omitidas en esta corrida</h3></div>
+      <span class="insignia insignia--none"><%= omitidas.length %></span>
+    </div>
+    <p class="texto-suave">Estos servicios ya tienen una factura para el periodo actual; no se volverán a facturar.</p>
+    <ul class="lista-simple">
+      <% omitidas.forEach((sub) => { %>
+        <li>
+          <span><strong><%= sub.clientId?.firstName || 'Cliente' %> <%= sub.clientId?.lastName || '' %></strong> <span class="texto-suave">· <%= sub.clientId?.clientCode || '—' %></span></span>
+          <span class="texto-suave"><%= sub.planSnapshot?.name || 'Sin plan' %></span>
+        </li>
+      <% }); %>
+    </ul>
+  </section>
+<% } %>
+
+<p class="nota nota--morado">
+  <%- include('../partials/icon', { nombre: 'shield' }) %>
+  La emisión es idempotente por servicio y periodo. Si dos solicitudes coinciden, solo se crea una factura.
+</p>

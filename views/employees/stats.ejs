@@ -1,0 +1,203 @@
+﻿<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Administración · Empleados</p>
+    <h2 class="pagina-cabecera__titulo">Rendimiento por cargo</h2>
+    <p class="pagina-cabecera__texto">Actividad del <%= formatearFecha(desde) %> al <%= formatearFecha(hasta) %> según el área de cada trabajador.</p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <div class="segmentado" role="group" aria-label="Período">
+      <% periodos.forEach((periodo) => { %>
+        <a class="segmentado__boton <%= !filtroDesde && dias === periodo ? 'is-activo' : '' %>" href="/admin/empleados/rendimiento?dias=<%= periodo %><%= empleadoId ? `&empleado=${empleadoId}` : '' %>" aria-pressed="<%= !filtroDesde && dias === periodo %>"><%= periodo %> d</a>
+      <% }); %>
+    </div>
+  </div>
+</section>
+
+<%- include('_tabs', { activa: 'rendimiento' }) %>
+
+<%
+  const baseTab = new URLSearchParams();
+  if (filtroDesde) baseTab.set('desde', filtroDesde);
+  if (filtroHasta) baseTab.set('hasta', filtroHasta);
+  if (!filtroDesde && !filtroHasta) baseTab.set('dias', String(dias));
+  const enlaceEmpleado = (id) => {
+    const query = new URLSearchParams(baseTab);
+    if (id) query.set('empleado', id);
+    const texto = query.toString();
+    return `/admin/empleados/rendimiento${texto ? `?${texto}` : ''}`;
+  };
+%>
+<nav class="tabs tabs--scroll" aria-label="Rendimiento por trabajador">
+  <a class="tabs__enlace <%= !empleadoId ? 'is-activo' : '' %>" href="<%= enlaceEmpleado('') %>" <%= !empleadoId ? 'aria-current="page"' : '' %>>Todos</a>
+  <% empleados.forEach((empleado) => { %>
+    <a class="tabs__enlace <%= empleadoId === empleado.id ? 'is-activo' : '' %>" href="<%= enlaceEmpleado(empleado.id) %>" <%= empleadoId === empleado.id ? 'aria-current="page"' : '' %>><%= empleado.name %></a>
+  <% }); %>
+</nav>
+
+<section class="tarjeta superficie filtros">
+  <form method="get" action="/admin/empleados/rendimiento" class="filtros__form">
+    <div class="campo">
+      <label for="desde">Desde</label>
+      <input id="desde" type="date" name="desde" value="<%= filtroDesde %>">
+    </div>
+    <div class="campo">
+      <label for="hasta">Hasta</label>
+      <input id="hasta" type="date" name="hasta" value="<%= filtroHasta %>">
+    </div>
+    <div class="campo">
+      <label for="empleado">Trabajador</label>
+      <select id="empleado" name="empleado">
+        <option value="">Todos</option>
+        <% empleados.forEach((empleado) => { %>
+          <option value="<%= empleado.id %>" <%= empleadoId === empleado.id ? 'selected' : '' %>><%= empleado.name %></option>
+        <% }); %>
+      </select>
+    </div>
+    <button type="submit" class="boton boton--secundario boton--sm">Aplicar</button>
+    <a class="boton boton--secundario boton--sm" href="/admin/empleados/rendimiento">Limpiar</a>
+  </form>
+</section>
+
+<% if (seleccionado) { %>
+  <section class="tarjeta superficie panel">
+    <div class="panel__cabecera">
+      <div><p class="etiqueta">Trabajador</p><h3><%= seleccionado.empleado.name %> · <%= seleccionado.empleado.position %></h3></div>
+      <span class="insignia insignia--modulo">Todo el período</span>
+    </div>
+    <div class="rejilla rejilla--cuatro">
+      <div class="resumen-linea"><span>Tickets abiertos</span><strong><%= seleccionado.ticketsAbiertos %></strong></div>
+      <div class="resumen-linea"><span>Tickets resueltos</span><strong><%= seleccionado.ticketsResueltos %></strong></div>
+      <div class="resumen-linea"><span>Tiempo medio ticket</span><strong><%= seleccionado.promedioHoras === null ? '—' : `${seleccionado.promedioHoras.toFixed(1)} h` %></strong></div>
+      <div class="resumen-linea"><span>Instalaciones</span><strong><%= seleccionado.instalaciones %></strong></div>
+      <div class="resumen-linea"><span>Averías resueltas</span><strong><%= seleccionado.averias %></strong></div>
+      <div class="resumen-linea"><span>Ventas</span><strong><%= seleccionado.ventas %></strong></div>
+      <div class="resumen-linea"><span>Vendido</span><strong><%= formatearDinero(seleccionado.vendido) %></strong></div>
+      <div class="resumen-linea"><span>Pagos cobrados</span><strong><%= seleccionado.pagos %></strong></div>
+      <div class="resumen-linea"><span>Cobrado</span><strong><%= formatearDinero(seleccionado.cobrado) %></strong></div>
+      <div class="resumen-linea"><span>Tareas asignadas</span><strong><%= seleccionado.tareasAsignadas %></strong></div>
+      <div class="resumen-linea"><span>Tareas hechas</span><strong><%= seleccionado.tareasHechas %></strong></div>
+      <div class="resumen-linea"><span>Tiempo medio tarea</span><strong><%= seleccionado.promedioHorasTarea === null ? '-' : `${seleccionado.promedioHorasTarea.toFixed(1)} h` %></strong></div>
+    </div>
+    <% const tiposTarea = Object.entries(seleccionado.tareasPorTipo || {}).sort(([a], [b]) => String(categoriasTarea[a] || a).localeCompare(String(categoriasTarea[b] || b))); %>
+    <% if (tiposTarea.length) { %>
+      <div class="panel__cabecera"><div><p class="etiqueta">Tareas por tipo</p><h3>Tiempo medio para resolver cada tarea</h3><small class="texto-suave">Desde que se inicia hasta que se marca como hecha.</small></div></div>
+      <div class="tabla-scroll">
+        <table class="tabla">
+          <thead><tr><th>Tipo de tarea</th><th>Asignadas</th><th>Tiempo medio</th></tr></thead>
+          <tbody>
+            <% tiposTarea.forEach(([clave, total]) => { const media = seleccionado.promedioPorTipo ? seleccionado.promedioPorTipo[clave] : null; %>
+              <tr>
+                <td data-etiqueta="Tipo"><strong><%= categoriasTarea[clave] || clave %></strong></td>
+                <td data-etiqueta="Asignadas"><%= total %></td>
+                <td data-etiqueta="Tiempo medio"><%= media === null || media === undefined ? '-' : `${media.toFixed(1)} h` %></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </section>
+<% } %>
+
+<section class="dash-kpis">
+  <article class="kpi kpi--verde">
+    <p class="kpi__etiqueta">Tickets resueltos</p>
+    <p class="kpi__valor"><%= resumen.ticketsResueltos %></p>
+    <p class="kpi__detalle">Cerrados en el período</p>
+  </article>
+  <article class="kpi kpi--morado">
+    <p class="kpi__etiqueta">Tiempo medio</p>
+    <p class="kpi__valor"><%= resumen.promedioHoras === null ? '—' : `${resumen.promedioHoras.toFixed(1)} h` %></p>
+    <p class="kpi__detalle">De apertura a resolución</p>
+  </article>
+  <article class="kpi kpi--ambar">
+    <p class="kpi__etiqueta">Instalaciones</p>
+    <p class="kpi__valor"><%= resumen.instalaciones %></p>
+    <p class="kpi__detalle"><%= resumen.averias %> avería(s) resuelta(s)</p>
+  </article>
+  <article class="kpi">
+    <p class="kpi__etiqueta">Ventas</p>
+    <p class="kpi__valor"><%= resumen.ventas %></p>
+    <p class="kpi__detalle"><%= formatearDinero(resumen.vendido) %> vendido</p>
+  </article>
+  <article class="kpi kpi--verde">
+    <p class="kpi__etiqueta">Cobranzas</p>
+    <p class="kpi__valor"><%= resumen.pagos %></p>
+    <p class="kpi__detalle"><%= formatearDinero(resumen.cobrado) %> cobrado</p>
+  </article>
+  <article class="kpi kpi--morado">
+    <p class="kpi__etiqueta">Tareas hechas</p>
+    <p class="kpi__valor"><%= resumen.tareasHechas %></p>
+    <p class="kpi__detalle"><%= resumen.tareasAsignadas %> asignada(s)<%= resumen.promedioHorasTarea === null ? '' : ` · ${resumen.promedioHorasTarea.toFixed(1)} h de media` %></p>
+  </article>
+</section>
+
+<% if (!secciones.length) { %>
+  <section class="tarjeta superficie panel">
+    <div class="vacio vacio--compacto">
+      <p class="vacio__icono"><%- include('../partials/icon', { nombre: 'activity' }) %></p>
+      <p class="vacio__texto">Sin actividad en este período. Prueba con un rango más largo.</p>
+    </div>
+  </section>
+<% } %>
+
+<% secciones.forEach((seccion) => { %>
+  <section class="tarjeta superficie panel panel--tabla">
+    <div class="panel__cabecera">
+      <div><p class="etiqueta"><%= seccion.titulo %></p><h3><%= seccion.detalle %></h3></div>
+      <span class="insignia insignia--modulo"><%= seccion.filas.length %> persona(s)</span>
+    </div>
+    <div class="tabla-scroll">
+      <table class="tabla">
+        <thead>
+          <% if (seccion.key === 'soporte') { %>
+            <tr><th>Trabajador</th><th>Cargo</th><th>Abiertos</th><th>Resueltos</th><th>Tiempo medio</th><th>Tareas</th><th></th></tr>
+          <% } else if (seccion.key === 'cobranzas') { %>
+            <tr><th>Trabajador</th><th>Cargo</th><th>Pagos</th><th>Cobrado</th><th></th></tr>
+          <% } else if (seccion.key === 'tecnicos') { %>
+            <tr><th>Trabajador</th><th>Cargo</th><th>Instalaciones</th><th>Averías resueltas</th><th>Tareas</th><th></th></tr>
+          <% } else if (seccion.key === 'ventas') { %>
+            <tr><th>Trabajador</th><th>Cargo</th><th>Ventas</th><th>Vendido</th><th></th></tr>
+          <% } else { %>
+            <tr><th>Trabajador</th><th>Cargo</th><th>Tickets</th><th>Instalaciones</th><th>Ventas</th><th>Pagos</th><th>Tareas</th><th></th></tr>
+          <% } %>
+        </thead>
+        <tbody>
+          <% seccion.filas.forEach((fila) => { %>
+            <tr>
+              <td data-etiqueta="Trabajador"><strong><%= fila.empleado.name %></strong></td>
+              <td data-etiqueta="Cargo"><%= fila.empleado.position %></td>
+              <% if (seccion.key === 'soporte') { %>
+                <td data-etiqueta="Abiertos"><%= fila.ticketsAbiertos %></td>
+                <td data-etiqueta="Resueltos"><%= fila.ticketsResueltos %></td>
+                <td data-etiqueta="Tiempo medio"><%= fila.promedioHoras === null ? '-' : `${fila.promedioHoras.toFixed(1)} h` %></td>
+                <td data-etiqueta="Tareas"><%= fila.tareasHechas %>/<%= fila.tareasAsignadas %><% if (fila.promedioHorasTarea !== null) { %> · <%= fila.promedioHorasTarea.toFixed(1) %> h<% } %></td>
+              <% } else if (seccion.key === 'cobranzas') { %>
+                <td data-etiqueta="Pagos"><%= fila.pagos %></td>
+                <td data-etiqueta="Cobrado"><%= formatearDinero(fila.cobrado) %></td>
+              <% } else if (seccion.key === 'tecnicos') { %>
+                <td data-etiqueta="Instalaciones"><%= fila.instalaciones %></td>
+                <td data-etiqueta="Averías"><%= fila.averias %></td>
+                <td data-etiqueta="Tareas"><%= fila.tareasHechas %>/<%= fila.tareasAsignadas %><% if (fila.promedioHorasTarea !== null) { %> · <%= fila.promedioHorasTarea.toFixed(1) %> h<% } %></td>
+              <% } else if (seccion.key === 'ventas') { %>
+                <td data-etiqueta="Ventas"><%= fila.ventas %></td>
+                <td data-etiqueta="Vendido"><%= formatearDinero(fila.vendido) %></td>
+              <% } else { %>
+                <td data-etiqueta="Tickets"><%= fila.ticketsResueltos %></td>
+                <td data-etiqueta="Instalaciones"><%= fila.instalaciones %></td>
+                <td data-etiqueta="Ventas"><%= fila.ventas %></td>
+                <td data-etiqueta="Pagos"><%= fila.pagos %></td>
+                <td data-etiqueta="Tareas"><%= fila.tareasHechas %>/<%= fila.tareasAsignadas %><% if (fila.promedioHorasTarea !== null) { %> · <%= fila.promedioHorasTarea.toFixed(1) %> h<% } %></td>
+              <% } %>
+              <td>
+                <% if (fila.empleado._id) { %>
+                  <a class="boton-icono boton-icono--sm" href="/admin/empleados/rendimiento?empleado=<%= fila.empleado._id %><%= filtroDesde ? `&desde=${filtroDesde}&hasta=${filtroHasta}` : `&dias=${dias}` %>" title="Ver ficha" aria-label="Ver rendimiento de <%= fila.empleado.name %>"><%- include('../partials/icon', { nombre: 'eye' }) %></a>
+                <% } %>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+<% }); %>

@@ -1,0 +1,174 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Financiero</p>
+    <h2 class="pagina-cabecera__titulo">Facturación</h2>
+    <p class="pagina-cabecera__texto">Cobra los periodos que están por vencer y controla la mora en un solo lugar.</p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <a class="boton boton--secundario" href="/facturacion/previsualizar">
+      <%- include('../partials/icon', { nombre: 'eye' }) %> Previsualizar
+    </a>
+    <form action="/facturacion/mora" method="post" data-confirmar="Se marcarán las facturas vencidas y se cortarán los servicios que superaron los días de gracia. ¿Continuar?">
+      <button type="submit" class="boton boton--peligro">
+        <%- include('../partials/icon', { nombre: 'zap' }) %> Ejecutar mora
+      </button>
+    </form>
+  </div>
+</section>
+
+<section class="rejilla rejilla--cuatro">
+  <article class="tarjeta superficie kpi kpi--ambar">
+    <div class="kpi__cabecera">
+      <span class="kpi__icono"><%- include('../partials/icon', { nombre: 'creditCard' }) %></span>
+      <span class="kpi__periodo"><%= resumen.pendientes %> factura(s)</span>
+    </div>
+    <p class="kpi__valor"><%= formatearDinero(resumen.deuda) %></p>
+    <p class="kpi__etiqueta">Deuda pendiente</p>
+    <p class="kpi__detalle"><a href="/facturas?estado=open">Ver pendientes <span aria-hidden="true">→</span></a></p>
+  </article>
+
+  <article class="tarjeta superficie kpi kpi--rojo">
+    <div class="kpi__cabecera">
+      <span class="kpi__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></span>
+      <span class="kpi__periodo"><%= resumen.vencidas %> factura(s)</span>
+    </div>
+    <p class="kpi__valor"><%= formatearDinero(resumen.vencido) %></p>
+    <p class="kpi__etiqueta">Saldo vencido</p>
+    <p class="kpi__detalle"><a href="/facturas?estado=overdue">Ver vencidas <span aria-hidden="true">→</span></a></p>
+  </article>
+
+  <article class="tarjeta superficie kpi kpi--verde">
+    <div class="kpi__cabecera">
+      <span class="kpi__icono"><%- include('../partials/icon', { nombre: 'trendUp' }) %></span>
+      <span class="kpi__periodo"><%= resumen.pagadasMes %> pago(s)</span>
+    </div>
+    <p class="kpi__valor"><%= formatearDinero(resumen.pagadoMes) %></p>
+    <p class="kpi__etiqueta">Cobrado este mes</p>
+    <p class="kpi__detalle"><a href="/facturas?estado=paid">Ver pagadas <span aria-hidden="true">→</span></a></p>
+  </article>
+
+  <article class="tarjeta superficie kpi kpi--morado">
+    <div class="kpi__cabecera">
+      <span class="kpi__icono"><%- include('../partials/icon', { nombre: 'receipt' }) %></span>
+      <span class="kpi__periodo"><%= resumen.emitidasMes %> emitida(s)</span>
+    </div>
+    <p class="kpi__valor"><%= resumen.porEmitir %></p>
+    <p class="kpi__etiqueta">Listas para facturar</p>
+    <p class="kpi__detalle"><a href="/facturacion/previsualizar">Revisar corrida <span aria-hidden="true">→</span></a></p>
+  </article>
+</section>
+
+<div class="rejilla rejilla--facturacion">
+  <section class="tarjeta superficie panel panel--corrida">
+    <div class="panel__cabecera">
+      <div>
+        <p class="etiqueta">Corrida</p>
+        <h3>Emitir facturas del periodo</h3>
+      </div>
+      <span class="insignia insignia--morado"><%= resumen.porEmitir %> elegible(s)</span>
+    </div>
+    <p class="texto-suave">
+      La corrida toma los servicios activos cuyo periodo termina en los próximos
+      <strong><%= config.billing.previewDays %> día(s)</strong>,
+      <%= config.billing.taxEnabled !== false ? `calcula IVA del ${Math.round(config.billing.taxRate * 100)} %` : 'emite sin IVA (desactivado)' %> y crea una factura por servicio.
+      Si un periodo ya fue facturado, se omite: no se duplica.
+    </p>
+    <ul class="lista-pasos">
+      <li><span>1</span><div><strong>Selecciona</strong><small>Servicios activos con periodo próximo a vencer.</small></div></li>
+      <li><span>2</span><div><strong>Calcula</strong><small>Snapshot del plan, <%= config.billing.taxEnabled !== false ? 'subtotal, IVA' : 'subtotal sin IVA' %> y vencimiento.</small></div></li>
+      <li><span>3</span><div><strong>Avanza</strong><small>El periodo del servicio se mueve al siguiente ciclo.</small></div></li>
+    </ul>
+    <div class="panel__acciones">
+      <a class="boton boton--secundario" href="/facturacion/previsualizar"><%- include('../partials/icon', { nombre: 'eye' }) %> Ver antes de emitir</a>
+      <form action="/facturacion/emitir" method="post" data-confirmar="Se emitirán <%= resumen.porEmitir %> factura(s) y se avanzará el periodo de cada servicio. Esta acción no se puede deshacer. ¿Continuar?">
+        <button type="submit" class="boton boton--primario">
+          <%- include('../partials/icon', { nombre: 'zap' }) %> Emitir <%= resumen.porEmitir %> factura(s)
+        </button>
+      </form>
+    </div>
+    <% if (resumen.fallidos > 0) { %>
+      <p class="nota nota--ambar">
+        <%- include('../partials/icon', { nombre: 'alert' }) %>
+        Hay <strong><%= resumen.fallidos %></strong> corte(s) fallido(s) pendientes de reintento en el dashboard.
+      </p>
+    <% } %>
+  </section>
+
+  <section class="tarjeta superficie panel">
+    <div class="panel__cabecera">
+      <div>
+        <p class="etiqueta">Configuración activa</p>
+        <h3>Reglas de cobro</h3>
+      </div>
+      <a class="enlace-flecha" href="/configuracion?tab=facturacion">Editar <span aria-hidden="true">→</span></a>
+    </div>
+    <dl class="datos datos--dos">
+      <div><dt>Moneda</dt><dd><%= config.billing.currency %> · <%= config.billing.locale %></dd></div>
+      <div><dt>IVA</dt><dd><%= config.billing.taxEnabled !== false ? `${Math.round(config.billing.taxRate * 100)} %` : 'Desactivado' %></dd></div>
+      <div><dt>Vencimiento</dt><dd><%= config.billing.dueDays %> día(s)</dd></div>
+      <div><dt>Gracia</dt><dd><%= config.billing.graceDays %> día(s)</dd></div>
+      <div><dt>Prefijo</dt><dd><%= config.billing.invoicePrefix %>-000000</dd></div>
+      <div><dt>Zona horaria</dt><dd><%= config.billing.timezone %></dd></div>
+    </dl>
+    <p class="nota nota--morado">
+      <%- include('../partials/icon', { nombre: 'shield' }) %>
+      Las facturas emitidas son inmutables: conservan moneda, precio y snapshot del plan.
+    </p>
+  </section>
+
+  <section class="tarjeta superficie panel panel--tabla panel--ancho">
+    <div class="panel__cabecera">
+      <div>
+        <p class="etiqueta">Financiero</p>
+        <h3>Facturas recientes</h3>
+      </div>
+      <a class="enlace-flecha" href="/facturas">Ver todas <span aria-hidden="true">→</span></a>
+    </div>
+    <% if (recientes.length === 0) { %>
+      <div class="vacio vacio--compacto"><p class="vacio__texto">Todavía no hay facturas emitidas.</p></div>
+    <% } else { %>
+      <div class="tabla-scroll">
+        <table class="tabla tabla--compacta">
+          <thead><tr><th>Factura</th><th>Cliente</th><th>Vencimiento</th><th>Total</th><th>Estado</th><th></th></tr></thead>
+          <tbody>
+            <% recientes.forEach((factura) => { %>
+              <tr>
+                <td data-etiqueta="Factura"><a href="/facturas/<%= factura._id %>"><%= factura.invoiceNumber %></a></td>
+                <td data-etiqueta="Cliente"><%= factura.clientId ? `${factura.clientId.firstName} ${factura.clientId.lastName}` : '—' %></td>
+                <td data-etiqueta="Vencimiento"><%= formatearFecha(factura.dueDate) %></td>
+                <td data-etiqueta="Total"><strong><%= formatearDinero(factura.total, factura.currency) %></strong></td>
+                <td data-etiqueta="Estado"><span class="insignia insignia--<%= factura.status %>"><%= etiquetas[factura.status] %></span></td>
+                <td><a class="boton-icono boton-icono--sm" href="/facturas/<%= factura._id %>" aria-label="Ver factura <%= factura.invoiceNumber %>"><%- include('../partials/icon', { nombre: 'eye' }) %></a></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </section>
+
+  <section class="tarjeta superficie panel">
+    <div class="panel__cabecera">
+      <div>
+        <p class="etiqueta">Trazabilidad</p>
+        <h3>Últimas corridas</h3>
+      </div>
+      <a class="enlace-flecha" href="/logs?modulo=financial">Auditoría <span aria-hidden="true">→</span></a>
+    </div>
+    <% if (corridas.length === 0) { %>
+      <div class="vacio vacio--compacto"><p class="vacio__texto">Sin corridas registradas todavía.</p></div>
+    <% } else { %>
+      <ul class="timeline">
+        <% corridas.forEach((log) => { %>
+          <li>
+            <span class="timeline__punto <%= log.status === 'failed' ? 'timeline__punto--rojo' : 'timeline__punto--verde' %>"></span>
+            <div class="timeline__contenido">
+              <p><%= log.description %></p>
+              <small><%= formatearFechaHora(log.timestamp) %> · <%= log.action %></small>
+            </div>
+          </li>
+        <% }); %>
+      </ul>
+    <% } %>
+  </section>
+</div>

@@ -1,0 +1,249 @@
+﻿<%
+  const activo = serie.find((item) => item.activo) || serie[serie.length - 1];
+  const datosGrafico = {
+    labels: serie.map((item) => item.etiqueta),
+    resumen: serie.map((item) => ({
+      clave: item.clave,
+      etiqueta: item.etiqueta,
+      ingresos: item.ingresos,
+      ingresosBrutos: item.ingresosBrutos,
+      gastos: item.gastos,
+      utilidadNeta: item.utilidadNeta,
+      margenNeto: item.margenNeto,
+      activo: Boolean(item.activo),
+    })),
+    detalle: serie.map((item) => ({
+      etiqueta: item.etiqueta,
+      servicio: item.servicio,
+      instalaciones: item.instalaciones,
+      equipos: item.equipos,
+      otros: item.otros,
+    })),
+    enlaceMes: Boolean(enlaceMes),
+    base: typeof base !== 'undefined' ? base : 'caja',
+  };
+%>
+<div class="evolucion" data-evolucion>
+  <div class="evolucion__cabecera">
+    <div class="segmentado segmentado--grafico" role="group" aria-label="Tipo de gráfico" data-evolucion-tipos>
+      <button type="button" class="segmentado__boton" data-tipo="bar">Barras</button>
+      <button type="button" class="segmentado__boton" data-tipo="line">Líneas</button>
+      <button type="button" class="segmentado__boton" data-tipo="area">Área</button>
+      <button type="button" class="segmentado__boton" data-tipo="stacked">Apiladas</button>
+      <button type="button" class="segmentado__boton" data-tipo="doughnut">Dona</button>
+    </div>
+    <span class="texto-suave">Haz clic en un mes para ver su detalle.</span>
+  </div>
+
+  <div class="evolucion__lienzo">
+    <canvas data-evolucion-lienzo role="img" aria-label="Ingresos por mensualidades, instalaciones, ventas de equipos y otros, frente a los gastos de los últimos seis meses"></canvas>
+  </div>
+
+  <div class="resumen-servicio resumen-servicio--finanzas" data-evolucion-resumen>
+    <p class="resumen-servicio__mes" data-resumen="periodo"><%= activo.etiqueta %></p>
+    <div><small>Ingresos netos</small><strong data-resumen="ingresos"><%= formatearDinero(activo.ingresos) %></strong></div>
+    <div><small>Con IVA</small><strong data-resumen="brutos"><%= formatearDinero(activo.ingresosBrutos) %></strong></div>
+    <div><small>Gastos</small><strong class="monto--deuda" data-resumen="gastos"><%= formatearDinero(activo.gastos) %></strong></div>
+    <div><small>Utilidad neta</small><strong class="<%= activo.utilidadNeta >= 0 ? 'monto--ok' : 'monto--deuda' %>" data-resumen="utilidad"><%= formatearDinero(activo.utilidadNeta) %></strong></div>
+    <div><small>Margen neto</small><strong data-resumen="margen"><%= activo.margenNeto %>%</strong></div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    var raiz = document.querySelector('[data-evolucion]');
+    if (!raiz || !window.Chart) return;
+
+    var datos = <%- JSON.stringify(datosGrafico).replace(/</g, '\\u003c') %>;
+    var series = [
+      { clave: 'servicio', label: 'Mensualidades', color: '#7c5cff', fondo: 'rgba(124, 92, 255, 0.72)' },
+      { clave: 'instalaciones', label: 'Instalaciones', color: '#f59e0b', fondo: 'rgba(245, 158, 11, 0.72)' },
+      { clave: 'equipos', label: 'Ventas de equipos', color: '#3b82f6', fondo: 'rgba(59, 130, 246, 0.72)' },
+      { clave: 'otros', label: 'Otros ingresos', color: '#22c55e', fondo: 'rgba(34, 197, 94, 0.72)' },
+      { clave: 'gastos', label: 'Gastos', color: '#f43f5e', fondo: 'rgba(244, 63, 94, 0.72)' },
+    ];
+    var valores = {
+      servicio: <%- JSON.stringify(serie.map((item) => item.servicio)) %>,
+      instalaciones: <%- JSON.stringify(serie.map((item) => item.instalaciones)) %>,
+      equipos: <%- JSON.stringify(serie.map((item) => item.equipos)) %>,
+      otros: <%- JSON.stringify(serie.map((item) => item.otros)) %>,
+      gastos: <%- JSON.stringify(serie.map((item) => item.gastos)) %>,
+    };
+
+    var moneda = (document.querySelector('meta[name="moneda"]') || {}).content || 'USD';
+    var locale = (document.querySelector('meta[name="locale"]') || {}).content || 'es-VE';
+    var formateador = new Intl.NumberFormat(locale, { style: 'currency', currency: moneda, maximumFractionDigits: 2 });
+    var formateadorCompacto = new Intl.NumberFormat(locale, { notation: 'compact', maximumFractionDigits: 1 });
+    var lienzo = raiz.querySelector('[data-evolucion-lienzo]');
+    var botones = raiz.querySelectorAll('[data-evolucion-tipos] [data-tipo]');
+    var chart = null;
+    var indiceActivo = datos.resumen.findIndex(function (item) { return item.activo; });
+    if (indiceActivo < 0) indiceActivo = datos.resumen.length - 1;
+
+    function formatearMoneda(valor) {
+      var numero = Number(valor) || 0;
+      var texto = formateador.format(Math.abs(numero));
+      return numero < 0 ? '-' + texto : texto;
+    }
+
+    function coloresTema() {
+      var estilos = getComputedStyle(document.documentElement);
+      return {
+        texto: (estilos.getPropertyValue('--muted') || '#8c8c9e').trim(),
+        borde: (estilos.getPropertyValue('--border') || '#272733').trim(),
+      };
+    }
+
+    function mostrarResumen(indice) {
+      var item = datos.resumen[indice];
+      if (!item) return;
+      var resumen = raiz.querySelector('[data-evolucion-resumen]');
+      resumen.querySelector('[data-resumen="periodo"]').textContent = item.etiqueta;
+      resumen.querySelector('[data-resumen="ingresos"]').textContent = formatearMoneda(item.ingresos);
+      resumen.querySelector('[data-resumen="brutos"]').textContent = formatearMoneda(item.ingresosBrutos);
+      resumen.querySelector('[data-resumen="gastos"]').textContent = formatearMoneda(item.gastos);
+      var utilidad = resumen.querySelector('[data-resumen="utilidad"]');
+      utilidad.textContent = formatearMoneda(item.utilidadNeta);
+      utilidad.className = item.utilidadNeta >= 0 ? 'monto--ok' : 'monto--deuda';
+      resumen.querySelector('[data-resumen="margen"]').textContent = item.margenNeto + '%';
+    }
+
+    function opcionesBase(theme) {
+      return {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: { color: theme.texto, usePointStyle: true, boxWidth: 8, padding: 14 },
+          },
+          tooltip: {
+            callbacks: {
+              label: function (contexto) {
+                return contexto.dataset.label + ': ' + formatearMoneda(contexto.parsed.y || 0);
+              },
+            },
+          },
+        },
+        scales: {
+          x: { stacked: false, grid: { display: false }, ticks: { color: theme.texto, maxRotation: 0, autoSkip: true } },
+          y: {
+            stacked: false,
+            beginAtZero: true,
+            grid: { color: theme.borde },
+            ticks: { color: theme.texto, callback: function (valor) { return formateadorCompacto.format(valor); } },
+          },
+        },
+        onClick: function (evento, elementos) {
+          if (!elementos.length) return;
+          var indice = elementos[0].index;
+          if (datos.enlaceMes && datos.resumen[indice]) {
+            window.location.href = '/finanzas?mes=' + datos.resumen[indice].clave + '&base=' + datos.base;
+            return;
+          }
+          indiceActivo = indice;
+          mostrarResumen(indice);
+          if (chart && chart.config.type === 'doughnut') crearDona();
+        },
+      };
+    }
+
+    function crearTendencia(tipo) {
+      var theme = coloresTema();
+      var esBarra = tipo === 'bar' || tipo === 'stacked';
+      var apilado = tipo === 'stacked';
+      var datasets = series.map(function (serieItem) {
+        return {
+          label: serieItem.label,
+          data: valores[serieItem.clave],
+          type: esBarra ? 'bar' : 'line',
+          stack: apilado ? (serieItem.clave === 'gastos' ? 'gastos' : 'ingresos') : undefined,
+          backgroundColor: serieItem.fondo,
+          borderColor: serieItem.color,
+          borderWidth: 2,
+          borderRadius: 6,
+          maxBarThickness: 28,
+          tension: 0.35,
+          pointRadius: esBarra ? 0 : 3,
+          pointHoverRadius: 4,
+          fill: tipo === 'area',
+        };
+      });
+      var opciones = opcionesBase(theme);
+      if (apilado) {
+        opciones.scales.x.stacked = true;
+        opciones.scales.y.stacked = true;
+      }
+      chart = new window.Chart(lienzo, {
+        type: esBarra ? 'bar' : 'line',
+        data: { labels: datos.labels, datasets: datasets },
+        options: opciones,
+      });
+    }
+
+    function crearDona() {
+      var theme = coloresTema();
+      var item = datos.detalle[indiceActivo] || { servicio: 0, instalaciones: 0, equipos: 0, otros: 0 };
+      chart = new window.Chart(lienzo, {
+        type: 'doughnut',
+        data: {
+          labels: ['Mensualidades', 'Instalaciones', 'Ventas de equipos', 'Otros ingresos'],
+          datasets: [{
+            data: [item.servicio, item.instalaciones, item.equipos, item.otros],
+            backgroundColor: ['#7c5cff', '#f59e0b', '#3b82f6', '#22c55e'],
+            borderWidth: 0,
+            hoverOffset: 6,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '58%',
+          plugins: {
+            legend: { position: 'bottom', labels: { color: theme.texto, usePointStyle: true, boxWidth: 8, padding: 14 } },
+            tooltip: {
+              callbacks: {
+                label: function (contexto) {
+                  return contexto.label + ': ' + formatearMoneda(contexto.parsed || 0);
+                },
+              },
+            },
+          },
+        },
+      });
+    }
+
+    function aplicarTipo(tipo) {
+      if (chart) chart.destroy();
+      if (tipo === 'doughnut') crearDona();
+      else crearTendencia(tipo);
+      botones.forEach(function (boton) {
+        var activo = boton.dataset.tipo === tipo;
+        boton.classList.toggle('is-activo', activo);
+        boton.setAttribute('aria-pressed', String(activo));
+      });
+      mostrarResumen(indiceActivo);
+      try { localStorage.setItem('crackentick-grafico-evolucion', tipo); } catch (error) { /* sin almacenamiento */ }
+    }
+
+    var tipo = 'bar';
+    try { tipo = localStorage.getItem('crackentick-grafico-evolucion') || 'bar'; } catch (error) { /* sin almacenamiento */ }
+    if (!['bar', 'line', 'area', 'stacked', 'doughnut'].includes(tipo)) tipo = 'bar';
+
+    botones.forEach(function (boton) {
+      boton.addEventListener('click', function () { aplicarTipo(boton.dataset.tipo); });
+    });
+    aplicarTipo(tipo);
+
+    new MutationObserver(function () {
+      if (!chart) return;
+      var theme = coloresTema();
+      if (chart.options.plugins?.legend?.labels) chart.options.plugins.legend.labels.color = theme.texto;
+      if (chart.options.scales?.x?.ticks) chart.options.scales.x.ticks.color = theme.texto;
+      if (chart.options.scales?.y?.ticks) chart.options.scales.y.ticks.color = theme.texto;
+      if (chart.options.scales?.y?.grid) chart.options.scales.y.grid.color = theme.borde;
+      chart.update('none');
+    }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-tema'] });
+  })();
+</script>

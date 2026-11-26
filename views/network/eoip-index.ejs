@@ -1,0 +1,66 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Red · Túneles</p>
+    <h2 class="pagina-cabecera__titulo">Conexiones EOIP</h2>
+    <p class="pagina-cabecera__texto">Selecciona un router para ver y administrar sus túneles EOIP.</p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <% if (selectedRouter && selectedRouter.vendor !== 'cisco') { %>
+      <a class="boton boton--primario" href="/red/eoip/nuevo?routerId=<%= selectedRouter._id %>"><%- include('../partials/icon', { nombre: 'plus' }) %> Nuevo túnel</a>
+    <% } %>
+  </div>
+</section>
+
+<%- include('../partials/red-router-nav', { routers, selectedRouter, modulo, conteos }) %>
+
+<%- include('../partials/experimental-aviso') %>
+
+<% if (selectedRouter) { %>
+  <% if (selectedRouter.vendor === 'cisco') { %>
+    <div class="aviso aviso--advertencia" role="note">
+      <span class="aviso__icono"><%- include('../partials/icon', { nombre: 'alert' }) %></span>
+      <div class="aviso__texto"><strong>EOIP es propio de RouterOS.</strong> En Cisco no se aplica automáticamente; Cisco queda limitado a VLANs y diagnóstico experimental.</div>
+    </div>
+  <% } %>
+
+  <section class="tarjeta panel panel--tabla">
+    <div class="panel__cabecera">
+      <div><p class="etiqueta">Router seleccionado</p><h3><%= selectedRouter.name %> · <%= tuneles.length %> túnel(es)</h3></div>
+    </div>
+    <% if (!tuneles.length) { %>
+      <div class="vacio vacio--compacto"><p class="vacio__icono"><%- include('../partials/icon', { nombre: 'wifi' }) %></p><p class="vacio__texto">No hay túneles EOIP registrados para este router.</p></div>
+    <% } else { %>
+      <div class="tabla-scroll">
+        <table class="tabla">
+          <thead><tr><th>Túnel</th><th>Remoto / local</th><th>Tunnel ID</th><th>Estado</th><th></th></tr></thead>
+          <tbody>
+            <% tuneles.forEach((tunel) => { %>
+              <tr>
+                <td data-etiqueta="Túnel"><strong><%= tunel.name %></strong><small><%= tunel.notes || 'Sin notas' %></small></td>
+                <td data-etiqueta="Remoto"><span class="mono"><%= tunel.remoteAddress %></span><small><%= tunel.localAddress || 'IP local automática' %></small></td>
+                <td data-etiqueta="Tunnel ID"><%= tunel.tunnelId %></td>
+                <td data-etiqueta="Estado">
+                  <span class="insignia insignia--<%= tunel.status === 'applied' ? 'active' : tunel.status === 'error' ? 'error' : tunel.status === 'simulated' ? 'pending' : 'none' %>"><%= tunel.status %></span>
+                  <small><%= tunel.enabled ? 'Habilitado' : 'Inhabilitado' %></small>
+                </td>
+                <td>
+                  <div class="tabla__acciones">
+                    <a class="boton-icono boton-icono--sm" href="/red/eoip/<%= tunel._id %>/editar" title="Editar" aria-label="Editar túnel"><%- include('../partials/icon', { nombre: 'edit' }) %></a>
+                    <form action="/red/eoip/<%= tunel._id %>/estado" method="post">
+                      <input type="hidden" name="accion" value="<%= tunel.enabled ? 'inhabilitar' : 'habilitar' %>">
+                      <button type="submit" class="boton-icono boton-icono--sm" title="<%= tunel.enabled ? 'Inhabilitar' : 'Habilitar' %>" aria-label="<%= tunel.enabled ? 'Inhabilitar' : 'Habilitar' %>"><%- include('../partials/icon', { nombre: tunel.enabled ? 'ban' : 'check' }) %></button>
+                    </form>
+                    <form action="/red/eoip/<%= tunel._id %>" method="post" data-confirmar="¿Eliminar el túnel <%= tunel.name %>?">
+                      <input type="hidden" name="_method" value="DELETE">
+                      <button type="submit" class="boton-icono boton-icono--sm boton-icono--peligro" title="Eliminar" aria-label="Eliminar túnel"><%- include('../partials/icon', { nombre: 'trash' }) %></button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </section>
+<% } %>

@@ -1,0 +1,81 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Red · Direccionamiento</p>
+    <h2 class="pagina-cabecera__titulo">Pools de IP</h2>
+    <p class="pagina-cabecera__texto"><%= resumen.total %> bloque(s) · <%= resumen.direcciones %> dirección(es) usables · <%= resumen.asignadas %> asignada(s)</p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <a class="boton boton--secundario" href="/routers">Routers</a>
+    <a class="boton boton--primario" href="/pools/nuevo"><%- include('../partials/icon', { nombre: 'plus' }) %> Nuevo pool</a>
+  </div>
+</section>
+
+<section class="tarjeta superficie filtros">
+  <form method="get" action="/pools" class="filtros__form">
+    <div class="campo campo--busqueda">
+      <label class="sr-only" for="q">Buscar pool</label>
+      <div class="campo__control">
+        <%- include('../partials/icon', { nombre: 'search' }) %>
+        <input id="q" type="search" name="q" value="<%= filtros.q %>" placeholder="Nombre del pool">
+      </div>
+    </div>
+    <div class="campo">
+      <label for="routerId">Router</label>
+      <select id="routerId" name="routerId" data-auto-enviar>
+        <option value="">Todos</option>
+        <% routers.forEach((router) => { %>
+          <option value="<%= router._id %>" <%= filtros.routerId === String(router._id) ? 'selected' : '' %>><%= router.name %></option>
+        <% }); %>
+      </select>
+    </div>
+    <button type="submit" class="boton boton--secundario boton--sm">Filtrar</button>
+  </form>
+</section>
+
+<% if (pools.length === 0) { %>
+  <section class="tarjeta superficie vacio">
+    <p class="vacio__icono"><%- include('../partials/icon', { nombre: 'network' }) %></p>
+    <h3 class="vacio__titulo">Sin pools</h3>
+    <p class="vacio__texto">Define un bloque CIDR para asignar IP automáticamente a los clientes.</p>
+    <a class="boton boton--primario" href="/pools/nuevo">Crear pool</a>
+  </section>
+<% } else { %>
+  <div class="rejilla rejilla--tres">
+    <% pools.forEach((pool) => { %>
+      <article class="tarjeta superficie plan-card">
+        <div class="plan-card__cabecera">
+          <div>
+            <p class="etiqueta"><%= etiquetas[pool.purpose] || pool.purpose %></p>
+            <h3 class="mono"><%= pool.cidr %></h3>
+          </div>
+          <span class="insignia insignia--<%= pool.active ? 'active' : 'cancelled' %>"><%= pool.active ? 'Activo' : 'Inactivo' %></span>
+        </div>
+        <p class="texto-suave"><%= pool.name %> · <%= pool.routerId ? pool.routerId.name : 'Sin router' %></p>
+        <div class="plan-card__velocidades">
+          <div><strong><%= pool.usadas %></strong><span>usadas</span></div>
+          <div><strong><%= pool.libres %></strong><span>libres</span></div>
+          <div><strong><%= pool.datosCidr.usable %></strong><span>usables</span></div>
+        </div>
+        <div class="barra-progreso" aria-hidden="true"><span data-progreso style="width: <%= pool.porcentaje %>%"></span></div>
+        <p class="texto-suave mono"><%= pool.datosCidr.firstUsable %> — <%= pool.datosCidr.lastUsable %></p>
+        <p class="mono texto-suave"><%= pool.muestra.slice(0, 5).join(' · ') %><%= pool.datosCidr.usable > 5 ? ' …' : '' %></p>
+        <div class="plan-card__pie">
+          <span class="texto-suave"><%= pool.aplicado || pool.appliedAt ? 'Aplicado' : 'Sin aplicar' %></span>
+          <div class="tabla__acciones">
+            <form action="/pools/<%= pool._id %>/aplicar" method="post" data-confirmar="¿Aplicar el pool <%= pool.name %> en el router?">
+              <button type="submit" class="boton-icono boton-icono--sm" title="Aplicar en el router" aria-label="Aplicar pool"><%- include('../partials/icon', { nombre: 'refresh' }) %></button>
+            </form>
+            <a class="boton-icono boton-icono--sm" href="/pools/<%= pool._id %>/editar" title="Editar"><%- include('../partials/icon', { nombre: 'edit' }) %></a>
+            <% if (!pool.usadas) { %>
+              <form action="/pools/<%= pool._id %>" method="post" data-confirmar="¿Eliminar el pool <%= pool.name %>?">
+                <input type="hidden" name="_method" value="DELETE">
+                <button type="submit" class="boton-icono boton-icono--sm boton-icono--peligro" title="Eliminar"><%- include('../partials/icon', { nombre: 'trash' }) %></button>
+              </form>
+            <% } %>
+          </div>
+        </div>
+      </article>
+    <% }); %>
+  </div>
+  <%- include('../partials/pagination', { paginacion, filtros }) %>
+<% } %>

@@ -1,0 +1,159 @@
+<section class="pagina-cabecera">
+  <div>
+    <p class="etiqueta">Comercial</p>
+    <h2 class="pagina-cabecera__titulo">Clientes</h2>
+    <p class="pagina-cabecera__texto"><%= resumen.total %> cliente(s) · <%= resumen.activos %> activo(s)<% if (puedeFacturacion) { %> · <%= resumen.conDeuda %> con deuda<% } %></p>
+  </div>
+  <div class="pagina-cabecera__acciones">
+    <% if (puedeEditar('finanzas.facturacion')) { %>
+    <form action="/clientes/verificar-estados" method="post" data-confirmar="¿Revisar la facturación y ajustar los estados? Los clientes al día quedan activos y los que deben mensualidad pasan a suspendidos. Los retirados no se tocan.">
+      <button type="submit" class="boton boton--secundario"><%- include('../partials/icon', { nombre: 'refresh' }) %> Verificar facturación</button>
+    </form>
+    <% } %>
+    <% if (puedeEditar('clientes.datos')) { %>
+    <a class="boton boton--primario" href="/clientes/nuevo">
+      <%- include('../partials/icon', { nombre: 'plus' }) %> Nuevo cliente
+    </a>
+    <% } %>
+  </div>
+</section>
+
+<section class="tarjeta superficie filtros">
+  <form method="get" action="/clientes" class="filtros__form">
+    <div class="campo campo--busqueda">
+      <label class="sr-only" for="q">Buscar</label>
+      <div class="campo__control">
+        <%- include('../partials/icon', { nombre: 'search' }) %>
+        <input id="q" type="search" name="q" value="<%= filtros.q %>" placeholder="Nombre, código, correo o identificación">
+      </div>
+    </div>
+    <div class="campo">
+      <label for="estado">Estado</label>
+      <select id="estado" name="estado" data-auto-enviar>
+        <option value="">Todos</option>
+        <option value="active" <%= filtros.estado === 'active' ? 'selected' : '' %>>Activo</option>
+        <option value="suspended" <%= filtros.estado === 'suspended' ? 'selected' : '' %>>Suspendido</option>
+        <option value="retired" <%= filtros.estado === 'retired' ? 'selected' : '' %>>Retirado</option>
+      </select>
+    </div>
+    <div class="campo">
+      <label for="servicio">Servicio</label>
+      <select id="servicio" name="servicio" data-auto-enviar>
+        <option value="">Todos</option>
+        <option value="active" <%= filtros.servicio === 'active' ? 'selected' : '' %>>Activo</option>
+        <option value="suspended" <%= filtros.servicio === 'suspended' ? 'selected' : '' %>>Suspendido</option>
+        <option value="sin" <%= filtros.servicio === 'sin' ? 'selected' : '' %>>Sin servicio</option>
+      </select>
+    </div>
+    <div class="campo">
+      <label for="plan">Plan</label>
+      <select id="plan" name="plan" data-auto-enviar>
+        <option value="">Todos</option>
+        <% planes.forEach((plan) => { %>
+          <option value="<%= plan._id %>" <%= String(filtros.plan) === String(plan._id) ? 'selected' : '' %>><%= plan.name %></option>
+        <% }); %>
+      </select>
+    </div>
+    <% if (puedeFacturacion) { %>
+    <div class="campo">
+      <label for="deuda">Cartera</label>
+      <select id="deuda" name="deuda" data-auto-enviar>
+        <option value="">Todos</option>
+        <option value="1" <%= filtros.deuda === '1' ? 'selected' : '' %>>Solo con deuda</option>
+      </select>
+    </div>
+    <% } %>
+    <div class="campo">
+      <label for="orden">Orden</label>
+      <select id="orden" name="orden" data-auto-enviar>
+        <option value="nombre" <%= filtros.orden === 'nombre' ? 'selected' : '' %>>Nombre</option>
+        <option value="codigo" <%= filtros.orden === 'codigo' ? 'selected' : '' %>>Código</option>
+        <option value="reciente" <%= filtros.orden === 'reciente' ? 'selected' : '' %>>Más reciente</option>
+        <% if (puedeFacturacion) { %><option value="deuda" <%= filtros.orden === 'deuda' ? 'selected' : '' %>>Mayor deuda</option><% } %>
+      </select>
+    </div>
+    <button type="submit" class="boton boton--secundario boton--sm">Filtrar</button>
+    <% if (filtros.q || filtros.estado || filtros.servicio || filtros.plan || filtros.deuda) { %>
+      <a class="enlace-flecha" href="/clientes">Limpiar</a>
+    <% } %>
+  </form>
+</section>
+
+<section class="tarjeta superficie tabla-panel">
+  <% if (clientes.length === 0) { %>
+    <div class="vacio">
+      <p class="vacio__icono"><%- include('../partials/icon', { nombre: 'users' }) %></p>
+      <h3 class="vacio__titulo">No hay clientes con esos filtros</h3>
+      <p class="vacio__texto">Ajusta la búsqueda o crea el primer cliente para empezar.</p>
+      <% if (puedeEditar('clientes.datos')) { %><a class="boton boton--primario" href="/clientes/nuevo">Crear cliente</a><% } %>
+    </div>
+  <% } else { %>
+    <div class="tabla-scroll">
+      <table class="tabla">
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Cliente</th>
+            <th>Plan</th>
+            <th>Servicio</th>
+            <% if (puedeFacturacion) { %><th>Deuda</th><% } %>
+            <th>Estado</th>
+            <th class="tabla__acciones">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% clientes.forEach((cliente) => { %>
+            <tr>
+              <td data-etiqueta="Código"><span class="codigo"><%= cliente.clientCode %></span></td>
+              <td data-etiqueta="Cliente">
+                <a class="persona" href="/clientes/<%= cliente._id %>?tab=general">
+                  <span class="avatar avatar--sm"><%= cliente.initials %></span>
+                  <span>
+                    <strong><%= cliente.fullName %></strong>
+                    <small><%= cliente.email || 'Sin correo' %></small>
+                  </span>
+                </a>
+              </td>
+              <td data-etiqueta="Plan">
+                <% if (cliente.subscription) { %>
+                  <span><%= cliente.subscription.planSnapshot?.name || cliente.subscription.planId?.name || '—' %></span>
+                  <small class="texto-suave"><%= cliente.subscription.serviceConfig?.connectionType === 'pppoe' ? 'PPPoE' : cliente.subscription.serviceConfig?.connectionType === 'static' ? 'IP fija' : 'DHCP' %></small>
+                <% } else { %>
+                  <span class="texto-suave">Sin servicio</span>
+                <% } %>
+              </td>
+              <td data-etiqueta="Servicio">
+                <% if (cliente.subscription) { %>
+                  <span class="insignia insignia--<%= cliente.subscription.status %>"><%= etiquetas[cliente.subscription.status] %></span>
+                <% } else { %>
+                  <span class="insignia insignia--vacio">Sin servicio</span>
+                <% } %>
+              </td>
+              <% if (puedeFacturacion) { %>
+              <td data-etiqueta="Deuda">
+                <% if (cliente.deuda.total > 0) { %>
+                  <strong class="monto monto--deuda"><%= formatearDinero(cliente.deuda.total) %></strong>
+                  <small class="texto-suave"><%= cliente.deuda.cantidad %> factura(s)</small>
+                <% } else { %>
+                  <span class="monto monto--ok">Al día</span>
+                <% } %>
+              </td>
+              <% } %>
+              <td data-etiqueta="Estado"><span class="insignia insignia--<%= cliente.status %>"><%= etiquetas[cliente.status] %></span></td>
+              <td data-etiqueta="Acciones" class="tabla__acciones">
+                <a class="boton-icono boton-icono--sm" href="/clientes/<%= cliente._id %>?tab=general" aria-label="Ver <%= cliente.fullName %>" title="Ver ficha"><%- include('../partials/icon', { nombre: 'eye' }) %></a>
+                <% if (puedeEditar('clientes.datos')) { %>
+                  <a class="boton-icono boton-icono--sm" href="/clientes/<%= cliente._id %>/editar" aria-label="Editar <%= cliente.fullName %>" title="Editar"><%- include('../partials/icon', { nombre: 'edit' }) %></a>
+                <% } %>
+                <% if (puede('clientes.servicio') || puede('clientes.cortes')) { %>
+                <a class="boton-icono boton-icono--sm" href="/clientes/<%= cliente._id %>?tab=servicio" aria-label="Servicio de <%= cliente.fullName %>" title="Servicio"><%- include('../partials/icon', { nombre: 'wifi' }) %></a>
+                <% } %>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+    <%- include('../partials/pagination', { paginacion, filtros }) %>
+  <% } %>
+</section>

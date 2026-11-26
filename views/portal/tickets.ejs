@@ -1,0 +1,64 @@
+<%
+  const estados = { open: 'Abierto', in_progress: 'En proceso', resolved: 'Resuelto', closed: 'Cerrado' };
+  const clases = { open: 'abierto', in_progress: 'proceso', resolved: 'resuelto', closed: 'cerrado' };
+  const prioridades = { low: 'Baja', medium: 'Media', high: 'Alta', urgent: 'Crítica' };
+  const filtros = [
+    ['todos', 'Todos'],
+    ['abiertos', 'Abiertos'],
+    ['en_proceso', 'En proceso'],
+    ['resueltos', 'Resueltos'],
+    ['cerrados', 'Cerrados'],
+  ];
+  const enlace = (clave, pagina) => {
+    const query = new URLSearchParams();
+    if (clave !== 'todos') query.set('estado', clave);
+    if (pagina > 1) query.set('pagina', String(pagina));
+    const texto = query.toString();
+    return `/portal/tickets${texto ? `?${texto}` : ''}`;
+  };
+%>
+<section class="p-page-head" data-motion="fade">
+  <div>
+    <span class="p-eyebrow">Soporte</span>
+    <h1>Mis tickets</h1>
+    <p>Sigue el estado de tus solicitudes y responde a soporte.</p>
+  </div>
+  <div class="p-page-head__acciones">
+    <a class="p-btn p-btn--secundario" href="/portal"><%- include('_icono', { nombre: 'arrowLeft' }) %> Volver al resumen</a>
+    <a class="p-btn p-btn--primario" href="/portal/tickets/nuevo"><%- include('_icono', { nombre: 'plus' }) %> Nuevo ticket</a>
+  </div>
+</section>
+
+<nav class="p-tabs" aria-label="Filtrar tickets" data-motion="fade">
+  <% filtros.forEach(([clave, etiqueta]) => { %>
+    <a class="p-tabs__link <%= estado === clave ? 'is-activo' : '' %>" href="<%= enlace(clave, 1) %>"><%= etiqueta %></a>
+  <% }); %>
+</nav>
+
+<section class="p-card" data-motion="fade">
+  <% if (!tickets.length) { %>
+    <div class="p-vacio"><span class="p-vacio__icono"><%- include('_icono', { nombre: 'ticket' }) %></span><strong>No hay tickets en este filtro</strong><p>Abre uno nuevo si necesitas ayuda con tu servicio.</p><a class="p-btn p-btn--primario p-btn--pequeno" href="/portal/tickets/nuevo">Abrir ticket</a></div>
+  <% } else { %>
+    <div class="p-tickets">
+      <% tickets.forEach((ticket) => { %>
+        <a class="p-ticket" href="/portal/tickets/<%= ticket._id %>">
+          <span class="p-ticket__icono"><%- include('_icono', { nombre: 'ticket' }) %></span>
+          <span class="p-ticket__cuerpo">
+            <span class="p-ticket__meta"><span class="p-mono"><%= ticket.code %></span> · <%= formatearFechaHora(ticket.createdAt) %></span>
+            <strong><%= ticket.subject %></strong>
+            <small><%= (ticket.messages || []).filter((m) => !m.internal).length %> mensaje(s) · Prioridad <%= prioridades[ticket.priority] || ticket.priority %></small>
+          </span>
+          <span class="p-status p-status--<%= clases[ticket.status] || 'abierto' %>"><%= estados[ticket.status] || ticket.status %></span>
+          <%- include('_icono', { nombre: 'arrowRight' }) %>
+        </a>
+      <% }); %>
+    </div>
+    <% if (paginacion.paginas > 1) { %>
+      <nav class="p-paginacion" aria-label="Páginas de tickets">
+        <% if (paginacion.actual > 1) { %><a class="p-btn p-btn--secundario p-btn--pequeno" href="<%= enlace(estado, paginacion.actual - 1) %>">Anterior</a><% } else { %><span></span><% } %>
+        <span>Página <%= paginacion.actual %> de <%= paginacion.paginas %></span>
+        <% if (paginacion.actual < paginacion.paginas) { %><a class="p-btn p-btn--secundario p-btn--pequeno" href="<%= enlace(estado, paginacion.actual + 1) %>">Siguiente</a><% } else { %><span></span><% } %>
+      </nav>
+    <% } %>
+  <% } %>
+</section>
