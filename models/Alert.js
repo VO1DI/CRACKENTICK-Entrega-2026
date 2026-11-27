@@ -11,6 +11,8 @@ const alertSchema = new mongoose.Schema(
     message: { type: String, required: true, trim: true, maxlength: 300 },
     status: { type: String, enum: ESTADOS_ALERTA, default: 'active', index: true },
     value: { type: String, trim: true, default: '', maxlength: 120 },
+    ticketId: { type: mongoose.Schema.Types.ObjectId, ref: 'Ticket', default: null, index: true },
+    link: { type: String, trim: true, default: '', maxlength: 200 },
     startedAt: { type: Date, default: Date.now, index: true },
     acknowledgedAt: { type: Date },
     resolvedAt: { type: Date },

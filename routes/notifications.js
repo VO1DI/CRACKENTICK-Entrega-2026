@@ -4,6 +4,7 @@ const notificationController = require('../controllers/notificationController');
 const router = express.Router();
 
 router.get('/', notificationController.index);
+router.get('/vista', notificationController.vista);
 router.post('/resolver-todas', notificationController.resolverTodas);
 router.post('/alertas/:id/reconocer', notificationController.reconocer);
 router.post('/alertas/:id/resolver', notificationController.resolver);

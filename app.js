@@ -69,6 +69,7 @@ const {
   TIPOS_MOVIMIENTO_FINANZAS,
   ESTADOS_MOVIMIENTO_FINANZAS,
   TIPOS_ALERTA_RED,
+  ETIQUETAS_TIPO_ALERTA,
 } = require('./config/constants');
 const { formatearDinero } = require('./utils/money');
 const { formatearBps } = require('./utils/bits');
@@ -214,6 +215,7 @@ app.use(async (req, res, next) => {
     res.locals.gruposPermisos = GRUPOS_PERMISOS;
     res.locals.etiquetasPermiso = ETIQUETAS_PERMISO;
     res.locals.etiquetasRol = ETIQUETAS_ROL;
+    res.locals.etiquetasTipoAlerta = ETIQUETAS_TIPO_ALERTA;
     res.locals.categoriasFinanzas = CATEGORIAS_FINANZAS;
     res.locals.etiquetasCategoria = ETIQUETAS_CATEGORIA_FINANZA;
     res.locals.tiposMovimiento = TIPOS_MOVIMIENTO_FINANZAS;
@@ -228,20 +230,32 @@ app.use(async (req, res, next) => {
     if (res.locals.puede('red.monitoreo')) tiposAlerta.push(...TIPOS_ALERTA_RED);
     if (res.locals.puede('ventas.inventario')) tiposAlerta.push('stock_low');
     if (res.locals.puede('general.clientes') || res.locals.puede('red.monitoreo')) tiposAlerta.push('client_down');
+    if (res.locals.puede('soporte.tickets')) tiposAlerta.push('ticket_new');
     const claveAlertas = [...new Set(tiposAlerta)].join(',');
+    res.locals.notificacionesPreview = [];
     if (!claveAlertas) {
       res.locals.notificacionesPendientes = 0;
     } else {
       const enCache = alertBadgeCache.obtener(claveAlertas);
-      if (enCache !== null) {
-        res.locals.notificacionesPendientes = enCache;
+      if (enCache && typeof enCache === 'object') {
+        res.locals.notificacionesPendientes = enCache.pendientes;
+        res.locals.notificacionesPreview = enCache.preview;
       } else {
-        const pendientes = await Alert.countDocuments({
+        const consulta = {
           type: { $in: claveAlertas.split(',') },
           status: { $in: ['active', 'acknowledged'] },
-        });
-        alertBadgeCache.guardar(claveAlertas, pendientes);
+        };
+        const [pendientes, preview] = await Promise.all([
+          Alert.countDocuments(consulta),
+          Alert.find(consulta)
+            .select('type severity message value link startedAt')
+            .sort({ startedAt: -1 })
+            .limit(5)
+            .lean(),
+        ]);
+        alertBadgeCache.guardar(claveAlertas, { pendientes, preview });
         res.locals.notificacionesPendientes = pendientes;
+        res.locals.notificacionesPreview = preview;
       }
     }
     res.locals.formatearDinero = (valor, currency) =>

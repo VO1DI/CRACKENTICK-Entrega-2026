@@ -7,6 +7,7 @@ const { verifyPassword } = require('../utils/password');
 const { registrar } = require('../services/auditService');
 const { crearError } = require('../utils/errors');
 const { crearLimite } = require('../utils/rateLimit');
+const ticketAlertService = require('../services/ticketAlertService');
 
 const PENDIENTES = ['open', 'overdue'];
 const POR_PAGINA = 10;
@@ -287,6 +288,7 @@ async function crearTicket(req, res, next) {
       status: 'open',
       assignedTo: 'Soporte',
     });
+    await ticketAlertService.notificarTicketCreado(ticket, req.cliente, 'portal');
     await registrar({
       module: 'support',
       entity: 'Ticket',

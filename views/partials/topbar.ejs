@@ -21,10 +21,43 @@
       </a>
       <% } %>
     <% } %>
-    <a class="boton-icono topbar__campana" href="/notificaciones" aria-label="Notificaciones<% if (notificacionesPendientes) { %>, <%= notificacionesPendientes %> pendientes<% } %>" title="Notificaciones">
-      <%- include('icon', { nombre: 'bell' }) %>
-      <% if (notificacionesPendientes) { %><span class="topbar__campana-badge"><%= notificacionesPendientes > 99 ? '99+' : notificacionesPendientes %></span><% } %>
-    </a>
+    <div class="topbar__campana-envoltura" data-campana>
+      <button type="button" class="boton-icono topbar__campana" id="btnCampana" data-campana-boton aria-haspopup="dialog" aria-expanded="false" aria-controls="campanaPanel" aria-label="Notificaciones<% if (notificacionesPendientes) { %>, <%= notificacionesPendientes %> pendientes<% } %>" title="Notificaciones">
+        <%- include('icon', { nombre: 'bell' }) %>
+        <% if (notificacionesPendientes) { %><span class="topbar__campana-badge"><%= notificacionesPendientes > 99 ? '99+' : notificacionesPendientes %></span><% } %>
+      </button>
+      <div class="campana-panel" id="campanaPanel" data-campana-panel role="dialog" aria-label="Últimas notificaciones" hidden>
+        <div class="campana-panel__cabecera">
+          <div>
+            <p class="etiqueta">Avisos</p>
+            <strong>Últimas notificaciones</strong>
+          </div>
+          <button type="button" class="boton-icono boton-icono--sm" data-campana-cerrar aria-label="Cerrar notificaciones">
+            <%- include('icon', { nombre: 'x' }) %>
+          </button>
+        </div>
+        <% if (!notificacionesPreview.length) { %>
+          <p class="campana-panel__vacio">No hay avisos pendientes en tus áreas.</p>
+        <% } else { %>
+          <div class="campana-panel__lista">
+            <% notificacionesPreview.forEach((alerta) => { %>
+              <a class="campana-item campana-item--<%= alerta.severity %>" href="<%= alerta.link || '/notificaciones' %>">
+                <span class="campana-item__punto" aria-hidden="true"></span>
+                <span class="campana-item__cuerpo">
+                  <span class="campana-item__tipo"><%= (etiquetasTipoAlerta && etiquetasTipoAlerta[alerta.type]) || 'Aviso' %></span>
+                  <strong><%= alerta.message %></strong>
+                  <% if (alerta.value) { %><small><%= alerta.value %></small><% } %>
+                  <small><%- include('icon', { nombre: 'clock' }) %> <%= formatearFechaHora(alerta.startedAt) %></small>
+                </span>
+              </a>
+            <% }); %>
+          </div>
+        <% } %>
+        <a class="boton boton--primario boton--bloque campana-panel__ver" href="/notificaciones">
+          Ver todas<% if (notificacionesPendientes) { %> (<%= notificacionesPendientes %>)<% } %>
+        </a>
+      </div>
+    </div>
     <div class="topbar__tasa" data-tasa>
       <button type="button" class="topbar__tasa-boton" data-tasa-boton aria-haspopup="dialog" aria-expanded="false" aria-controls="tasaPanel" title="Dólar BCV">
         <span data-tasa-valor><%= tasaBcv.rate ? `Bs ${tasaBcv.rate.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'Bs —' %></span>
@@ -72,6 +105,11 @@
         <button type="button" class="tema-menu__opcion" role="menuitemcheckbox" data-vista-compacta aria-checked="false">
           <span class="tema-muestra tema-muestra--compacta" aria-hidden="true"></span>
           <span class="tema-menu__texto"><strong>Vista compacta</strong><small>Más filas en pantalla</small></span>
+          <%- include('icon', { nombre: 'check' }) %>
+        </button>
+        <button type="button" class="tema-menu__opcion" role="menuitemcheckbox" data-menu-mega-opcion aria-checked="false">
+          <span class="tema-muestra tema-muestra--mega" aria-hidden="true"></span>
+          <span class="tema-menu__texto"><strong>Mega menú</strong><small>Panel de navegación por grupos</small></span>
           <%- include('icon', { nombre: 'check' }) %>
         </button>
       </div>

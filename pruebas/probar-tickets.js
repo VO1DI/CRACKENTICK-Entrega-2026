@@ -7,6 +7,7 @@ const assert = require('assert');
 const mongoose = require('mongoose');
 const Client = require('../models/Client');
 const Ticket = require('../models/Ticket');
+const Alert = require('../models/Alert');
 const User = require('../models/User');
 const ticketController = require('../controllers/ticketController');
 const portalController = require('../controllers/portalController');
@@ -58,6 +59,11 @@ async function correr(controlador, peticion) {
   assert.strictEqual(ticket.messages.length, 1);
   assert.match(alta.redireccion, new RegExp(`/tickets/${ticket._id}`));
 
+  const aviso = await Alert.findOne({ type: 'ticket_new', ticketId: ticket._id });
+  assert.ok(aviso, 'el ticket debe generar una notificación');
+  assert.strictEqual(aviso.link, `/soporte/tickets/${ticket._id}`);
+  assert.strictEqual(aviso.severity, 'warning', 'prioridad alta genera aviso de advertencia');
+
   const respuesta = await correr(ticketController.responder, req({
     params: { id: String(ticket._id) },
     body: { body: 'Técnico asignado.', internal: 'on' },
@@ -82,6 +88,8 @@ async function correr(controlador, peticion) {
   actualizado = await Ticket.findById(ticket._id);
   assert.strictEqual(actualizado.status, 'resolved');
   assert.ok(actualizado.resolvedAt);
+  const avisoResuelto = await Alert.findById(aviso._id);
+  assert.strictEqual(avisoResuelto.status, 'resolved', 'resolver el ticket cierra su aviso');
 
   await correr(ticketController.cambiarEstado, req({
     params: { id: String(ticket._id) },
@@ -102,6 +110,10 @@ async function correr(controlador, peticion) {
   assert.strictEqual(desdePortal.priority, 'urgent');
   assert.strictEqual(String(desdePortal.clientId), String(cliente._id));
   assert.match(portal.redireccion, /\/portal\/tickets\/[a-f0-9]{24}$/);
+  assert.ok(
+    await Alert.findOne({ type: 'ticket_new', ticketId: desdePortal._id }),
+    'el ticket del portal también genera notificación'
+  );
 
   // Un valor viejo (`critical`) no debe romper: cae a media.
   await correr(portalController.crearTicket, req({

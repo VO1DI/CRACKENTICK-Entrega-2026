@@ -29,6 +29,9 @@
           var validos = ['oscuro', 'claro', 'claro-suave'];
           document.documentElement.dataset.tema = validos.indexOf(guardado) !== -1 ? guardado : 'oscuro';
         }
+        if (localStorage.getItem('crackentick-menu-mega') === '1') {
+          document.documentElement.dataset.menuMega = '1';
+        }
       } catch (e) { document.documentElement.dataset.tema = 'oscuro'; /* sin almacenamiento */ }
     })();
   </script>

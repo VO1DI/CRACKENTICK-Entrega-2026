@@ -13,6 +13,7 @@ function puedeAlerta(usuario, alerta, editar = false) {
   if (TIPOS_ALERTA_RED.includes(alerta.type)) return permitido(usuario, 'red.monitoreo');
   if (alerta.type === 'stock_low') return permitido(usuario, 'ventas.inventario');
   if (alerta.type === 'client_down') return permitido(usuario, 'general.clientes') || permitido(usuario, 'red.monitoreo');
+  if (alerta.type === 'ticket_new') return permitido(usuario, 'soporte.tickets');
   return false;
 }
 
@@ -23,6 +24,7 @@ function tiposPermitidos(usuario, editar = false) {
   if (permitido(usuario, 'red.monitoreo')) tipos.push(...TIPOS_ALERTA_RED);
   if (permitido(usuario, 'ventas.inventario')) tipos.push('stock_low');
   if (permitido(usuario, 'general.clientes') || permitido(usuario, 'red.monitoreo')) tipos.push('client_down');
+  if (permitido(usuario, 'soporte.tickets')) tipos.push('ticket_new');
   return [...new Set(tipos)];
 }
 
@@ -67,6 +69,7 @@ async function index(req, res, next) {
     );
 
     const grupos = [
+      { key: 'soporte', titulo: 'Soporte', descripcion: 'Tickets nuevos', icono: 'ticket', alertas: alertasConPermiso.filter((a) => a.type === 'ticket_new') },
       { key: 'red', titulo: 'Red', descripcion: 'WAN, latencia y enlaces', icono: 'gauge', alertas: alertasConPermiso.filter((a) => TIPOS_ALERTA_RED.includes(a.type)) },
       { key: 'servicio', titulo: 'Servicios', descripcion: 'Clientes sin conexión', icono: 'wifi', alertas: alertasConPermiso.filter((a) => a.type === 'client_down') },
       { key: 'stock', titulo: 'Almacén', descripcion: 'Existencias bajo mínimo', icono: 'box', alertas: alertasConPermiso.filter((a) => a.type === 'stock_low') },
@@ -78,6 +81,35 @@ async function index(req, res, next) {
       grupos,
       resumen: { pendientes, criticas, reconocidas, resueltas },
       puedeGestionar: tiposPermitidos(req.usuario, true).length > 0,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/** GET /notificaciones/vista — últimos avisos para la campana y los pop-ups. */
+async function vista(req, res, next) {
+  try {
+    const tipos = tiposPermitidos(req.usuario);
+    if (!tipos.length) return res.json({ pendientes: 0, items: [] });
+
+    const consulta = { type: { $in: tipos }, status: { $in: ['active', 'acknowledged'] } };
+    const [items, pendientes] = await Promise.all([
+      Alert.find(consulta).sort({ startedAt: -1 }).limit(6).lean(),
+      Alert.countDocuments(consulta),
+    ]);
+
+    res.json({
+      pendientes,
+      items: items.map((alerta) => ({
+        id: String(alerta._id),
+        type: alerta.type,
+        severity: alerta.severity,
+        message: alerta.message,
+        value: alerta.value || '',
+        link: alerta.link || '',
+        startedAt: alerta.startedAt,
+      })),
     });
   } catch (error) {
     next(error);
@@ -155,4 +187,4 @@ async function resolverTodas(req, res, next) {
   }
 }
 
-module.exports = { index, reconocer, resolver, resolverTodas, puedeAlerta, tiposPermitidos };
+module.exports = { index, vista, reconocer, resolver, resolverTodas, puedeAlerta, tiposPermitidos };

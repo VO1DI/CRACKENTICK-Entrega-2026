@@ -66,8 +66,19 @@ const TIPOS_MOVIMIENTO_INVENTARIO = ['entrada', 'salida', 'ajuste', 'instalacion
 
 /** Monitorización y alertas. */
 const ESTADOS_ALERTA = ['active', 'acknowledged', 'resolved'];
-const TIPOS_ALERTA = ['wan_down', 'wan_up', 'client_down', 'stock_low', 'wan_latency', 'router_down', 'router_up'];
+const TIPOS_ALERTA = ['wan_down', 'wan_up', 'client_down', 'stock_low', 'wan_latency', 'router_down', 'router_up', 'ticket_new'];
 const TIPOS_ALERTA_RED = ['wan_down', 'wan_up', 'wan_latency', 'router_down', 'router_up'];
+const TIPOS_ALERTA_SOPORTE = ['ticket_new'];
+const ETIQUETAS_TIPO_ALERTA = {
+  wan_down: 'WAN caída',
+  wan_up: 'WAN restablecida',
+  client_down: 'Cliente sin conexión',
+  stock_low: 'Stock bajo',
+  wan_latency: 'Latencia alta',
+  router_down: 'Router caído',
+  router_up: 'Router restablecido',
+  ticket_new: 'Ticket nuevo',
+};
 const PROPOSITOS_POOL = ['pppoe', 'static', 'dhcp', 'mixed'];
 
 /** Categorías de aviso que se pueden enrutar a cada bot de Telegram. */
@@ -443,6 +454,8 @@ module.exports = {
   ESTADOS_ALERTA,
   TIPOS_ALERTA,
   TIPOS_ALERTA_RED,
+  TIPOS_ALERTA_SOPORTE,
+  ETIQUETAS_TIPO_ALERTA,
   PROPOSITOS_POOL,
   CATEGORIAS_TELEGRAM,
   ROLES_USUARIO,

@@ -2,9 +2,14 @@
   <div>
     <p class="etiqueta">Operación · Avisos</p>
     <h2 class="pagina-cabecera__titulo">Notificaciones</h2>
-    <p class="pagina-cabecera__texto">Alertas de red, servicios y almacén filtradas por tus permisos.</p>
+    <p class="pagina-cabecera__texto">Avisos de soporte, red, servicios y almacén filtrados por tus permisos.</p>
   </div>
   <div class="pagina-cabecera__acciones">
+    <label class="switch notif-popups" title="Mostrar los avisos nuevos como pop-ups">
+      <input type="checkbox" data-popups-toggle>
+      <span class="switch__control"></span>
+      <span class="switch__texto">Pop-ups</span>
+    </label>
     <% if (resumen.pendientes && puedeGestionar) { %>
       <form action="/notificaciones/resolver-todas" method="post" data-confirmar="¿Resolver todas las alertas pendientes de tus áreas?">
         <button type="submit" class="boton boton--secundario boton--sm"><%- include('../partials/icon', { nombre: 'check' }) %> Resolver todas</button>
@@ -66,6 +71,8 @@
       </div>
       <% if (grupo.key === 'red' && puede('red.monitoreo')) { %>
         <a class="enlace-flecha" href="/red/monitoreo#alertas">Abrir monitorización <span aria-hidden="true">→</span></a>
+      <% } else if (grupo.key === 'soporte' && puede('soporte.tickets')) { %>
+        <a class="enlace-flecha" href="/soporte/tickets">Abrir tickets <span aria-hidden="true">→</span></a>
       <% } else if (grupo.key === 'stock' && puede('ventas.inventario')) { %>
         <a class="enlace-flecha" href="/ventas/inventario#alertas-stock">Abrir inventario <span aria-hidden="true">→</span></a>
       <% } else if (grupo.key === 'servicio' && puede('general.clientes')) { %>
@@ -79,7 +86,9 @@
           <span class="notif-item__punto" aria-hidden="true"></span>
           <div class="notif-item__cuerpo">
             <div class="notif-item__linea">
-              <strong><%= alerta.message %></strong>
+              <strong>
+                <% if (alerta.link) { %><a href="<%= alerta.link %>"><%= alerta.message %></a><% } else { %><%= alerta.message %><% } %>
+              </strong>
               <span class="insignia insignia--<%= alerta.status === 'active' ? 'overdue' : alerta.status === 'acknowledged' ? 'pending' : 'active' %>">
                 <%= alerta.status === 'active' ? 'Activa' : alerta.status === 'acknowledged' ? 'Reconocida' : 'Resuelta' %>
               </span>

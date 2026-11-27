@@ -4,6 +4,7 @@ const Subscription = require('../models/Subscription');
 const User = require('../models/User');
 const { registrar } = require('../services/auditService');
 const staffService = require('../services/staffService');
+const ticketAlertService = require('../services/ticketAlertService');
 const { crearError, mensajeDeError } = require('../utils/errors');
 const {
   TICKETS_POR_PAGINA,
@@ -110,6 +111,7 @@ async function crear(req, res, next) {
         : [],
     });
     await ticket.save();
+    await ticketAlertService.notificarTicketCreado(ticket, cliente, 'soporte');
 
     await registrar({
       module: 'support',
@@ -225,6 +227,9 @@ async function cambiarEstado(req, res, next) {
       if (!ticket.resolvedAt) ticket.resolvedAt = new Date();
     }
     await ticket.save();
+    if (estado === 'resolved' || estado === 'closed') {
+      await ticketAlertService.resolverTicket(ticket._id);
+    }
 
     await registrar({
       module: 'support',

@@ -115,6 +115,134 @@
     });
   });
 
+  /* ------------------------------------------------------------------
+     Mega menú opcional: panel de navegación con los mismos permisos.
+     La barra lateral sigue siendo el modo por defecto.
+     ------------------------------------------------------------------ */
+  const CLAVE_MEGA = 'crackentick-menu-mega';
+  let megaDialogo = null;
+
+  function menuMegaActivo() {
+    return raiz.dataset.menuMega === '1';
+  }
+
+  function sincronizarMega() {
+    document.querySelectorAll('[data-menu-mega-opcion]').forEach(function (boton) {
+      boton.classList.toggle('is-activo', menuMegaActivo());
+      boton.setAttribute('aria-checked', menuMegaActivo() ? 'true' : 'false');
+    });
+    const botonMenuMega = document.getElementById('btnMenu');
+    if (menuMegaActivo() && botonMenuMega && !(megaDialogo && megaDialogo.open)) {
+      botonMenuMega.setAttribute('aria-expanded', 'false');
+    }
+  }
+
+  function cerrarMega() {
+    if (!megaDialogo || !megaDialogo.open) return;
+    const boton = document.getElementById('btnMenu');
+    if (boton) boton.setAttribute('aria-expanded', 'false');
+    const panel = megaDialogo.querySelector('.mega-menu__panel');
+    const terminar = function () { megaDialogo.close(); };
+    const salida = panel ? animar(panel, { opacity: [1, 0], scale: [1, 0.985], y: [0, -8] }, { duration: 0.18 }) : null;
+    if (salida && salida.finished) salida.finished.then(terminar).catch(terminar);
+    else terminar();
+  }
+
+  function crearMega() {
+    if (megaDialogo) return megaDialogo;
+    const dialogo = document.createElement('dialog');
+    dialogo.className = 'mega-menu';
+    dialogo.setAttribute('aria-labelledby', 'megaTitulo');
+    dialogo.innerHTML =
+      '<div class="mega-menu__panel">' +
+        '<header class="mega-menu__cabecera">' +
+          '<div><p class="etiqueta">Navegación</p><h2 id="megaTitulo">Módulos del panel</h2></div>' +
+          '<button type="button" class="boton-icono" data-mega-cerrar aria-label="Cerrar menú">' +
+            '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>' +
+          '</button>' +
+        '</header>' +
+        '<div class="mega-menu__grid"></div>' +
+      '</div>';
+    document.body.appendChild(dialogo);
+    dialogo.addEventListener('click', function (evento) {
+      if (evento.target === dialogo || evento.target.closest('[data-mega-cerrar]')) cerrarMega();
+    });
+    dialogo.addEventListener('cancel', function (evento) {
+      evento.preventDefault();
+      cerrarMega();
+    });
+
+    const grid = dialogo.querySelector('.mega-menu__grid');
+    const nav = document.querySelector('.sidebar__nav');
+    if (nav && grid) {
+      nav.querySelectorAll(':scope > details.sidebar__menu').forEach(function (grupo) {
+        const resumen = grupo.querySelector(':scope > summary span');
+        const columna = document.createElement('section');
+        columna.className = 'mega-menu__grupo';
+        const titulo = document.createElement('h3');
+        titulo.textContent = (resumen ? resumen.textContent : 'Menú').trim();
+        columna.appendChild(titulo);
+
+        const agregar = function (detalle) {
+          detalle.querySelectorAll(':scope > a.sidebar__enlace').forEach(function (enlace) {
+            const clon = enlace.cloneNode(true);
+            clon.className = 'mega-menu__enlace' + (enlace.classList.contains('is-activo') ? ' is-activo' : '');
+            clon.addEventListener('click', cerrarMega);
+            columna.appendChild(clon);
+          });
+          detalle.querySelectorAll(':scope > details.sidebar__menu--sub').forEach(function (sub) {
+            const resumenSub = sub.querySelector(':scope > summary span');
+            if (resumenSub) {
+              const subtitulo = document.createElement('p');
+              subtitulo.className = 'mega-menu__subtitulo';
+              subtitulo.textContent = resumenSub.textContent.trim();
+              columna.appendChild(subtitulo);
+            }
+            agregar(sub);
+          });
+        };
+        agregar(grupo);
+        grid.appendChild(columna);
+      });
+    }
+
+    megaDialogo = dialogo;
+    return dialogo;
+  }
+
+  function abrirMega() {
+    const dialogo = crearMega();
+    if (dialogo.open) return;
+    dialogo.showModal();
+    const boton = document.getElementById('btnMenu');
+    if (boton) boton.setAttribute('aria-expanded', 'true');
+    const panel = dialogo.querySelector('.mega-menu__panel');
+    if (panel) animar(panel, { opacity: [0, 1], scale: [0.97, 1], y: [14, 0] }, { duration: 0.28 });
+    dialogo.querySelectorAll('.mega-menu__grupo').forEach(function (grupo, indice) {
+      animar(grupo, { opacity: [0, 1], y: [10, 0] }, { duration: 0.3, delay: indice * 0.04 });
+    });
+    const cerrar = dialogo.querySelector('[data-mega-cerrar]');
+    if (cerrar) cerrar.focus();
+  }
+
+  function aplicarMega(activo) {
+    raiz.dataset.menuMega = activo ? '1' : '';
+    try { localStorage.setItem(CLAVE_MEGA, activo ? '1' : '0'); } catch (error) { /* sin almacenamiento */ }
+    sincronizarMega();
+    if (!activo) cerrarMega();
+  }
+
+  sincronizarMega();
+  document.querySelectorAll('[data-menu-mega-opcion]').forEach(function (boton) {
+    boton.addEventListener('click', function () {
+      aplicarMega(!menuMegaActivo());
+      if (menuTema) {
+        menuTema.hidden = true;
+        if (botonTema) botonTema.setAttribute('aria-expanded', 'false');
+      }
+    });
+  });
+
   /* Recordar qué grupos de la barra lateral están plegados. */
   document.querySelectorAll('.sidebar__menu').forEach(function (grupo, indice) {
     const resumen = grupo.querySelector(':scope > summary');
@@ -166,6 +294,10 @@
 
   if (botonMenu) {
     botonMenu.addEventListener('click', function () {
+      if (menuMegaActivo()) {
+        abrirMega();
+        return;
+      }
       aplicarMenu(!menuAbierto());
     });
   }
@@ -516,15 +648,91 @@
   }
 
   /* ------------------------------------------------------------------
-     Confirmación de acciones destructivas
+     Confirmación de acciones destructivas con diálogo Motion
      ------------------------------------------------------------------ */
+  let dialogoConfirmar = null;
+  let resolverConfirmar = null;
+
+  function crearDialogoConfirmar() {
+    if (dialogoConfirmar) return dialogoConfirmar;
+    const dialogo = document.createElement('dialog');
+    dialogo.className = 'dialogo-confirmar';
+    dialogo.setAttribute('aria-labelledby', 'confirmarTitulo');
+    dialogo.innerHTML =
+      '<div class="dialogo-confirmar__caja">' +
+        '<span class="dialogo-confirmar__icono" aria-hidden="true">' +
+          '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>' +
+        '</span>' +
+        '<h2 id="confirmarTitulo">Confirmar acción</h2>' +
+        '<p data-confirmar-mensaje></p>' +
+        '<div class="dialogo-confirmar__acciones">' +
+          '<button type="button" class="boton boton--secundario" data-confirmar-cancelar>Rechazar</button>' +
+          '<button type="button" class="boton boton--primario" data-confirmar-aceptar>Aceptar</button>' +
+        '</div>' +
+      '</div>';
+
+    dialogo.addEventListener('click', function (evento) {
+      if (evento.target.closest('[data-confirmar-aceptar]')) {
+        cerrarConfirmar(true);
+      } else if (evento.target.closest('[data-confirmar-cancelar]') || evento.target === dialogo) {
+        cerrarConfirmar(false);
+      }
+    });
+    dialogo.addEventListener('cancel', function (evento) {
+      evento.preventDefault();
+      cerrarConfirmar(false);
+    });
+
+    document.body.appendChild(dialogo);
+    dialogoConfirmar = dialogo;
+    return dialogo;
+  }
+
+  function cerrarConfirmar(valor) {
+    const dialogo = dialogoConfirmar;
+    if (!dialogo || !dialogo.open) return;
+    const responder = resolverConfirmar;
+    resolverConfirmar = null;
+    const caja = dialogo.querySelector('.dialogo-confirmar__caja');
+    const terminar = function () {
+      dialogo.close();
+      if (responder) responder(valor);
+    };
+    const salida = caja ? animar(caja, { opacity: [1, 0], scale: [1, 0.96] }, { duration: 0.16 }) : null;
+    if (salida && salida.finished) salida.finished.then(terminar).catch(terminar);
+    else terminar();
+  }
+
+  function pedirConfirmacion(mensaje) {
+    const dialogo = crearDialogoConfirmar();
+    dialogo.querySelector('[data-confirmar-mensaje]').textContent = mensaje;
+    return new Promise(function (resolver) {
+      resolverConfirmar = resolver;
+      dialogo.showModal();
+      const caja = dialogo.querySelector('.dialogo-confirmar__caja');
+      if (caja) animar(caja, { opacity: [0, 1], scale: [0.94, 1], y: [12, 0] }, { duration: 0.26 });
+      const aceptar = dialogo.querySelector('[data-confirmar-aceptar]');
+      if (aceptar) aceptar.focus();
+    });
+  }
+
   document.querySelectorAll('form[data-confirmar]').forEach(function (formulario) {
     formulario.addEventListener('submit', function (evento) {
       if (evento.defaultPrevented) return;
-      const mensaje = formulario.getAttribute('data-confirmar') || '¿Confirmas esta acción?';
-      if (!window.confirm(mensaje)) {
-        evento.preventDefault();
+      if (formulario.dataset.confirmado === '1') {
+        delete formulario.dataset.confirmado;
+        return;
       }
+      const mensaje = formulario.getAttribute('data-confirmar') || '¿Confirmas esta acción?';
+      const submitter = evento.submitter;
+      evento.preventDefault();
+      pedirConfirmacion(mensaje).then(function (aceptado) {
+        if (!aceptado) return;
+        formulario.dataset.confirmado = '1';
+        if (typeof formulario.requestSubmit === 'function') formulario.requestSubmit(submitter || undefined);
+        else formulario.submit();
+        setTimeout(function () { delete formulario.dataset.confirmado; }, 0);
+      });
     });
   });
 
@@ -951,6 +1159,243 @@
   animarEntrada();
   animarContadores();
   animarGraficos();
+
+  /* ------------------------------------------------------------------
+     Campana: vista previa de las últimas notificaciones
+     ------------------------------------------------------------------ */
+  const campana = document.querySelector('[data-campana]');
+  if (campana) {
+    const botonCampana = campana.querySelector('[data-campana-boton]');
+    const panelCampana = campana.querySelector('[data-campana-panel]');
+
+    function cerrarCampana() {
+      if (!panelCampana || panelCampana.hidden) return;
+      panelCampana.hidden = true;
+      if (botonCampana) botonCampana.setAttribute('aria-expanded', 'false');
+    }
+
+    function abrirCampana() {
+      if (!panelCampana) return;
+      panelCampana.hidden = false;
+      if (botonCampana) botonCampana.setAttribute('aria-expanded', 'true');
+      animar(panelCampana, { opacity: [0, 1], y: [-7, 0], scale: [0.98, 1] }, { duration: 0.2 });
+    }
+
+    if (botonCampana) {
+      botonCampana.addEventListener('click', function (evento) {
+        evento.stopPropagation();
+        if (panelCampana && panelCampana.hidden) abrirCampana();
+        else cerrarCampana();
+      });
+    }
+
+    campana.querySelectorAll('[data-campana-cerrar]').forEach(function (cerrar) {
+      cerrar.addEventListener('click', cerrarCampana);
+    });
+
+    document.addEventListener('click', function (evento) {
+      if (!campana.contains(evento.target)) cerrarCampana();
+    });
+
+    document.addEventListener('keydown', function (evento) {
+      if (evento.key === 'Escape' && panelCampana && !panelCampana.hidden) {
+        cerrarCampana();
+        if (botonCampana) botonCampana.focus();
+      }
+    });
+  }
+
+  /* ------------------------------------------------------------------
+     Pop-ups de notificaciones: apilados abajo a la derecha
+     ------------------------------------------------------------------ */
+  const CLAVE_POPUPS = 'crackentick-popups';
+  const CLAVE_POPUPS_VISTO = 'crackentick-popups-visto';
+  const ETIQUETAS_ALERTA = {
+    wan_down: 'WAN caída',
+    wan_up: 'WAN restablecida',
+    client_down: 'Cliente sin conexión',
+    stock_low: 'Stock bajo',
+    wan_latency: 'Latencia alta',
+    router_down: 'Router caído',
+    router_up: 'Router restablecido',
+    ticket_new: 'Ticket nuevo',
+  };
+  let contenedorPopups = null;
+  let temporizadorPopups = null;
+
+  function popupsActivos() {
+    try {
+      return localStorage.getItem(CLAVE_POPUPS) === '1';
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function leerUltimoVisto() {
+    try {
+      const guardado = localStorage.getItem(CLAVE_POPUPS_VISTO);
+      return guardado ? new Date(guardado) : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function marcarUltimoVisto() {
+    try {
+      localStorage.setItem(CLAVE_POPUPS_VISTO, new Date().toISOString());
+    } catch (error) {
+      /* sin almacenamiento */
+    }
+  }
+
+  function obtenerContenedorPopups() {
+    if (contenedorPopups && document.body.contains(contenedorPopups)) return contenedorPopups;
+    contenedorPopups = document.createElement('div');
+    contenedorPopups.className = 'popups-notif';
+    contenedorPopups.setAttribute('aria-live', 'polite');
+    contenedorPopups.setAttribute('aria-label', 'Notificaciones emergentes');
+    document.body.appendChild(contenedorPopups);
+    return contenedorPopups;
+  }
+
+  function quitarPopup(elemento) {
+    if (!elemento || !elemento.parentNode) return;
+    const salida = animar(elemento, { opacity: [1, 0], x: [24, 0], scale: [1, 0.96] }, { duration: 0.18 });
+    const terminar = function () {
+      if (elemento.parentNode) elemento.remove();
+    };
+    if (salida && salida.finished) salida.finished.then(terminar).catch(terminar);
+    else terminar();
+  }
+
+  function mostrarPopup(alerta) {
+    const contenedor = obtenerContenedorPopups();
+    const elemento = document.createElement('a');
+    elemento.className = 'popup-notif popup-notif--' + (alerta.severity || 'info');
+    elemento.href = alerta.link || '/notificaciones';
+
+    const punto = document.createElement('span');
+    punto.className = 'popup-notif__punto';
+    punto.setAttribute('aria-hidden', 'true');
+
+    const cuerpo = document.createElement('span');
+    cuerpo.className = 'popup-notif__cuerpo';
+    const tipo = document.createElement('small');
+    tipo.textContent = ETIQUETAS_ALERTA[alerta.type] || 'Aviso';
+    const mensaje = document.createElement('strong');
+    mensaje.textContent = alerta.message || '';
+    cuerpo.appendChild(tipo);
+    cuerpo.appendChild(mensaje);
+    if (alerta.value) {
+      const detalle = document.createElement('span');
+      detalle.className = 'popup-notif__detalle';
+      detalle.textContent = alerta.value;
+      cuerpo.appendChild(detalle);
+    }
+
+    const cerrar = document.createElement('button');
+    cerrar.type = 'button';
+    cerrar.className = 'popup-notif__cerrar';
+    cerrar.setAttribute('aria-label', 'Cerrar aviso');
+    cerrar.innerHTML = '<span aria-hidden="true">&times;</span>';
+    cerrar.addEventListener('click', function (evento) {
+      evento.preventDefault();
+      evento.stopPropagation();
+      quitarPopup(elemento);
+    });
+
+    elemento.appendChild(punto);
+    elemento.appendChild(cuerpo);
+    elemento.appendChild(cerrar);
+    contenedor.appendChild(elemento);
+
+    while (contenedor.children.length > 4) {
+      contenedor.firstElementChild.remove();
+    }
+    animar(elemento, { opacity: [0, 1], x: [40, 0], scale: [0.96, 1] }, { duration: 0.3 });
+    setTimeout(function () { quitarPopup(elemento); }, 9000);
+  }
+
+  function limpiarPopups() {
+    if (contenedorPopups) contenedorPopups.innerHTML = '';
+  }
+
+  function programarPopups() {
+    if (temporizadorPopups) return;
+    temporizadorPopups = setInterval(consultarPopups, 20000);
+  }
+
+  function detenerPopups() {
+    if (temporizadorPopups) {
+      clearInterval(temporizadorPopups);
+      temporizadorPopups = null;
+    }
+  }
+
+  async function consultarPopups() {
+    if (!popupsActivos() || document.hidden || !window.fetch || !document.querySelector('.app-shell')) return;
+    try {
+      const respuesta = await window.fetch('/notificaciones/vista', {
+        headers: { Accept: 'application/json' },
+      });
+      if (!respuesta.ok) return;
+      const datos = await respuesta.json();
+      const desde = leerUltimoVisto();
+      const items = Array.isArray(datos.items) ? datos.items : [];
+      if (!desde) {
+        marcarUltimoVisto();
+        return;
+      }
+      const nuevos = items
+        .filter(function (item) { return new Date(item.startedAt) > desde; })
+        .reverse()
+        .slice(-3);
+      if (!nuevos.length) return;
+      marcarUltimoVisto();
+      nuevos.forEach(function (item, indice) {
+        setTimeout(function () { mostrarPopup(item); }, indice * 140);
+      });
+    } catch (error) {
+      /* sin conexión: se reintenta en el siguiente ciclo */
+    }
+  }
+
+  document.querySelectorAll('[data-popups-toggle]').forEach(function (control) {
+    control.checked = popupsActivos();
+    control.addEventListener('change', function () {
+      try {
+        localStorage.setItem(CLAVE_POPUPS, control.checked ? '1' : '0');
+      } catch (error) {
+        /* sin almacenamiento */
+      }
+      if (control.checked) {
+        marcarUltimoVisto();
+        consultarPopups();
+        programarPopups();
+      } else {
+        detenerPopups();
+        limpiarPopups();
+      }
+    });
+  });
+
+  if (popupsActivos() && document.querySelector('.app-shell')) {
+    if (!leerUltimoVisto()) marcarUltimoVisto();
+    consultarPopups();
+    programarPopups();
+  }
+
+  /* ------------------------------------------------------------------
+     Respuesta al toque en los checkboxes convertidos a switch
+     ------------------------------------------------------------------ */
+  document.querySelectorAll('.check input[type="checkbox"], .check-linea input[type="checkbox"], .switch input[type="checkbox"]').forEach(function (control) {
+    control.addEventListener('change', function () {
+      if (movimientoReducido) return;
+      const interruptor = control.closest('.switch');
+      const objetivo = (interruptor && interruptor.querySelector('.switch__control')) || control;
+      animar(objetivo, { scale: [1, 0.9, 1] }, { duration: 0.24 });
+    });
+  });
 
   /* ------------------------------------------------------------------
      Importes, inventario y ventas
